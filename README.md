@@ -30,7 +30,7 @@ ValSKA-HERA-beam-FWHM includes:
 
 ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request. For any additional questions or comments, please contact one of the UKSRC science validation tooling team:
  - Peter Sims (PO) - ps550 [at] cam.ac.uk
- - Tianyue Chen (SM) - tianyue [at] chen@manchester.ac.uk
+ - Tianyue Chen (SM) - tianyue.chen [at] manchester.ac.uk
  - Quentin Gueuning - qdg20 [at] cam.ac.uk
  - Ed Polehampton - edward.polehampton [at] stfc.ac.uk
  - Vlad Stolyarov - vs237 [at] cam.ac.uk

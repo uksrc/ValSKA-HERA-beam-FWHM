@@ -27,7 +27,7 @@ ValSKA-HERA-beam-FWHM includes:
 ```
 conda env create -f valska_env.yaml
 ```
- - valska_env.yaml is setup for Galahad. On Azimuth, in valska_env.yaml, comment out cudatoolkit and uncomment cuda.
+ - valska_env.yaml is setup for Galahad. To install the dependencies on Azimuth, in valska_env.yaml, comment out cudatoolkit and uncomment cuda.
 
 
 ## Usage

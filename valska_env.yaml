@@ -1,0 +1,43 @@
+# ---
+# Basic usage:
+# conda env create -f valska_env.yaml
+# conda activate valska
+# or
+# mamba env create -f valska_env.yaml
+# mamba activate valska
+# ---
+name: valska
+# name: valska2
+channels:
+  - conda-forge
+dependencies:
+  - astropy
+  - astropy-healpix
+  - cudatoolkit # Uncomment only on Galahad
+  # - cuda # Uncomment everywhere except Galahad
+  - gcc_linux-64
+  - h5py
+  - jsonargparse
+  - magma
+  - matplotlib
+  - mpi4py>=3.0.0
+  - numpy
+  - pip
+  - pycuda
+  - pymultinest
+  - python
+  - pyuvdata
+  - rich
+  - scipy
+  - setuptools
+  - setuptools_scm
+  - sphinx
+  - threadpoolctl
+  - pandas
+
+  - pip:
+      # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt
+      - -e . # editable-installs valska and standard deps from pyproject.toml
+      # - -e .[dev] # editable-installs valska and all deps from pyproject.toml
+      # - . # standard-installs valska and standard deps from pyproject.toml
+      # - .[dev] # default installs valska and all deps from pyproject.toml

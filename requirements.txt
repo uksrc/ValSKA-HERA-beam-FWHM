@@ -1,0 +1,8 @@
+# ---
+# For legacy/pip users.
+# This file just tells pip to install the project editable with the dev extra,
+# pulling all dependencies from pyproject.toml.
+# It’s a shim for:
+# pip install -r requirements.txt
+# ---
+-e .[dev]

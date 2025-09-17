@@ -22,6 +22,14 @@ ValSKA-HERA-beam-FWHM includes:
 
 *TBD: Instructions for installation.*
 
+ - Clone the repo.
+ - All dependencies can be installed with `conda` using the included `valska_env.yaml` file via (but see below first):
+```
+conda env create -f valska_env.yaml
+```
+ - valska_env.yaml is setup for Galahad. On Azimuth, in valska_env.yaml, comment out cudatoolkit and uncomment cuda.
+
+
 ## Usage
 
 *TBD: Instructions for usage, including examples.*

@@ -1,0 +1,51 @@
+# Default paths configuration for ValSKA-HERA-beam-FWHM
+
+
+# ------------------------------
+# - Data paths -
+# Each path is a chains_subdir such that the full path to
+# the chains_dir is of the form:
+# chains_dir = chains_base_dir + chains_subdir
+# and chains_base_dir is determined on a per-system basis by PathManager in utils.py
+# ------------------------------
+# EoR + Foregrounds
+EoRFg: v4d0/EoRFg/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# EoR-only
+EoR: v4d0/EoR/MN-23-23-38-0-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM with negative perturbations
+GSM_FgEoR_-5e0pp: v5d0/GSM_FgEoR_-5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-5e0pp: v5d0/GSM_FgOnly_-5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e0pp: v5d0/GSM_FgEoR_-1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e0pp: v5d0/GSM_FgOnly_-1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e-1pp: v5d0/GSM_FgEoR_-1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e-1pp: v5d0/GSM_FgOnly_-1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e-2pp: v5d0/GSM_FgEoR_-1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e-2pp: v5d0/GSM_FgOnly_-1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e-3pp: v5d0/GSM_FgEoR_-1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e-3pp: v5d0/GSM_FgOnly_-1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-2e0pp: v5d0/GSM_FgEoR_-2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-2e0pp: v5d0/GSM_FgOnly_-2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e1pp: v5d0/GSM_FgEoR_-1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e1pp: v5d0/GSM_FgOnly_-1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM with positive perturbations
+GSM_FgEoR_+5e0pp: v5d0/GSM_FgEoR_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+5e0pp: v5d0/GSM_FgOnly_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e0pp: v5d0/GSM_FgEoR_+1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e0pp: v5d0/GSM_FgOnly_+1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e-1pp: v5d0/GSM_FgEoR_+1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e-1pp: v5d0/GSM_FgOnly_+1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e-2pp: v5d0/GSM_FgEoR_+1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e-2pp: v5d0/GSM_FgOnly_+1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e-3pp: v5d0/GSM_FgEoR_+1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e-3pp: v5d0/GSM_FgOnly_+1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+2e0pp: v5d0/GSM_FgEoR_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+2e0pp: v5d0/GSM_FgOnly_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e1pp: v5d0/GSM_FgEoR_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e1pp: v5d0/GSM_FgOnly_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+## GLEAM paths
+# GLEAM_FgEoR: v6d0/GL_FgEoR/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+# GLEAM_FgOnly: v6d0/GL_FgOnly/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/

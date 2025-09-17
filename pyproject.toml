@@ -1,0 +1,87 @@
+# ---
+# Quick usage:
+# Editable install (dev): pip install -e .[dev]
+# Standard install: pip install .
+# ---
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "valska-hera-beam-fwhm"
+version = "0.1.0"
+description = "Validation utilities for HERA beam FWHM sensitivity in 21-cm power-spectrum forward modelling."
+readme = "README.md"
+# requires-python = ">=3.10"
+license = { file = "LICENSE" }
+
+authors = [
+  { name = "UKSRC Science Enabling - Science Validation Tooling" }
+]
+
+keywords = ["UKSRC", "validation", "Bayesian", "HERA", "21-cm", "power spectrum"]
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: BSD License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Astronomy"
+]
+
+# TODO: consider fixing to a specific versions for reproducibility
+dependencies = [
+    "astropy",
+    "astropy-healpix",
+    "h5py",
+    "jsonargparse",
+    "numpy",
+    "pymultinest",
+    "pyuvdata",
+    "rich",
+    "scipy",
+    "setuptools_scm",
+    "anesthetic",
+    "tqdm",
+    # "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"
+    "bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure"
+]
+
+# Version is derived from your Git tags by setuptools-scm
+# dynamic = ["version"]
+
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov5",
+  "ruff>=0.12.0",
+  "mypy",
+  "pre-commit",
+  "ipykernel",
+  "nbstripout",
+  "build",
+  "twine"
+]
+docs = [
+  "mkdocs",
+  "mkdocs-material"
+]
+
+[project.urls]
+Homepage = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM"
+Issues = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM/issues"
+
+[project.scripts]
+valska-beam-validate = "valska_hera_beam.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*", "docs*", "notebooks*", "scripts*", "temp*"]
+
+[tool.setuptools_scm]
+write_to = "src/valska_hera_beam/_version.py"
+fallback_version = "0.1.0"

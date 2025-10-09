@@ -57,7 +57,7 @@ dev = [
   "pylint",
   "pylint-junit",
   "pytest",
-  "pytest-cov5",
+  "pytest-cov",
   "pytest-mock",
   "ruff>=0.12.0",
   "mypy",

@@ -1,9 +1,24 @@
 # Unit tests for utils
 
+import os
 import tempfile
 from datetime import datetime
+from pathlib import Path
 
+import pytest
+from constants import (
+    BASE_DIR,
+    CHAINS_DIR,
+    DATA_DIR,
+    RESULTS_DIR,
+)
+
+import valska_hera_beam.utils
 from valska_hera_beam.utils import load_paths, make_timestamp
+
+UTILS_DIR = Path(
+    os.path.abspath(valska_hera_beam.utils.__file__)
+).parent.resolve()
 
 
 def test_make_timestamp():
@@ -50,3 +65,48 @@ def test_load_paths_with_input():
         assert paths["Test2"] == "test/directory2/"
 
         yaml_file.close()
+
+
+def test_path_manager_get_paths(path_manager):
+    """
+    Test PathManager get_paths method
+    This returns a dictionary of all the paths
+    """
+
+    expected_dictionary = {
+        "utils_dir": UTILS_DIR,
+        "package_dir": UTILS_DIR,
+        "base_dir": BASE_DIR,
+        "chains_dir": CHAINS_DIR,
+        "data_dir": DATA_DIR,
+        "results_dir": RESULTS_DIR,
+    }
+
+    assert path_manager.get_paths() == expected_dictionary
+
+
+@pytest.mark.parametrize(
+    "name, value",
+    [
+        ("utils_dir", UTILS_DIR),
+        ("package_dir", UTILS_DIR),
+        ("base_dir", BASE_DIR),
+        ("chains_dir", CHAINS_DIR),
+        ("data_dir", DATA_DIR),
+        ("results_dir", RESULTS_DIR),
+    ],
+)
+def test_path_manager_get_path(path_manager, name, value):
+    """
+    Test PathManager get_path method
+    This returns a dictionary of all the paths
+    """
+
+    assert path_manager.get_path(name) == value
+
+
+def test_path_manager_get_path_error(path_manager):
+    """Test get_path with incorrect name"""
+
+    with pytest.raises(KeyError):
+        path_manager.get_path("incorrect_name")

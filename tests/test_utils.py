@@ -67,6 +67,13 @@ def test_load_paths_with_input():
         yaml_file.close()
 
 
+def test_load_paths_with_input_error():
+    """Test load paths from non-existant yaml file"""
+
+    with pytest.raises(FileNotFoundError):
+        paths = load_paths("nonexistant_yaml_file.yml")
+
+
 def test_path_manager_get_paths(path_manager):
     """
     Test PathManager get_paths method
@@ -110,3 +117,43 @@ def test_path_manager_get_path_error(path_manager):
 
     with pytest.raises(KeyError):
         path_manager.get_path("incorrect_name")
+
+
+def test_path_manager_create_sub_dir(path_manager):
+    """Test create sub directory"""
+
+    new_dir = "new_directory"
+
+    with tempfile.TemporaryDirectory() as base_dir:
+
+        # Update the chains dir
+        path_manager.chains_dir = Path(base_dir)
+
+        returned_dir = path_manager.create_subdir("chains_dir", new_dir)
+
+        assert returned_dir == Path(base_dir).joinpath(new_dir)
+        assert returned_dir.exists()
+
+
+def test_path_manager_find_file(path_manager):
+    """Test find file with named directory"""
+
+    with tempfile.NamedTemporaryFile(suffix=".dat") as test_file:
+
+        path_manager.chains_dir = Path(test_file.name).parent
+
+        result = path_manager.find_file("*.dat", path_name="chains_dir")
+
+        assert result == [Path(test_file.name)]
+
+
+def test_path_manager_find_file_default(path_manager):
+    """Test find file from default directory"""
+
+    with tempfile.NamedTemporaryFile(suffix=".dat") as test_file:
+
+        path_manager.base_dir = Path(test_file.name).parent
+
+        result = path_manager.find_file("*.dat")
+
+        assert result == [Path(test_file.name)]

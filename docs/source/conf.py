@@ -1,3 +1,15 @@
+# If extensions (or modules to document with autodoc) are in another directory,
+# add these directories to sys.path here.
+import sys
+import os
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src/valska_hera_beam")
+
+#sys.path.insert(0, os.path.abspath("/home/vlad/software/SKA/ValSKA-HERA-beam-FWHM/src/valska_hera_beam"))
+
+#print(str(Path(__file__).resolve().parents[2]))
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -13,11 +25,20 @@ author = 'P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = ['sphinx.ext.duration',
+              'sphinx.ext.doctest',
+              'sphinx.ext.autodoc',
+              'sphinx.ext.autosummary',
+]
+
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": False,
+    "private-members": True,
+}
 
 templates_path = ['_templates']
 exclude_patterns = []
-
 
 
 # -- Options for HTML output -------------------------------------------------

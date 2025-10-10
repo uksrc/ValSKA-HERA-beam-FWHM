@@ -7,8 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ValSKA-HERA-beam-FWHM'
-copyright = '2025, P.Sims, Q.Gueuning, E.Polehampton, V.Stolyarov'
-author = 'P.Sims, Q.Gueuning, E.Polehampton, V.Stolyarov'
+copyright = '2025, P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov'
+author = 'P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

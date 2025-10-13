@@ -38,7 +38,9 @@ autodoc_default_options = {
 autodoc_mock_imports = ['bayeseor',
 			'anesthetic',
 			'matplotlib',
-			'yaml']
+			'yaml',
+			'tqdm',
+			'numpy']
 
 templates_path = ['_templates']
 exclude_patterns = []

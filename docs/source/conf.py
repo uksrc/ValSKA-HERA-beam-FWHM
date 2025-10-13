@@ -3,12 +3,10 @@
 import sys
 import os
 from pathlib import Path
+#sys.path.insert(0, str(Path('..', 'src').resolve()))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src")
-sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src/valska_hera_beam")
-
-#sys.path.insert(0, os.path.abspath("/home/vlad/software/SKA/ValSKA-HERA-beam-FWHM/src/valska_hera_beam"))
-
-#print(str(Path(__file__).resolve().parents[2]))
+#sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src/valska_hera_beam")
+import valska_hera_beam
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -36,6 +34,9 @@ autodoc_default_options = {
     "undoc-members": False,
     "private-members": True,
 }
+
+autodoc_mock_imports = ['bayeseor',
+			'anesthetic']
 
 templates_path = ['_templates']
 exclude_patterns = []

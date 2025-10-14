@@ -27,6 +27,7 @@ extensions = ['sphinx.ext.duration',
               'sphinx.ext.doctest',
               'sphinx.ext.autodoc',
               'sphinx.ext.autosummary',
+              'myst_parser'
 ]
 
 autodoc_default_options = {

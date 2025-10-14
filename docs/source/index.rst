@@ -22,6 +22,6 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   usage
+   readme
    validation
    api

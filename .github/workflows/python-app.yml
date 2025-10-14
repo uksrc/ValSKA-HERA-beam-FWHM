@@ -23,3 +23,6 @@ jobs:
     - name: Test with pytest
       run: |
         make python-test
+    - name: Test notebooks
+      run: |
+        make notebook-test

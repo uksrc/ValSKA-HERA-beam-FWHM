@@ -65,7 +65,8 @@ dev = [
   "ipykernel",
   "nbstripout",
   "build",
-  "twine"
+  "twine",
+  "nbmake"
 ]
 docs = [
   "mkdocs",

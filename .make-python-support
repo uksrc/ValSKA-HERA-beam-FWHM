@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+# Shellscript support function file for Python Make targets
+
+# Find and load the release support script
+CURRENT_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+. ${CURRENT_SCRIPT_DIR}/.make-release-support
+
+# Build Python packages
+function pythonBuild() {
+	if [ -z "$1" ] ; then
+		echo "pythonBuild: Missing PYTHON_BUILD_TYPE"
+        exit 1
+	fi
+    PYTHON_BUILD_TYPE="$1"
+    echo "pythonBuild: Building type $PYTHON_BUILD_TYPE"
+
+	. ${CURRENT_SCRIPT_DIR}/.make-metadata-support ; metadataGenerate MANIFEST.skao.int
+	. ${CURRENT_SCRIPT_DIR}/.make-metadata-support ; metadataPyprojectPatch
+
+	if [[ ${PYTHON_BUILD_TYPE} == "tag_setup" ]]; then
+		${PYTHON_RUNNER} python3 setup.py sdist bdist_wheel
+	fi
+	if [[ ${PYTHON_BUILD_TYPE} == "non_tag_setup" ]]; then
+		if [[ -z "${CI_COMMIT_SHORT_SHA}" ]]; then
+			${PYTHON_RUNNER} python3 setup.py egg_info -b+dev sdist bdist_wheel
+		else
+			${PYTHON_RUNNER} python3 setup.py egg_info -b+dev.c${CI_COMMIT_SHORT_SHA} sdist bdist_wheel
+		fi
+	fi
+	if [[ ${PYTHON_BUILD_TYPE} == "non_tag_pyproject" ]]; then
+		if [[ -z "${CI_COMMIT_SHORT_SHA}" ]]; then
+			sed -E -i.bak 's|^(version.*=.*")(.*)(")$|\1\2+dev\3|g' pyproject.toml && rm pyproject.toml.bak
+		else
+			sed -E -i.bak 's|^(version.*=.*")(.*)(")$|\1\2+dev.'"c${CI_COMMIT_SHORT_SHA}"'\3|g' pyproject.toml && rm pyproject.toml.bak
+		fi
+		if pip3 show "build" &>/dev/null; then
+        	${PYTHON_RUNNER} python3 -m build ${PYTHON_SWITCHES_FOR_BUILD}
+   		else
+        	pyproject-build ${PYTHON_SWITCHES_FOR_BUILD}
+		fi
+		sed -E -i.bak 's|^(version.*=.*")(.*)\+dev.*(")$|\1\2\3|' pyproject.toml && rm pyproject.toml.bak
+	fi
+	if [[ ${PYTHON_BUILD_TYPE} == "tag_pyproject" ]]; then
+		if pip3 show "build" &>/dev/null; then
+        	${PYTHON_RUNNER} python3 -m build ${PYTHON_SWITCHES_FOR_BUILD}
+   		else
+        	pyproject-build ${PYTHON_SWITCHES_FOR_BUILD}
+		fi
+	fi
+    echo "pythonBuild: dist files $(find ./dist)"
+    for filename in ./dist/*.whl ./dist/*.tar.gz; do
+        echo "pythonBuild: patching ${filename}"
+	. ${CURRENT_SCRIPT_DIR}/.make-metadata-support ; metadataPatch "${filename}" "MANIFEST.skao.int"
+	done
+
+	rm -f MANIFEST.skao.int
+	
+    echo "pythonBuild: done"
+    exit 0
+}
+
+
+# Build Python packages
+function pythonScan() {
+	if [ -z "$1" ] ; then
+		echo "pythonScan: Missing PYTHON_BUILD_TYPE"
+        exit 1
+	fi
+    PYTHON_BUILD_TYPE="$1"
+    echo "pythonScan: Building type $PYTHON_BUILD_TYPE"
+
+	if [[ ${PYTHON_BUILD_TYPE} == "non_tag_pyproject" ]] || [[ ${PYTHON_BUILD_TYPE} == "tag_pyproject" ]]; then
+		poetry export --format=requirements.txt --output=requirements.txt --without-hashes
+		rm poetry.lock pyproject.toml
+
+	fi
+
+	## uninstall poetry because of package conflicts
+	pip uninstall --yes poetry
+
+	## Run analyser to scan python packages
+	analyzer run
+
+    exit 0
+}
+
+# Check Jupyter notebooks are in notebooks directory
+function checkNotebookDir() {
+	if [[ $(find . -name '*.ipynb' -not -path "./.venv/*" | grep -v ^./notebooks/*) ]]; then
+		NOTEBOOKS=$(find -name '*.ipynb' | grep -v ^./notebooks/)
+		echo "Warning: the following Jupyter notebook files should be placed inside ./notebooks/ directory:"
+		echo $NOTEBOOKS
+	else
+		exit 0
+	fi
+}

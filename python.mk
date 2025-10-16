@@ -64,26 +64,11 @@ PYTHON_LINT_TARGET ?= $(PYTHON_SRC) tests/## Paths containing python to be forma
 
 NOTEBOOK_LINT_TARGET ?= .## Paths containing Jupyter notebooks to be formatted and linted
 
-# Possible PYTHON_BUILD_TYPE types:
-# 		- tag_setup : Building for release with setup.py
-# 	    - tag_pyproject: Building for release with pyproject.toml
-#       - non_tag_setup: Dirty Building with setup.py
-#	    - non_tag_pyproject: Dirty Building with pyproject.toml
 
-PYTHON_BUILD_TYPE ?= non_tag_pyproject## used to differentiate build types
-PYTHON_SWITCHES_FOR_BUILD ?= --sdist --wheel## switches passed to -m build for building wheels and dists
-
-PYTHON_PUBLISH_USERNAME ?=## Username used to publish
-
-PYTHON_PUBLISH_PASSWORD ?=## Password used to publish
-
-PYTHON_PUBLISH_URL ?=## URL to publish
-
-.PHONY: python-pre-build python-do-build python-post-build python-build \
-	python-format python-pre-format python-do-format python-post-format \
+.PHONY: python-format python-pre-format python-do-format python-post-format \
 	python-lint python-pre-lint python-do-lint python-post-lint \
-	python-test python-pre-test python-do-test python-post-test \
-	python-publish python-pre-publish python-do-publish
+	python-test python-pre-test python-do-test python-post-test
+	
 
 python-pre-format:
 
@@ -135,34 +120,6 @@ python-do-lint:
 
 python-lint: python-pre-lint python-do-lint python-post-lint  ## lint the Python code
 
-python-pre-build:
-
-python-post-build:
-
-python-do-build:
-	@. $(PYTHON_SUPPORT) ; \
-		PYTHON_RUNNER="$(PYTHON_RUNNER)" \
-		PYTHON_SWITCHES_FOR_BUILD="$(PYTHON_SWITCHES_FOR_BUILD)" \
-		pythonBuild $(PYTHON_BUILD_TYPE)
-
-## TARGET: python-build
-## SYNOPSIS: make python-build
-## HOOKS: python-pre-build, python-post-build
-## VARS:
-##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
-##       PYTHON_BUILD_TYPE=[tag_setup|non_tag_setup|non_tag_pyproject|tag_pyproject]
-##       PYTHON_SWITCHES_FOR_BUILD=<options for -m build> - defaults to: --sdist --wheel
-##
-##  Build the nominated package type for project Python code, and decorate the package
-##  with the SKAO metadata required for publishing to the Central Artefact Repository.
-##  Types:.
-##    tag_setup:         python3 setup.py sdist bdist_wheel
-##    non_tag_setup:     python3 setup.py egg_info -b+dev[.c${CI_COMMIT_SHORT_SHA}] sdist bdist_wheel
-##    non_tag_pyproject: pyproject-build (or python3 -m build) (pyproject.toml package version set to +dev[.c${CI_COMMIT_SHORT_SHA}])
-##    tag_pyproject:     pyproject-build (or python3 -m build)
-
-python-build: python-pre-build python-do-build python-post-build  ## build the Python package
-
 python-pre-test:
 
 python-post-test:
@@ -186,59 +143,6 @@ python-do-test:
 ##  specific configuration set in pytest.ini, setup.cfg etc. located in ./tests
 
 python-test: python-pre-test python-do-test python-post-test  ## test the Python package
-
-python-pre-publish:
-
-python-post-publish:
-
-python-do-publish:
-	$(PYTHON_RUNNER) twine upload --username ${PYTHON_PUBLISH_USERNAME} --password ${PYTHON_PUBLISH_PASSWORD} --repository-url $(PYTHON_PUBLISH_URL) dist/*
-
-## TARGET: python-publish
-## SYNOPSIS: make python-publish
-## HOOKS: python-pre-publish, python-post-publish
-## VARS:
-##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
-##       PYTHON_PUBLISH_USERNAME=<twine user> - default empty
-##       PYTHON_PUBLISH_PASSWORD=<twine user password> - default empty
-##       PYTHON_PUBLISH_URL=<repository URL> - default empty
-##
-##  Run twine to publish artefacts built in the project dist/ directory.
-
-python-publish: python-pre-publish python-do-publish python-post-publish  ## publish the Python artefact to the repository
-
-## TARGET: python-exportlock
-## SYNOPSIS: make python-exportlock
-## HOOKS: none
-## VARS: none
-##
-##  Run poetry export to generate requirements.txt and requirements-dev.txt based on pyproject.toml.
-
-python-pre-scan:
-
-python-post-scan:
-
-python-do-scan:
-	@. $(PYTHON_SUPPORT) ; \
-		pythonScan $(PYTHON_BUILD_TYPE)
-
-python-scan: python-pre-scan python-do-scan python-post-scan  ## scan the Python artefact to the repository
-
-## TARGET: python-scan
-## SYNOPSIS: make python-scan
-## HOOKS: python-pre-scan, python-post-scan
-## VARS:
-##       PYTHON_BUILD_TYPE=[tag_setup|non_tag_setup|non_tag_pyproject|tag_pyproject]
-##
-##  Scan python packages using Gemnasium.
-
-# end of switch to suppress targets for help
-
-
-python-exportlock: ## Exports runtime dependencies to requirements.txt file if needed
-	poetry export --without-hashes -f requirements.txt --output requirements.txt
-	poetry export --without-hashes --dev -f requirements.txt --output requirements-dev.txt
-
 
 notebook-pre-format:
 

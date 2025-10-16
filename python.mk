@@ -1,3 +1,10 @@
+# Copyright (c) 2021, SKA Observatory
+# Copyright (c) 2025, UK SKA Regional Centre (UKSRC)
+#
+# All rights reserved.
+#
+# This code is licensed under the BSD 3-Clause License (with modifications).
+#
 # include Makefile for python related targets and variables
 
 .PHONY: metrics-collect-target
@@ -14,12 +21,6 @@ else
 endif
 
 PYTHON_SUPPORT := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))/.make-python-support
-RELEASE_SUPPORT := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))/.make-release-support
-PYTHON_SCRIPT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-METADATA_SUPPORT := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))/.make-metadata-support
-
-VERSION=$(shell . $(RELEASE_SUPPORT) ; RELEASE_CONTEXT_DIR=$(RELEASE_CONTEXT_DIR) setContextHelper; CONFIG=${CONFIG} setReleaseFile; getVersion)
-TAG=$(shell . $(RELEASE_SUPPORT); RELEASE_CONTEXT_DIR=$(RELEASE_CONTEXT_DIR) setContextHelper; CONFIG=${CONFIG} setReleaseFile; getTag)
 
 SHELL=/usr/bin/env bash
 

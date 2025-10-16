@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-
+#
+# Copyright (c) 2021, SKA Observatory
+# All rights reserved.
+#
+# This code is licensed under the BSD 3-Clause License.
+#
 # Shellscript support function file for Python Make targets
 
 # Find and load the release support script

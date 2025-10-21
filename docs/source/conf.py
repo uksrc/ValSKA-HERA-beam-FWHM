@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 #sys.path.insert(0, str(Path('..', 'src').resolve()))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src")
-#sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src/valska_hera_beam")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2])+"/src/valska_hera_beam")
 import valska_hera_beam
 
 # Configuration file for the Sphinx documentation builder.

@@ -1,4 +1,4 @@
-name: Python application
+name: ValSKA CI/CD Pipeline
 
 on: [push]
 

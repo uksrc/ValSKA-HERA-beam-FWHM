@@ -49,18 +49,24 @@ dependencies = [
 # Version is derived from your Git tags by setuptools-scm
 # dynamic = ["version"]
 
-
 [project.optional-dependencies]
 dev = [
+  "black",
+  "flake8",
+  "isort",
+  "pylint",
+  "pylint-junit",
   "pytest",
-  "pytest-cov5",
+  "pytest-cov",
+  "pytest-mock",
   "ruff>=0.12.0",
   "mypy",
   "pre-commit",
   "ipykernel",
   "nbstripout",
   "build",
-  "twine"
+  "twine",
+  "nbmake"
 ]
 docs = [
   "mkdocs",

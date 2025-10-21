@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2021, SKA Observatory
+# All rights reserved.
+#
+# This code is licensed under the BSD 3-Clause License (with modifications).
+#
+# Shellscript support function file for Python Make targets
+
+# Check Jupyter notebooks are in notebooks directory
+function checkNotebookDir() {
+	if [[ $(find . -name '*.ipynb' -not -path "./.venv/*" | grep -v ^./notebooks/*) ]]; then
+		NOTEBOOKS=$(find -name '*.ipynb' | grep -v ^./notebooks/)
+		echo "Warning: the following Jupyter notebook files should be placed inside ./notebooks/ directory:"
+		echo $NOTEBOOKS
+	else
+		exit 0
+	fi
+}

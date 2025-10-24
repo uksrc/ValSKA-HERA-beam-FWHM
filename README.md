@@ -1,7 +1,7 @@
-# ValSKA-HERA-beam-FWHM
+# ValSKA-HERA-beam-FWHM   
 
 **An open-source, reproducible, flexible, and extensible package for validating the sensitivity of 21-cm power spectrum forward modeling approaches to imperfect knowledge of the FWHM of the interferometric primary beam.**
-
+ 
 ## Overview
 
 ValSKA-HERA-beam-FWHM provides a Bayesian science validation case study modelling the Hydrogen Epoch of Reionization Array (HERA) using the BayesEoR modeling framework.

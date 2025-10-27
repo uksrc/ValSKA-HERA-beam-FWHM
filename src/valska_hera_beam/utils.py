@@ -56,7 +56,9 @@ class PathManager:
                 self.chains_dir = candidate_chains_dir
             else:
                 # Fall back to BayesEoR default location
-                bayeseor_notebooks = Path("/home/psims/share/test/BayesEoR/notebooks/")
+                bayeseor_notebooks = Path(
+                    "/home/psims/share/test/BayesEoR/notebooks/"
+                )
                 self.chains_dir = bayeseor_notebooks / "../chains/"
         else:
             self.chains_dir = Path(chains_dir).resolve()
@@ -115,7 +117,9 @@ class PathManager:
         paths = self.get_paths()
         if name not in paths:
             valid_keys = list(paths.keys())
-            raise KeyError(f"Path '{name}' not found. Valid paths are: {valid_keys}")
+            raise KeyError(
+                f"Path '{name}' not found. Valid paths are: {valid_keys}"
+            )
         return paths[name]
 
     def create_subdir(self, parent: str, name: str) -> Path:
@@ -143,7 +147,9 @@ class PathManager:
         new_dir.mkdir(exist_ok=True, parents=True)
         return new_dir
 
-    def find_file(self, pattern: str, path_name: Optional[str] = None) -> list[Path]:
+    def find_file(
+        self, pattern: str, path_name: Optional[str] = None
+    ) -> list[Path]:
         """Find files matching a pattern in a specified directory.
 
         Parameters
@@ -204,7 +210,9 @@ def make_timestamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
 
-def load_paths(custom_paths_file: Optional[Union[str, Path]] = None) -> Dict[str, str]:
+def load_paths(
+    custom_paths_file: Optional[Union[str, Path]] = None,
+) -> Dict[str, str]:
     """Load analysis paths from a YAML configuration file.
 
     Parameters

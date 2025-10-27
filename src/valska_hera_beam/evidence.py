@@ -163,9 +163,7 @@ def analyze_bayeseor_perturbation(
     }
 
     # Define directory names for this perturbation level
-    GSM_FgEoR_dirname = (
-        f"v5d0/GSM_FgEoR_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/"
-    )
+    GSM_FgEoR_dirname = f"v5d0/GSM_FgEoR_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/"
     # GSM_FgOnly_dirname = (
     #     f"v5d0/GSM_FgOnly_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/"
     # )
@@ -367,8 +365,8 @@ def run_complete_bayeseor_analysis(
 
     # Set perturbation levels if not provided
     if perturbation_levels is None:
-        all_perts, negative_perts, positive_perts = get_available_perturbations(
-            paths_dict
+        all_perts, negative_perts, positive_perts = (
+            get_available_perturbations(paths_dict)
         )
 
         # Select perturbations based on flags
@@ -428,21 +426,27 @@ def run_complete_bayeseor_analysis(
                 dir_prefix=dir_prefix,
                 expected_ps=expected_ps,
                 create_plots=create_plots,
-                verbose=False
-                if show_progress
-                else verbose,  # Reduce verbosity when using progress bar
+                verbose=(
+                    False if show_progress else verbose
+                ),  # Reduce verbosity when using progress bar
             )
             all_results.append(result)
 
             # Update progress bar description with current perturbation level
-            if show_progress and hasattr(perturbation_iterator, "set_description"):
-                perturbation_iterator.set_description(f"Analyzing: {pert_level}")
+            if show_progress and hasattr(
+                perturbation_iterator, "set_description"
+            ):
+                perturbation_iterator.set_description(
+                    f"Analyzing: {pert_level}"
+                )
 
     # Generate summary table (always shown)
     print("\n" + "=" * 80)
     print("COMPLETE BAYESEOR PERTURBATION ANALYSIS SUMMARY")
     print("=" * 80)
-    print(f"{'Perturbation':<12} {'Log BF':<10} {'Validation':<12} {'Interpretation'}")
+    print(
+        f"{'Perturbation':<12} {'Log BF':<10} {'Validation':<12} {'Interpretation'}"
+    )
     print("-" * 80)
     # print("-" * 85)  # Slightly longer line for wider validation column
 
@@ -455,7 +459,9 @@ def run_complete_bayeseor_analysis(
         validation = result["validation"]
 
         if validation == "ERROR":
-            print(f"{pert:<12} {'ERROR':<10} {'❌ ERROR':<15} {'Analysis failed'}")
+            print(
+                f"{pert:<12} {'ERROR':<10} {'❌ ERROR':<15} {'Analysis failed'}"
+            )
             error_count += 1
         else:
             bf_result = result["bayes_factor_result"]
@@ -475,7 +481,9 @@ def run_complete_bayeseor_analysis(
                     f"{pert:<12} {log_bf:<10.3f} {validation_display:<15} {interpretation}"
                 )
             else:
-                print(f"{pert:<12} {'N/A':<10} {'❌ ERROR':<15} {'Calculation failed'}")
+                print(
+                    f"{pert:<12} {'N/A':<10} {'❌ ERROR':<15} {'Calculation failed'}"
+                )
                 error_count += 1
 
     print("-" * 80)
@@ -495,7 +503,10 @@ def run_complete_bayeseor_analysis(
     # Prepare successful results for detailed output and return
     successful_results = []
     for result in all_results:
-        if result["validation"] != "ERROR" and result["bayes_factor_result"]["success"]:
+        if (
+            result["validation"] != "ERROR"
+            and result["bayes_factor_result"]["success"]
+        ):
             bf_data = result["bayes_factor_result"]
             detailed_result = {
                 "perturbation": result["perturbation"],
@@ -515,9 +526,15 @@ def run_complete_bayeseor_analysis(
 
         for detailed_result in successful_results:
             print(f"Perturbation: {detailed_result['perturbation']}")
-            print(f"  FgEoR Evidence: {detailed_result['log_evidence_fgeor']:.6f}")
-            print(f"  FgOnly Evidence: {detailed_result['log_evidence_fgonly']:.6f}")
-            print(f"  Log Bayes Factor: {detailed_result['log_bayes_factor']:.6f}")
+            print(
+                f"  FgEoR Evidence: {detailed_result['log_evidence_fgeor']:.6f}"
+            )
+            print(
+                f"  FgOnly Evidence: {detailed_result['log_evidence_fgonly']:.6f}"
+            )
+            print(
+                f"  Log Bayes Factor: {detailed_result['log_bayes_factor']:.6f}"
+            )
             print(f"  Validation: {detailed_result['validation']}")
             print(f"  Interpretation: {detailed_result['interpretation']}")
             print()
@@ -593,7 +610,9 @@ if run_run_examples:
 
     # Example 4: Analysis with detailed results
     print("=== Example 4: Analysis with Detailed Results ===")
-    results_detailed = run_complete_bayeseor_analysis(show_detailed_results=True)
+    results_detailed = run_complete_bayeseor_analysis(
+        show_detailed_results=True
+    )
 
     print("\n" + "=" * 80 + "\n")
 
@@ -619,6 +638,8 @@ if run_run_examples:
     if failed_cases:
         print(f"\nFailed cases ({len(failed_cases)}):")
         for case in failed_cases:
-            print(f"  {case['perturbation']}: BF = {case['log_bayes_factor']:.3f}")
+            print(
+                f"  {case['perturbation']}: BF = {case['log_bayes_factor']:.3f}"
+            )
     else:
         print("\nNo failed cases found!")

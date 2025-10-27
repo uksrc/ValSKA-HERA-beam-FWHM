@@ -327,12 +327,17 @@ class BeamAnalysisPlotter:
 
         # Pass all arguments to plot_analysis_results
         return self.plot_analysis_results(
-            analysis_keys=all_keys, labels=all_labels, suptitle=suptitle, **kwargs
+            analysis_keys=all_keys,
+            labels=all_labels,
+            suptitle=suptitle,
+            **kwargs,
         )
 
 
 # Example usage functions
-def plot_gleam_analysis(base_chains_dir: Optional[Union[str, Path]] = None) -> Figure:
+def plot_gleam_analysis(
+    base_chains_dir: Optional[Union[str, Path]] = None,
+) -> Figure:
     """Example function that reproduces the GLEAM analysis plot.
 
     Parameters
@@ -349,12 +354,16 @@ def plot_gleam_analysis(base_chains_dir: Optional[Union[str, Path]] = None) -> F
     fig = plotter.plot_analysis_results(
         analysis_keys=["GLEAM_FgEoR"],
         labels=["GLEAM"],
-        suptitle="UKSRC validation: Burba et al. 2023, Case 1. \n12.9 deg. GLEAM Analysis.",
+        suptitle=(
+            "UKSRC validation: Burba et al. 2023, Case 1. \n12.9 deg. GLEAM Analysis."
+        ),
     )
     return fig
 
 
-def plot_gsm_comparison(base_chains_dir: Optional[Union[str, Path]] = None) -> Figure:
+def plot_gsm_comparison(
+    base_chains_dir: Optional[Union[str, Path]] = None,
+) -> Figure:
     """Example function comparing different GSM perturbation levels.
 
     Parameters

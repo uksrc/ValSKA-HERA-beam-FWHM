@@ -162,15 +162,15 @@ def test_path_manager_find_file_default(path_manager):
 
 def test_create_path_manager_default():
     """Test creation of default path manager"""
-    
+
     with tempfile.TemporaryDirectory() as base_dir:
 
         test_dir = Path(base_dir + "/one/two/three/")
 
         os.mkdir(base_dir + "/chains")
 
-        with patch('inspect.getfile', new_callable=PropertyMock) as getfile:
-            
+        with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
+
             getfile.return_value = str(test_dir)
 
             path_manager = PathManager()
@@ -178,10 +178,14 @@ def test_create_path_manager_default():
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
             assert path_manager.base_dir == Path(base_dir).resolve()
-            assert path_manager.chains_dir == Path(base_dir + "/chains").resolve()
+            assert (
+                path_manager.chains_dir == Path(base_dir + "/chains").resolve()
+            )
             assert path_manager.data_dir == Path(base_dir + "/data").resolve()
-            assert path_manager.results_dir == Path(base_dir + "/results").resolve()
+            assert (
+                path_manager.results_dir
+                == Path(base_dir + "/results").resolve()
+            )
 
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
-    

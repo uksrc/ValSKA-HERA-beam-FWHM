@@ -8,6 +8,7 @@
 # ---
 name: valska
 # name: valska2
+# name: valska3
 channels:
   - conda-forge
 dependencies:
@@ -37,7 +38,7 @@ dependencies:
 
   - pip:
       # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt
-      - -e . # editable-installs valska and standard deps from pyproject.toml
-      # - -e .[dev] # editable-installs valska and all deps from pyproject.toml
+      # - -e . # editable-installs valska and standard deps from pyproject.toml
+      - -e .[dev] # editable-installs valska and all deps from pyproject.toml
       # - . # standard-installs valska and standard deps from pyproject.toml
       # - .[dev] # default installs valska and all deps from pyproject.toml

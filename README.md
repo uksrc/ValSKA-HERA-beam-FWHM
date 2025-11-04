@@ -34,6 +34,10 @@ conda env create -f valska_env.yaml
 
 *TBD: Instructions for usage, including examples.*
 
+## Documentation
+
+The documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/).
+
 ## Contributing
 
 ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request. For any additional questions or comments, please contact one of the UKSRC science validation tooling team:

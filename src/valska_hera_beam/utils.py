@@ -50,13 +50,9 @@ class PathManager:
 
         # Set up chains directory
         if chains_dir is None:
-            # Try standard location relative to base_dir
-            candidate_chains_dir = self.base_dir / "chains"
-            if candidate_chains_dir.exists():
-                self.chains_dir = candidate_chains_dir
-            else:
-                # Raise error
-                raise FileNotFoundError(f"Chains directory not found: {candidate_chains_dir}")
+            self.chains_dir = self.base_dir / "chains"
+            # Create if it doesn't exist
+            self.chains_dir.mkdir(exist_ok=True, parents=True)
         else:
             self.chains_dir = Path(chains_dir).resolve()
 

@@ -186,34 +186,25 @@ def test_path_manager_find_file_default(path_manager):
         assert result == [Path(test_file.name)]
 
 
-@pytest.mark.parametrize("pm", ["class", "method"])
-def test_create_path_manager_default_no_chains(pm):
-    """Test creation of default path manager"""
 
-    with tempfile.TemporaryDirectory() as base_dir:
-
-        test_dir = Path(base_dir + "/one/two/three/")
-
-        with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
-
-            getfile.return_value = str(test_dir)
-
-            if pm == "class":
-                with pytest.raises(FileNotFoundError):
-                    path_manager = PathManager()
-            if pm == "method":
-                with pytest.raises(FileNotFoundError):
-                    path_manager = get_default_path_manager()
-
-
-@pytest.mark.parametrize("pm", ["class", "method"])
-def test_create_path_manager_default(pm):
+@pytest.mark.parametrize(
+    "pm, chains", 
+    [
+        ("class", True), 
+        ("class", False), 
+        ("method", True), 
+        ("method", False), 
+    ]
+)
+def test_create_path_manager_default(pm, chains):
     """Test creation of default path manager without default chains directory"""
 
     with tempfile.TemporaryDirectory() as base_dir:
 
         test_dir = Path(base_dir + "/one/two/three/")
-        os.mkdir(base_dir + "/chains")
+
+        if chains:
+            os.mkdir(base_dir + "/chains")
 
         with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
 

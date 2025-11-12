@@ -15,8 +15,13 @@ from constants import (
 )
 
 import valska_hera_beam.utils
-from valska_hera_beam.utils import PathManager, load_paths, make_timestamp
-
+from valska_hera_beam.utils import (
+    PathManager,
+    load_paths, 
+    make_timestamp, 
+    get_default_path_manager, 
+    __repr__,
+)
 UTILS_DIR = Path(
     os.path.abspath(valska_hera_beam.utils.__file__)
 ).parent.resolve()
@@ -120,6 +125,27 @@ def test_path_manager_get_path_error(path_manager):
         path_manager.get_path("incorrect_name")
 
 
+def test_repr(path_manager):
+    """Test __repr__ method"""
+
+    expected_dictionary = {
+        "utils_dir": UTILS_DIR,
+        "package_dir": UTILS_DIR,
+        "base_dir": BASE_DIR,
+        "chains_dir": CHAINS_DIR,
+        "data_dir": DATA_DIR,
+        "results_dir": RESULTS_DIR,
+    }
+
+    repr_string = path_manager.__repr__()
+    print(repr_string)
+
+    expected_strs = [f"  {name}: {path}" for name, path in expected_dictionary.items()]
+    expected_string = "PathManager:\n" + "\n".join(expected_strs)
+    print(expected_string)
+
+    assert  expected_string == repr_string
+
 def test_path_manager_create_sub_dir(path_manager):
     """Test create sub directory"""
 
@@ -160,20 +186,43 @@ def test_path_manager_find_file_default(path_manager):
         assert result == [Path(test_file.name)]
 
 
-def test_create_path_manager_default():
+@pytest.mark.parametrize("pm", ["class", "method"])
+def test_create_path_manager_default_no_chains(pm):
     """Test creation of default path manager"""
 
     with tempfile.TemporaryDirectory() as base_dir:
 
         test_dir = Path(base_dir + "/one/two/three/")
 
+        with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
+
+            getfile.return_value = str(test_dir)
+
+            if pm == "class":
+                with pytest.raises(FileNotFoundError):
+                    path_manager = PathManager()
+            if pm == "method":
+                with pytest.raises(FileNotFoundError):
+                    path_manager = get_default_path_manager()
+
+
+@pytest.mark.parametrize("pm", ["class", "method"])
+def test_create_path_manager_default(pm):
+    """Test creation of default path manager without default chains directory"""
+
+    with tempfile.TemporaryDirectory() as base_dir:
+
+        test_dir = Path(base_dir + "/one/two/three/")
         os.mkdir(base_dir + "/chains")
 
         with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
 
             getfile.return_value = str(test_dir)
 
-            path_manager = PathManager()
+            if pm == "class":
+                path_manager = PathManager()
+            if pm == "method":
+                path_manager = get_default_path_manager()
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
@@ -189,3 +238,4 @@ def test_create_path_manager_default():
 
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
+

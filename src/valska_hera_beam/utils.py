@@ -55,11 +55,8 @@ class PathManager:
             if candidate_chains_dir.exists():
                 self.chains_dir = candidate_chains_dir
             else:
-                # Fall back to BayesEoR default location
-                bayeseor_notebooks = Path(
-                    "/home/psims/share/test/BayesEoR/notebooks/"
-                )
-                self.chains_dir = bayeseor_notebooks / "../chains/"
+                # Raise error
+                raise FileNotFoundError(f"Chains directory not found: {candidate_chains_dir}")
         else:
             self.chains_dir = Path(chains_dir).resolve()
 

@@ -14,17 +14,9 @@ from constants import (
     RESULTS_DIR,
 )
 
-import valska_hera_beam.utils
-from valska_hera_beam.utils import (
-    PathManager,
-    load_paths, 
-    make_timestamp, 
-    get_default_path_manager, 
-    __repr__,
-)
-UTILS_DIR = Path(
-    os.path.abspath(valska_hera_beam.utils.__file__)
-).parent.resolve()
+from valska_hera_beam import utils
+
+UTILS_DIR = Path(os.path.abspath(utils.__file__)).parent.resolve()
 
 
 def test_make_timestamp():
@@ -34,7 +26,7 @@ def test_make_timestamp():
     """
 
     time_now = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    timestamp = make_timestamp()
+    timestamp = utils.make_timestamp()
 
     assert time_now[0:4] == timestamp[0:4]
     assert time_now[5:6] == timestamp[5:6]
@@ -45,7 +37,7 @@ def test_make_timestamp():
 def test_load_paths_no_input():
     """Test load paths from default yaml file"""
 
-    paths = load_paths()
+    paths = utils.load_paths()
 
     # Reads paths.yaml from config directory
     # Test first path
@@ -64,7 +56,7 @@ def test_load_paths_with_input():
         )
         yaml_file.seek(0)
 
-        paths = load_paths(yaml_file.name)
+        paths = utils.load_paths(yaml_file.name)
 
         # Reads yaml_file
         assert paths["Test1"] == "test/directory1/"
@@ -77,7 +69,7 @@ def test_load_paths_with_input_error():
     """Test load paths from non-existant yaml file"""
 
     with pytest.raises(FileNotFoundError):
-        paths = load_paths("nonexistant_yaml_file.yml")
+        paths = utils.load_paths("nonexistant_yaml_file.yml")
 
 
 def test_path_manager_get_paths(path_manager):
@@ -140,11 +132,14 @@ def test_repr(path_manager):
     repr_string = path_manager.__repr__()
     print(repr_string)
 
-    expected_strs = [f"  {name}: {path}" for name, path in expected_dictionary.items()]
+    expected_strs = [
+        f"  {name}: {path}" for name, path in expected_dictionary.items()
+    ]
     expected_string = "PathManager:\n" + "\n".join(expected_strs)
     print(expected_string)
 
-    assert  expected_string == repr_string
+    assert expected_string == repr_string
+
 
 def test_path_manager_create_sub_dir(path_manager):
     """Test create sub directory"""
@@ -186,18 +181,20 @@ def test_path_manager_find_file_default(path_manager):
         assert result == [Path(test_file.name)]
 
 
-
 @pytest.mark.parametrize(
-    "pm, chains", 
+    "pm, chains",
     [
-        ("class", True), 
-        ("class", False), 
-        ("method", True), 
-        ("method", False), 
-    ]
+        ("class", True),
+        ("class", False),
+        ("method", True),
+        ("method", False),
+    ],
 )
 def test_create_path_manager_default(pm, chains):
-    """Test creation of default path manager without default chains directory"""
+    """
+    Test creation of default path manager
+    with or without default chains directory
+    """
 
     with tempfile.TemporaryDirectory() as base_dir:
 
@@ -211,9 +208,9 @@ def test_create_path_manager_default(pm, chains):
             getfile.return_value = str(test_dir)
 
             if pm == "class":
-                path_manager = PathManager()
+                path_manager = utils.PathManager()
             if pm == "method":
-                path_manager = get_default_path_manager()
+                path_manager = utils.get_default_path_manager()
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
@@ -229,4 +226,3 @@ def test_create_path_manager_default(pm, chains):
 
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
-

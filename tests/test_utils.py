@@ -69,10 +69,10 @@ def test_load_paths_with_input():
 
 
 def test_load_paths_with_input_error():
-    """Test load paths from non-existant yaml file"""
+    """Test load paths from non-existent yaml file"""
 
     with pytest.raises(FileNotFoundError):
-        load_paths("nonexistant_yaml_file.yml")
+        load_paths("nonexistent_yaml_file.yml")
 
 
 def test_path_manager_get_paths(path_manager):

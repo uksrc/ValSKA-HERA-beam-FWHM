@@ -68,7 +68,7 @@ NOTEBOOK_LINT_TARGET ?= .## Paths containing Jupyter notebooks to be formatted a
 .PHONY: python-format python-pre-format python-do-format python-post-format \
 	python-lint python-pre-lint python-do-lint python-post-lint \
 	python-test python-pre-test python-do-test python-post-test
-	
+
 
 python-pre-format:
 

@@ -8,7 +8,6 @@ between models in the BayesEoR analysis of HERA beam perturbations.
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import tqdm
 
 # import numpy as np
 from anesthetic import read_chains

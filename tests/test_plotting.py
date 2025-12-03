@@ -21,7 +21,7 @@ from constants import CHAINS_DIR
 #     ],
 # )
 def test_create_beam_plotter_with_paths_file():
-    """Test creating beam plotter with different options"""
+    """Test creating beam plotter with paths in yaml file"""
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
         yaml_file.writelines(
@@ -39,6 +39,21 @@ def test_create_beam_plotter_with_paths_file():
         assert beam_analysis_plotter.paths["Test1"] == "test/directory1/"
         assert beam_analysis_plotter.paths["Test2"] == "test/directory2/"
 
+def test_create_beam_plotter_with_paths_dict():
+    """Test creating beam plotter with paths in dictionary"""
+
+    paths = {
+        "Test1": "test/directory1/",
+        "Test2": "test/directory2/",
+    }
+
+    beam_analysis_plotter = BeamAnalysisPlotter(
+        base_chains_dir = CHAINS_DIR,
+        paths = paths,
+    )
+
+    assert beam_analysis_plotter.paths["Test1"] == "test/directory1/"
+    assert beam_analysis_plotter.paths["Test2"] == "test/directory2/"
 
 def test_add_analysis_path(beam_analysis):
     """Test adding an analysis path to BeamAnalysisPlotter"""

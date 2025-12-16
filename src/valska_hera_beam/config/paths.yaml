@@ -55,8 +55,8 @@ GSM_FgOnly_+5e0pp:  v5d0/GSM_FgOnly_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dP
 GSM_FgOnly_+1e1pp:  v5d0/GSM_FgOnly_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 
 ## GLEAM paths (older single-run config)
-# GLEAM_FgEoR: v6d0/GL_FgEoR/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-# GLEAM_FgOnly: v6d0/GL_FgOnly/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GLEAM_FgEoR: v6d0/GL_FgEoR/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GLEAM_FgOnly: v6d0/GL_FgOnly/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 
 # -----------------------------------------------------------------------------
 # GSM + GLEAM v7d0 paths (EoR+Foregrounds) - negative perturbations

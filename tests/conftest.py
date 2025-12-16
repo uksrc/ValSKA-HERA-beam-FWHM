@@ -41,7 +41,9 @@ def beam_analysis_fixture():
     paths = {
         "Test1": "test/directory1/",
         "Test2": "test/directory2/",
-    }
+        "Test3": "test/directory3/",
+        "Test4": "test/directory4/",
+   }
 
     beam_analysis_plotter = BeamAnalysisPlotter(
         base_chains_dir = CHAINS_DIR,

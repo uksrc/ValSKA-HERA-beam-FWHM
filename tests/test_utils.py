@@ -69,7 +69,7 @@ def test_load_paths_with_input_error():
     """Test load paths from non-existant yaml file"""
 
     with pytest.raises(FileNotFoundError):
-        paths = utils.load_paths("nonexistant_yaml_file.yml")
+        utils.load_paths("nonexistant_yaml_file.yml")
 
 
 def test_path_manager_get_paths(path_manager):
@@ -227,6 +227,7 @@ def test_create_path_manager_default(pm, chains):
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
 
+
 @pytest.mark.parametrize(
     "key, prefix, label_prefix, expected_result",
     [
@@ -243,10 +244,10 @@ def test_create_path_manager_default(pm, chains):
     ],
 )
 def test_pp_key_to_percent_label(key, prefix, label_prefix, expected_result):
-    """ Test to strip prefix from key to produce labels """
+    """Test to strip prefix from key to produce labels"""
 
     label = utils._pp_key_to_percent_label(key, prefix, label_prefix)
-    
+
     assert label == expected_result
 
 
@@ -256,20 +257,20 @@ def test_build_pp_groups_from_paths_default():
     prefixes = ["GSM_FgEoR_"]
 
     expected_output = {
-        'GSM -10%': ['GSM_FgEoR_-1e1pp'],
-        'GSM -5%': ['GSM_FgEoR_-5e0pp'], 
-        'GSM -2%': ['GSM_FgEoR_-2e0pp'], 
-        'GSM -1%': ['GSM_FgEoR_-1e0pp'], 
-        'GSM -0.1%': ['GSM_FgEoR_-1e-1pp'], 
-        'GSM -0.01%': ['GSM_FgEoR_-1e-2pp'], 
-        'GSM -0.001%': ['GSM_FgEoR_-1e-3pp'], 
-        'GSM +0.001%': ['GSM_FgEoR_+1e-3pp'], 
-        'GSM +0.01%': ['GSM_FgEoR_+1e-2pp'], 
-        'GSM +0.1%': ['GSM_FgEoR_+1e-1pp'], 
-        'GSM +1%': ['GSM_FgEoR_+1e0pp'], 
-        'GSM +2%': ['GSM_FgEoR_+2e0pp'], 
-        'GSM +5%': ['GSM_FgEoR_+5e0pp'], 
-        'GSM +10%': ['GSM_FgEoR_+1e1pp'],
+        "GSM -10%": ["GSM_FgEoR_-1e1pp"],
+        "GSM -5%": ["GSM_FgEoR_-5e0pp"],
+        "GSM -2%": ["GSM_FgEoR_-2e0pp"],
+        "GSM -1%": ["GSM_FgEoR_-1e0pp"],
+        "GSM -0.1%": ["GSM_FgEoR_-1e-1pp"],
+        "GSM -0.01%": ["GSM_FgEoR_-1e-2pp"],
+        "GSM -0.001%": ["GSM_FgEoR_-1e-3pp"],
+        "GSM +0.001%": ["GSM_FgEoR_+1e-3pp"],
+        "GSM +0.01%": ["GSM_FgEoR_+1e-2pp"],
+        "GSM +0.1%": ["GSM_FgEoR_+1e-1pp"],
+        "GSM +1%": ["GSM_FgEoR_+1e0pp"],
+        "GSM +2%": ["GSM_FgEoR_+2e0pp"],
+        "GSM +5%": ["GSM_FgEoR_+5e0pp"],
+        "GSM +10%": ["GSM_FgEoR_+1e1pp"],
     }
 
     groups = utils.build_pp_groups_from_paths(prefixes)
@@ -281,64 +282,58 @@ def test_build_pp_groups_from_paths_default():
     "prefixes, label_prefixes, expected_result",
     [
         (
-            ["Test1_"], 
-            {"Test1_": "T1", "Test2_": "T2"}, 
+            ["Test1_"],
+            {"Test1_": "T1", "Test2_": "T2"},
             {
-                'T1 -0.001%': ['Test1_-1e-3pp'],
-                'T1 -0.01%': ['Test1_-1e-2pp'],
-                'T1 -0.1%': ['Test1_-1e-1pp'],
-                'T1 -1%': ['Test1_-1e0pp'],
-            }
+                "T1 -0.001%": ["Test1_-1e-3pp"],
+                "T1 -0.01%": ["Test1_-1e-2pp"],
+                "T1 -0.1%": ["Test1_-1e-1pp"],
+                "T1 -1%": ["Test1_-1e0pp"],
+            },
         ),
         (
-            ["Test2_"], 
-            {"Test1_": "T1", "Test2_": "T2"}, 
+            ["Test2_"],
+            {"Test1_": "T1", "Test2_": "T2"},
             {
-                'T2 -2%': ['Test2_-2e0pp'],
-                'T2 -5%': ['Test2_-5e0pp'],
-                'T2 -10%': ['Test2_-1e1pp'],
-            }
+                "T2 -2%": ["Test2_-2e0pp"],
+                "T2 -5%": ["Test2_-5e0pp"],
+                "T2 -10%": ["Test2_-1e1pp"],
+            },
         ),
         (
-            ["Test2_"], 
-            {"Dummy": "something"}, 
+            ["Test2_"],
+            {"Dummy": "something"},
             {
-                'Test2 -2%': ['Test2_-2e0pp'],
-                'Test2 -5%': ['Test2_-5e0pp'],
-                'Test2 -10%': ['Test2_-1e1pp'],
-            }
+                "Test2 -2%": ["Test2_-2e0pp"],
+                "Test2 -5%": ["Test2_-5e0pp"],
+                "Test2 -10%": ["Test2_-1e1pp"],
+            },
         ),
         (
-            ["Test2_"], 
-            None, 
+            ["Test2_"],
+            None,
             {
-                'Test2 -2%': ['Test2_-2e0pp'],
-                'Test2 -5%': ['Test2_-5e0pp'],
-                'Test2 -10%': ['Test2_-1e1pp'],
-            }
+                "Test2 -2%": ["Test2_-2e0pp"],
+                "Test2 -5%": ["Test2_-5e0pp"],
+                "Test2 -10%": ["Test2_-1e1pp"],
+            },
         ),
         (
-            ["Test2_"], 
-            None, 
+            ["Test2_"],
+            None,
             {
-                'Test2 -2%': ['Test2_-2e0pp'],
-                'Test2 -5%': ['Test2_-5e0pp'],
-                'Test2 -10%': ['Test2_-1e1pp'],
-            }
+                "Test2 -2%": ["Test2_-2e0pp"],
+                "Test2 -5%": ["Test2_-5e0pp"],
+                "Test2 -10%": ["Test2_-1e1pp"],
+            },
         ),
-        (
-            ["Test3_"], 
-            {"Test1_": "T1", "Test2_": "T2"}, 
-            {}
-        ),
-        (
-            ["Test4_"], 
-            {"Test1_": "T1", "Test2_": "T2"}, 
-            {}
-        ),
+        (["Test3_"], {"Test1_": "T1", "Test2_": "T2"}, {}),
+        (["Test4_"], {"Test1_": "T1", "Test2_": "T2"}, {}),
     ],
 )
-def test_build_pp_groups_from_paths_with_input(prefixes, label_prefixes, expected_result):
+def test_build_pp_groups_from_paths_with_input(
+    prefixes, label_prefixes, expected_result
+):
     """Test with input yaml file"""
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
@@ -354,11 +349,11 @@ def test_build_pp_groups_from_paths_with_input(prefixes, label_prefixes, expecte
                 "Test3_-ee1pp: test/directory3/",
             ]
         )
-   
+
         yaml_file.seek(0)
 
         groups = utils.build_pp_groups_from_paths(
-            prefixes, 
+            prefixes,
             custom_paths_file=yaml_file.name,
             label_prefixes=label_prefixes,
         )

@@ -43,14 +43,13 @@ def beam_analysis_fixture():
         "Test2": "test/directory2/",
         "Test3": "test/directory3/",
         "Test4": "test/directory4/",
-   }
+    }
 
     beam_analysis_plotter = BeamAnalysisPlotter(
-        base_chains_dir = CHAINS_DIR,
-        paths = paths,
-        eor_ps = EOR_PS,
-        noise_ratio = NOISE_RATIO,
+        base_chains_dir=CHAINS_DIR,
+        paths=paths,
+        eor_ps=EOR_PS,
+        noise_ratio=NOISE_RATIO,
     )
 
     yield beam_analysis_plotter
-

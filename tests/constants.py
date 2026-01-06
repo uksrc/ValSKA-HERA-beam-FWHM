@@ -108,3 +108,20 @@ class MockText:
 
     def set_text(self, text):
         self.text = text
+
+
+class MockChain:
+    """
+    Mock class for chain
+    (to mock output of anesthetic.read_chains)
+    """
+
+    def __init__(self, chain_path):
+        self.read_chain(chain_path)
+
+    def read_chain(self, chain_path):
+        with open(chain_path) as file:
+            self.logZ_value = file.read()
+
+    def logZ(self):
+        return self.logZ_value

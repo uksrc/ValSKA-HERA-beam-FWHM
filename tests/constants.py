@@ -125,3 +125,10 @@ class MockChain:
 
     def logZ(self):
         return self.logZ_value
+
+
+def mock_read_chains(*args, **kwargs):
+    """
+    Mock method to replace anesthetic read_chains()
+    """
+    return MockChain(args[0])

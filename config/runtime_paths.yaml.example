@@ -1,0 +1,11 @@
+# Example site/user-specific runtime configuration for ValSKA.
+# Copy this file to config/runtime_paths.yaml and edit paths for your system.
+# (config/runtime_paths.yaml should typically be gitignored.)
+
+results_root: ~/UKSRC/ValSKA/results
+
+bayeseor:
+  repo_path: /path/to/BayesEoR
+  conda_sh: "source /path/to/miniconda3/etc/profile.d/conda.sh"
+  conda_env: bayeseor
+  default_template: validation_v1d0_template.yaml

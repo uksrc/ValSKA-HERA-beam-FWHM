@@ -213,5 +213,7 @@ __marimo__/
 temp/
 chains/
 old/
-
-
+Old/
+*.egg-info/
+src/valska_hera_beam/_version.py
+file_structure.txt

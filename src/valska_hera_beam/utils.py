@@ -1,12 +1,125 @@
-"""Utility functions for the ValSKA-HERA-beam-FWHM package."""
+"""Utility functions for the ValSKA-HERA-beam-FWHM package.
+
+This module provides:
+
+- Path management via :class:`PathManager`
+- Loading of analysis paths from ``config/paths.yaml``
+- Helpers to build perturbation groups and human-readable labels
+- Simple filtering helpers for perturbation keys
+"""
+
+from __future__ import annotations
 
 import inspect
-
-# import os
+import os
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Mapping, MutableMapping, Optional, Union
 
 import yaml
+
+# =============================================================================
+# TYPE ALIASES
+# =============================================================================
+
+PathLike = Union[str, Path]
+PairsMap = Mapping[str, object]  # generic mapping of key -> value
+MutablePairsMap = MutableMapping[str, object]
+
+
+# =============================================================================
+# RUNTIME PATHS YAML (SITE/USER CONFIG)
+# =============================================================================
+
+
+def load_runtime_paths(
+    base_dir: Optional[PathLike] = None,
+    runtime_paths_file: Optional[PathLike] = None,
+) -> Dict[str, object]:
+    """Load site/user runtime paths from ``config/runtime_paths.yaml`` if present.
+
+    This configuration is intended for *site/user-specific* settings such as:
+
+    - results_root (where all ValSKA outputs go)
+    - BayesEoR repo_path / conda_sh / conda_env defaults
+    - Other external tool paths (pyuvsim, OSKAR) in future
+
+    By convention, ``config/runtime_paths.yaml`` is often gitignored, and an
+    ``.example`` version is committed instead.
+
+    Parameters
+    ----------
+    base_dir
+        Repository base directory. If None, inferred from this module location.
+        Only used when runtime_paths_file is None.
+    runtime_paths_file
+        Explicit path to a runtime paths YAML. If None, uses
+        ``<base_dir>/config/runtime_paths.yaml``.
+
+    Returns
+    -------
+    dict
+        Parsed YAML mapping. Returns an empty dict if the file does not exist.
+
+    Raises
+    ------
+    ValueError
+        If the YAML exists but does not contain a mapping at top level.
+    """
+    if runtime_paths_file is not None:
+        p = Path(runtime_paths_file).expanduser().resolve()
+    else:
+        if base_dir is None:
+            # Infer repo root similarly to PathManager
+            utils_dir = Path(
+                inspect.getfile(load_runtime_paths)
+            ).parent.resolve()
+            base_dir_path = utils_dir.parent.parent.resolve()
+        else:
+            base_dir_path = Path(base_dir).expanduser().resolve()
+
+        p = (base_dir_path / "config" / "runtime_paths.yaml").resolve()
+
+    if not p.exists():
+        return {}
+
+    with p.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected a mapping in runtime paths YAML: {p}")
+
+    return data
+
+
+# =============================================================================
+# PATH MANAGEMENT
+# =============================================================================
+
+
+def _default_results_root(base_dir: Path) -> Path:
+    """
+    Resolve a sensible default results_root for HPC and local use.
+
+    Resolution order:
+      1) runtime_paths.yaml (results_root key) [handled by PathManager]
+      2) $VALSKA_RESULTS_ROOT
+      3) $SCRATCH/UKSRC/ValSKA/results
+      4) $HOME/UKSRC/ValSKA/results
+      5) <base_dir>/results
+    """
+    env = os.environ.get("VALSKA_RESULTS_ROOT")
+    if env:
+        return Path(env).expanduser().resolve()
+
+    scratch = os.environ.get("SCRATCH")
+    if scratch:
+        return (Path(scratch) / "UKSRC" / "ValSKA" / "results").resolve()
+
+    home = os.environ.get("HOME")
+    if home:
+        return (Path(home) / "UKSRC" / "ValSKA" / "results").resolve()
+
+    return (base_dir / "results").resolve()
 
 
 class PathManager:
@@ -14,70 +127,114 @@ class PathManager:
 
     def __init__(
         self,
-        base_dir: Optional[Union[str, Path]] = None,
-        chains_dir: Optional[Union[str, Path]] = None,
-        data_dir: Optional[Union[str, Path]] = None,
-        results_dir: Optional[Union[str, Path]] = None,
+        base_dir: Optional[PathLike] = None,
+        chains_dir: Optional[PathLike] = None,
+        data_dir: Optional[PathLike] = None,
+        results_dir: Optional[PathLike] = None,
+        results_root: Optional[PathLike] = None,
+        runtime_paths_file: Optional[PathLike] = None,
     ):
         """Initialize the PathManager with configurable directories.
 
         If directories are not specified, they will be automatically determined
-        relative to the package location.
+        relative to the package location and common HPC conventions.
 
         Parameters
         ----------
-        base_dir : str or Path, optional
+        base_dir
             Base directory of the project. If None, it's determined automatically.
-        chains_dir : str or Path, optional
-            Directory containing chain files. If None, defaults to {base_dir}/chains
-            or falls back to BayesEoR default location.
-        data_dir : str or Path, optional
-            Directory containing data files. If None, defaults to {base_dir}/data.
-        results_dir : str or Path, optional
-            Directory for storing results. If None, defaults to {base_dir}/results.
+        chains_dir
+            Directory containing chain files. If None, attempts:
+              - $BAYESEOR_CHAINS_DIR (if set)
+              - <results_root>/bayeseor (if exists)
+              - <base_dir>/chains (if exists)
+              - <base_dir>/results (fallback)
+        data_dir
+            Directory containing data files. If None, defaults to <base_dir>/data (created).
+        results_dir
+            Directory for ValSKA-produced results (tables/plots/summaries).
+            If None, defaults to <results_root>/validation (created).
+        results_root
+            Root directory for all ValSKA-generated outputs, including external tool outputs.
+            If None, PathManager checks (in order):
+              - config/runtime_paths.yaml (results_root key)
+              - $VALSKA_RESULTS_ROOT
+              - $SCRATCH/UKSRC/ValSKA/results
+              - $HOME/UKSRC/ValSKA/results
+              - <base_dir>/results
+        runtime_paths_file
+            Optional explicit path to a runtime paths YAML file.
+            If None, uses ``<base_dir>/config/runtime_paths.yaml``.
         """
-        # Get the directory of this file
+        # Directory containing this module
         self.utils_dir = Path(inspect.getfile(self.__class__)).parent.resolve()
 
-        # Determine package src directory (one level up from utils_dir)
+        # Package dir (same as utils_dir for src layout)
         self.package_dir = self.utils_dir
 
-        # Determine base directory (two levels up from utils_dir)
+        # Determine base directory (two levels up from utils_dir, i.e. repo root)
         if base_dir is None:
             self.base_dir = self.utils_dir.parent.parent.resolve()
         else:
-            self.base_dir = Path(base_dir).resolve()
+            self.base_dir = Path(base_dir).expanduser().resolve()
 
-        # Set up chains directory
-        if chains_dir is None:
-            # Try standard location relative to base_dir
-            candidate_chains_dir = self.base_dir / "chains"
-            if candidate_chains_dir.exists():
-                self.chains_dir = candidate_chains_dir
+        # Load runtime paths YAML (site/user config)
+        self.runtime_paths: Dict[str, object] = load_runtime_paths(
+            base_dir=self.base_dir,
+            runtime_paths_file=runtime_paths_file,
+        )
+
+        # Resolve results_root
+        if results_root is None:
+            cfg_rr = self.runtime_paths.get("results_root")
+            if cfg_rr:
+                self.results_root = Path(str(cfg_rr)).expanduser().resolve()
             else:
-                # Fall back to BayesEoR default location
-                bayeseor_notebooks = Path(
-                    "/home/psims/share/test/BayesEoR/notebooks/"
-                )
-                self.chains_dir = bayeseor_notebooks / "../chains/"
+                self.results_root = _default_results_root(self.base_dir)
         else:
-            self.chains_dir = Path(chains_dir).resolve()
+            self.results_root = Path(results_root).expanduser().resolve()
+        self.results_root.mkdir(exist_ok=True, parents=True)
 
         # Set up data directory
         if data_dir is None:
-            self.data_dir = self.base_dir / "data"
-            # Create if it doesn't exist
+            self.data_dir = (self.base_dir / "data").resolve()
             self.data_dir.mkdir(exist_ok=True, parents=True)
         else:
-            self.data_dir = Path(data_dir).resolve()
+            self.data_dir = Path(data_dir).expanduser().resolve()
+            self.data_dir.mkdir(exist_ok=True, parents=True)
 
-        # Set up results directory
+        # Set up results directory (ValSKA internal results, not external tool outputs)
+        # Default to a subdir under results_root so everything stays together.
         if results_dir is None:
-            self.results_dir = self.base_dir / "results"
-            # Create if it doesn't exist
+            self.results_dir = (self.results_root / "validation").resolve()
             self.results_dir.mkdir(exist_ok=True, parents=True)
         else:
-            self.results_dir = Path(results_dir).resolve()
+            self.results_dir = Path(results_dir).expanduser().resolve()
+            self.results_dir.mkdir(exist_ok=True, parents=True)
+
+        # Set up chains directory
+        if chains_dir is None:
+            # 1) Explicit override for external-tool chain location
+            env_chains = os.environ.get("BAYESEOR_CHAINS_DIR")
+            if env_chains:
+                self.chains_dir = Path(env_chains).expanduser().resolve()
+            else:
+                # 2) Prefer ValSKA-managed BayesEoR output tree if present
+                candidate_bayeseor = (self.results_root / "bayeseor").resolve()
+                if candidate_bayeseor.exists():
+                    self.chains_dir = candidate_bayeseor
+                else:
+                    # 3) Repo-local chains (legacy)
+                    candidate_chains_dir = (self.base_dir / "chains").resolve()
+                    if candidate_chains_dir.exists():
+                        self.chains_dir = candidate_chains_dir
+                    else:
+                        # 4) Last resort: base_dir/results
+                        self.chains_dir = (self.base_dir / "results").resolve()
+        else:
+            self.chains_dir = Path(chains_dir).expanduser().resolve()
+
+        # Do not mkdir chains_dir here: chains are often produced externally.
 
     def get_paths(self) -> Dict[str, Path]:
         """Get a dictionary of all managed paths.
@@ -85,12 +242,13 @@ class PathManager:
         Returns
         -------
         dict
-            Dictionary mapping path names to Path objects
+            Dictionary mapping path names to :class:`pathlib.Path` objects.
         """
         return {
             "utils_dir": self.utils_dir,
             "package_dir": self.package_dir,
             "base_dir": self.base_dir,
+            "results_root": self.results_root,
             "chains_dir": self.chains_dir,
             "data_dir": self.data_dir,
             "results_dir": self.results_dir,
@@ -101,18 +259,18 @@ class PathManager:
 
         Parameters
         ----------
-        name : str
-            Name of the path to retrieve
+        name
+            Name of the path to retrieve.
 
         Returns
         -------
         Path
-            Requested path
+            Requested path.
 
         Raises
         ------
         KeyError
-            If the requested path name doesn't exist
+            If the requested path name doesn't exist.
         """
         paths = self.get_paths()
         if name not in paths:
@@ -127,20 +285,20 @@ class PathManager:
 
         Parameters
         ----------
-        parent : str
-            Name of the parent directory (one of the managed paths)
-        name : str
-            Name of the subdirectory to create
+        parent
+            Name of the parent directory (one of the managed paths).
+        name
+            Name of the subdirectory to create.
 
         Returns
         -------
         Path
-            Path to the created subdirectory
+            Path to the created subdirectory.
 
         Raises
         ------
         KeyError
-            If the parent directory name is invalid
+            If the parent directory name is invalid.
         """
         parent_dir = self.get_path(parent)
         new_dir = parent_dir / name
@@ -154,15 +312,15 @@ class PathManager:
 
         Parameters
         ----------
-        pattern : str
-            Glob pattern to match files
-        path_name : str, optional
-            Name of the directory to search in. If None, searches in base_dir.
+        pattern
+            Glob pattern to match files.
+        path_name
+            Name of the directory to search in. If None, searches in ``base_dir``.
 
         Returns
         -------
         list of Path
-            List of paths to files matching the pattern
+            List of paths to files matching the pattern.
         """
         if path_name is None:
             search_dir = self.base_dir
@@ -172,58 +330,47 @@ class PathManager:
         return list(search_dir.glob(pattern))
 
     def __repr__(self) -> str:
-        """Return a string representation of the PathManager.
-
-        Returns
-        -------
-        str
-            String representation showing all managed paths
-        """
+        """Return a string representation of the PathManager."""
         paths = self.get_paths()
         path_strs = [f"  {name}: {path}" for name, path in paths.items()]
         return "PathManager:\n" + "\n".join(path_strs)
 
 
-# Example function that demonstrates how to use the PathManager
 def get_default_path_manager() -> PathManager:
-    """Get a PathManager instance with default settings.
-
-    Returns
-    -------
-    PathManager
-        A PathManager instance with automatically determined paths
-    """
+    """Get a :class:`PathManager` instance with default settings."""
     return PathManager()
 
 
-# Additional utility functions can be added below
+# =============================================================================
+# CONFIG / PATHS YAML
+# =============================================================================
+
+
 def make_timestamp() -> str:
     """Create a timestamp string for naming files and directories.
 
     Returns
     -------
     str
-        Current timestamp in format YYYY-MM-DD_HHMMSS
+        Current timestamp in format ``YYYY-MM-DD_HHMMSS``.
     """
     from datetime import datetime
 
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
 
-def load_paths(
-    custom_paths_file: Optional[Union[str, Path]] = None,
-) -> Dict[str, str]:
+def load_paths(custom_paths_file: Optional[PathLike] = None) -> Dict[str, str]:
     """Load analysis paths from a YAML configuration file.
 
     Parameters
     ----------
-    custom_paths_file : str or Path, optional
+    custom_paths_file
         Custom paths file to load. If None, loads the default paths file.
 
     Returns
     -------
     dict
-        Dictionary of analysis path keys to paths
+        Dictionary of analysis path keys to relative chain subdirectories.
     """
     if custom_paths_file is None:
         # Get the directory of this file
@@ -241,26 +388,33 @@ def load_paths(
     return paths
 
 
+# =============================================================================
+# LABEL / GROUP HELPERS
+# =============================================================================
+
+
 def _pp_key_to_percent_label(
     key: str,
     prefix: str,
     label_prefix: str | None = None,
 ) -> Optional[str]:
-    """Convert '<prefix><pp>' key into a '<label_prefix> ±X%' label.
+    """Convert ``'<prefix><pp>'`` key into a ``'<label_prefix> ±X%'`` label.
 
     Parameters
     ----------
-    key : str
-        Full analysis key (e.g. 'GSM_FgEoR_-1e0pp', 'GL_FgEoR_1.0e-01pp').
-    prefix : str
-        The prefix to strip before the numeric part (e.g. 'GSM_FgEoR_', 'GL_FgEoR_').
-    label_prefix : str, optional
-        Text to put in front of the percentage (default: derived from prefix).
+    key
+        Full analysis key (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
+    prefix
+        The prefix to strip before the numeric part
+        (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
+    label_prefix
+        Text to put in front of the percentage (default: derived from ``prefix``).
 
     Returns
     -------
     str or None
-        Human-readable label (e.g. 'GSM -1%', 'GL +0.1%') or None if not matched.
+        Human-readable label (e.g. ``'GSM -1%'``, ``'GL +0.1%'``)
+        or ``None`` if the key does not match the expected format.
     """
     if not key.startswith(prefix):
         return None
@@ -290,19 +444,30 @@ def _pp_key_to_percent_label(
 
 def build_pp_groups_from_paths(
     prefixes: list[str],
-    custom_paths_file: Optional[Union[str, Path]] = None,
+    custom_paths_file: Optional[PathLike] = None,
     label_prefixes: Optional[Dict[str, str]] = None,
 ) -> Dict[str, list[str]]:
-    """
-    Build groups for perturbation runs from paths.yaml for one or more prefixes.
+    """Build perturbation groups from ``paths.yaml`` for one or more prefixes.
 
-    Examples
-    --------
-    prefixes=['GSM_FgEoR_']                              -> GSM v5d0 EoR+Fg
-    prefixes=['GL_FgEoR_']                               -> GSM+GLEAM v7d0 EoR+Fg
-    prefixes=['GSM_FgEoR_', 'GL_FgEoR_']                 -> combined
-    label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}
-        -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
+    Parameters
+    ----------
+    prefixes
+        Key prefixes to select analyses, e.g.
+        ``['GSM_FgEoR_']`` (GSM v5d0 EoR+Fg),
+        ``['GL_FgEoR_']`` (GSM+GLEAM v7d0 EoR+Fg),
+        or ``['GSM_FgEoR_', 'GL_FgEoR_']`` (combined).
+    custom_paths_file
+        Optional custom paths file to load. If None, uses the default.
+    label_prefixes
+        Optional mapping from prefix to label prefix, e.g.
+        ``{'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}`` to get labels like
+        ``'GSM -1%'`` and ``'GL -1%'``.
+
+    Returns
+    -------
+    dict
+        Mapping from human-readable label (e.g. ``'GSM -1%'``) to a list of
+        analysis keys (e.g. ``['GSM_FgEoR_-1e0pp', 'GL_FgEoR_-1.0e00pp']``).
     """
     paths = load_paths(custom_paths_file)
     raw_groups: Dict[str, list[str]] = {}
@@ -317,7 +482,9 @@ def build_pp_groups_from_paths(
                 lp = label_prefixes.get(prefix)
 
             label = _pp_key_to_percent_label(
-                key, prefix=prefix, label_prefix=lp
+                key,
+                prefix=prefix,
+                label_prefix=lp,
             )
             if label is None:
                 continue
@@ -325,6 +492,7 @@ def build_pp_groups_from_paths(
             raw_groups.setdefault(label, []).append(key)
 
     def label_to_val(lbl: str) -> float:
+        # 'GSM -0.1%' -> -0.1
         try:
             return float(lbl.split()[-1].strip("%"))
         except Exception:
@@ -338,16 +506,149 @@ def build_pp_groups_from_paths(
 
 
 def build_group_labels(groups: Dict[str, list[str]]) -> Dict[str, str]:
-    """Simple label -> label mapping."""
+    """Build a simple group_labels dict (identity mapping)."""
     return {label: label for label in groups.keys()}
 
 
+# =============================================================================
+# FILTER HELPERS FOR PERTURBATION KEYS
+# =============================================================================
+
+
+def _parse_pp_key_to_float(key: str) -> float:
+    """Parse a perturbation key of the form ``'<something><value>pp'`` to float.
+
+    This is a small internal utility to convert keys like
+    ``'GSM_FgEoR_-1e0pp'`` or ``'GL_FgOnly_1.0e-01pp'`` into the numeric value
+    (already in percentage points) used for filtering.
+
+    Parameters
+    ----------
+    key
+        Perturbation key ending with ``'pp'``.
+
+    Returns
+    -------
+    float
+        The parsed numeric value.
+
+    Raises
+    ------
+    ValueError
+        If the key does not end with ``'pp'`` or the numeric part cannot be
+        parsed as a float.
+    """
+    if not key.endswith("pp"):
+        raise ValueError(f"Key does not end with 'pp': {key}")
+
+    # Extract the last token that contains the numeric part with 'pp'
+    token = key.split("_")[-1]  # e.g. '-1e0pp' or '1.0e-01pp'
+    mag_str = token[:-2]  # strip 'pp'
+    return float(mag_str)
+
+
+def filter_chain_pairs(
+    pairs: PairsMap,
+    min_value: float = -0.1,
+    max_value: float = 0.1,
+) -> Dict[str, object]:
+    """Filter chain pairs by signed perturbation value in percentage points.
+
+    Parameters
+    ----------
+    pairs
+        Mapping from perturbation key (ending with ``'pp'``) to any value
+        (e.g. :class:`ChainPair` objects).
+    min_value
+        Minimum allowed value (inclusive), in percentage points.
+    max_value
+        Maximum allowed value (inclusive), in percentage points.
+
+    Returns
+    -------
+    dict
+        Filtered mapping containing only keys with
+        ``min_value <= value <= max_value``.
+
+    Notes
+    -----
+    The numeric value is taken directly from the ``'<value>pp'`` suffix, e.g.
+    ``'-1e0pp' -> -1.0``, ``'1.0e-01pp' -> 0.1``.
+    """
+    filtered: Dict[str, object] = {}
+    for key, value in pairs.items():
+        try:
+            numeric_value = _parse_pp_key_to_float(key)
+        except ValueError:
+            # Skip keys that do not follow the expected pattern
+            continue
+
+        if min_value <= numeric_value <= max_value:
+            filtered[key] = value
+
+    return filtered
+
+
+def filter_chain_pairs_absolute_range(
+    pairs: PairsMap,
+    min_abs_value: float = 0.001,
+    max_abs_value: float = 0.1,
+) -> Dict[str, object]:
+    """Filter chain pairs by absolute perturbation value in percentage points.
+
+    Parameters
+    ----------
+    pairs
+        Mapping from perturbation key (ending with ``'pp'``) to any value
+        (e.g. :class:`ChainPair` objects).
+    min_abs_value
+        Minimum allowed absolute value (inclusive), in percentage points.
+    max_abs_value
+        Maximum allowed absolute value (inclusive), in percentage points.
+
+    Returns
+    -------
+    dict
+        Filtered mapping containing only keys with
+        ``min_abs_value <= |value| <= max_abs_value``.
+    """
+    filtered: Dict[str, object] = {}
+    for key, value in pairs.items():
+        try:
+            numeric_value = abs(_parse_pp_key_to_float(key))
+        except ValueError:
+            # Skip keys that do not follow the expected pattern
+            continue
+
+        if min_abs_value <= numeric_value <= max_abs_value:
+            filtered[key] = value
+
+    return filtered
+
+
+# =============================================================================
+# EXAMPLES (MANUAL)
+# =============================================================================
+
+
 if __name__ == "__main__":
-    # Example usage
+    # Simple manual checks, similar in spirit to evidence.py examples.
+
+    # PathManager example
     path_manager = get_default_path_manager()
     print(path_manager)
 
-    # # Create a timestamped results directory
-    # timestamp = make_timestamp()
-    # results_subdir = path_manager.create_subdir("results_dir", f"run_{timestamp}")
-    # print(f"\nCreated results directory: {results_subdir}")
+    # Example usage of load_paths and grouping helpers
+    try:
+        paths = load_paths()
+        print(f"\nLoaded {len(paths)} paths from config/paths.yaml")
+
+        groups = build_pp_groups_from_paths(
+            prefixes=["GSM_FgEoR_", "GL_FgEoR_"],
+            label_prefixes={"GSM_FgEoR_": "GSM", "GL_FgEoR_": "GL"},
+        )
+        print("\nAvailable perturbation groups:")
+        for label, keys in groups.items():
+            print(f"  {label}: {keys}")
+    except FileNotFoundError as exc:
+        print(f"\nCould not load paths.yaml: {exc}")

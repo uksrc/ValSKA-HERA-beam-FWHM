@@ -1,0 +1,28 @@
+# Site/user-specific runtime configuration for ValSKA.
+
+# Where ValSKA should write all results (BayesEoR outputs, validation plots/tables, etc.)
+results_root: /home/psims/share/validation_results/UKSRC/
+
+bayeseor:
+  # Path to a local clone of BayesEoR used to locate scripts/run-analysis.py
+  repo_path: /home/psims/share/test/Updated_BayesEoR_Nov2025/BayesEoR
+
+  # Conda settings used inside SLURM scripts (non-interactive shells)
+  conda_sh: "source /home/psims/share/miniconda3/etc/profile.d/conda.sh"
+  conda_env: bayeseor_test2
+
+  # Default shipped template to use if --template is not provided
+  default_template: validation_v1d0_template.yaml
+
+  # Whether to enforce unique output directories by default
+  unique_by_default: false
+
+  # Default SLURM settings for BayesEoR runs
+  slurm_defaults:
+    partition: a100_gpu
+    time: "1-00:00:00"
+    mem: 400G
+    cpus_per_task: 32
+    job_name_prefix: "bayeseor"
+    ntasks: 1
+    mpi: pmi2

@@ -28,9 +28,6 @@ _YAML.width = 4096  # avoid wrapping compact priors blocks
 
 
 def _load_yaml(path: Path) -> CommentedMap:
-    """
-    Load YAML into a ruamel CommentedMap for better formatting control.
-    """
     with path.open("r", encoding="utf-8") as f:
         data = _YAML.load(f)
     if not isinstance(data, CommentedMap):
@@ -39,10 +36,6 @@ def _load_yaml(path: Path) -> CommentedMap:
 
 
 def _dump_yaml(data: Mapping[str, Any], path: Path) -> None:
-    """
-    Write YAML using ruamel.yaml, preserving flow-style priors blocks where possible.
-    """
-    # Ensure we dump a CommentedMap for consistent formatting.
     if isinstance(data, CommentedMap):
         out = data
     else:
@@ -53,19 +46,12 @@ def _dump_yaml(data: Mapping[str, Any], path: Path) -> None:
 
 
 def _as_flow_seq(seq: Any) -> CommentedSeq:
-    """
-    Convert a Python list (possibly nested) into a ruamel CommentedSeq and set
-    flow style on the outermost sequence, plus inner sequences if present.
-
-    This preserves easy-to-parse priors formatting: [[-4.0, 2.0], [-3.2, 2.8], ...]
-    """
     if isinstance(seq, CommentedSeq):
         out = seq
     else:
         out = CommentedSeq(seq)
 
-    out.fa.set_flow_style()  # outer in flow style
-    # Inner pairs also in flow style
+    out.fa.set_flow_style()
     for i, item in enumerate(list(out)):
         if isinstance(item, (list, tuple, CommentedSeq)):
             inner = (
@@ -77,7 +63,7 @@ def _as_flow_seq(seq: Any) -> CommentedSeq:
 
 
 # -----------------------------------------------------------------------------
-# FWHM perturbation (Option A)
+# FWHM perturbation
 # -----------------------------------------------------------------------------
 
 
@@ -86,22 +72,6 @@ def _apply_fwhm_perturbation(
     *,
     fwhm_perturb_frac: float | None,
 ) -> dict[str, Any] | None:
-    """
-    Apply a multiplicative perturbation to cfg['fwhm_deg'] at prepare time.
-
-    Parameters
-    ----------
-    cfg
-        BayesEoR configuration mapping.
-    fwhm_perturb_frac
-        Fractional perturbation: +0.1 => +10% (multiply by 1.1),
-        -1e-3 => -0.1% (multiply by 0.999).
-
-    Returns
-    -------
-    dict or None
-        Provenance record describing the perturbation, suitable for manifest.json.
-    """
     if fwhm_perturb_frac is None:
         return None
 
@@ -141,34 +111,14 @@ def _materialise_hypothesis_config(
     hypothesis: str,
     run_dir: Path,
 ) -> CommentedMap:
-    """
-    Create a BayesEoR config for a single hypothesis.
-
-    Template expectations
-    ---------------------
-    We assume templates may include:
-      - priors (often wide priors; may be redundant)
-      - signal_fit_priors / no_signal_priors
-      - signal_fit_output_dir / no_signal_output_dir
-    but the *final* hypothesis-specific BayesEoR config should contain only:
-      - priors
-      - output_dir
-    and should not carry both hypothesis prior blocks simultaneously.
-
-    Output dir convention
-    ---------------------
-    ValSKA forces BayesEoR outputs under the run directory:
-      <run_dir>/output/<hypothesis>/
-    """
     if hypothesis not in {"signal_fit", "no_signal"}:
         raise ValueError("hypothesis must be one of: 'signal_fit', 'no_signal'")
 
-    cfg = CommentedMap(base_cfg)  # shallow copy is fine for our key-level edits
+    cfg = CommentedMap(base_cfg)
 
     base_out = run_dir / "output" / hypothesis
     cfg["output_dir"] = str(base_out)
 
-    # Choose priors source from template keys where present.
     if hypothesis == "signal_fit":
         pri = cfg.get("signal_fit_priors", cfg.get("priors", None))
         if pri is None:
@@ -186,7 +136,6 @@ def _materialise_hypothesis_config(
             )
         cfg["priors"] = _as_flow_seq(pri)
 
-    # Remove template-only hypothesis keys so the final config is unambiguous.
     for k in (
         "signal_fit_priors",
         "no_signal_priors",
@@ -235,6 +184,8 @@ def prepare_bayeseor_run(
     data_path: Path,
     overrides: Mapping[str, Any] | None = None,
     slurm: Mapping[str, object] | None = None,
+    slurm_cpu: Mapping[str, object] | None = None,
+    slurm_gpu: Mapping[str, object] | None = None,
     run_dir: Path | None = None,
     unique: bool = False,
     fwhm_perturb_frac: float | None = None,
@@ -254,13 +205,18 @@ def prepare_bayeseor_run(
           submit_no_signal_gpu_run.sh
       - manifest.json (provenance)
 
+    SLURM configuration
+    -------------------
+    Backwards compatible behaviour:
+      - If `slurm_cpu` / `slurm_gpu` are not provided, `slurm` is used for both stages.
+      - If `slurm_cpu` / `slurm_gpu` are provided, they are used for their respective stages.
+
     Notes
     -----
     - We assume BayesEoR is already installed/available via the runner environment.
     - Container support later: only runner + command-line changes; run artefacts remain the same.
 
     - Run directory semantics:
-
         *Recommended (resumable):*
           Pass an explicit ``run_dir`` (computed by the caller) and this function will
           write artefacts there without adding timestamps.
@@ -273,13 +229,9 @@ def prepare_bayeseor_run(
           stable at:
               <results_root>/bayeseor/<scenario>/<run_label>/
 
-    - FWHM perturbation semantics (Option A):
+    - FWHM perturbation semantics:
         If provided, ``fwhm_perturb_frac`` applies a multiplicative perturbation
         to ``fwhm_deg`` in the rendered config at prepare time.
-
-    - YAML formatting:
-        We use ruamel.yaml so that BayesEoR prior blocks can be preserved/emitted in
-        compact flow-style lists (e.g. [[-4.0, 2.0], ...]) for readability and parsing.
 
     - CPU precompute sharing:
         The instrument transfer matrix precompute is typically shared between
@@ -293,6 +245,12 @@ def prepare_bayeseor_run(
             "hypothesis must be one of: 'signal_fit', 'no_signal', 'both'"
         )
 
+    # Resolve SLURM mappings (backwards compatible)
+    if slurm_cpu is None:
+        slurm_cpu = slurm
+    if slurm_gpu is None:
+        slurm_gpu = slurm
+
     results_root = Path(results_root).expanduser().resolve()
 
     # Determine run_dir
@@ -302,8 +260,6 @@ def prepare_bayeseor_run(
         base_dir = results_root / "bayeseor" / scenario / run_label
         run_dir = base_dir / _utc_stamp() if unique else base_dir
 
-    # If unique=True, we generally want a fresh directory.
-    # If unique=False (stable), allow reusing the directory (resumable runs).
     run_dir.mkdir(parents=True, exist_ok=not unique)
 
     base_cfg = _load_yaml(template_yaml)
@@ -326,7 +282,6 @@ def prepare_bayeseor_run(
     else:
         hypotheses = [hypothesis]
 
-    # Prefer signal_fit as CPU precompute driver if present, else use first.
     cpu_precompute_driver_hypothesis = (
         "signal_fit" if "signal_fit" in hypotheses else hypotheses[0]
     )
@@ -349,7 +304,7 @@ def prepare_bayeseor_run(
                 install=install,
                 config_yaml=config_yaml,
                 run_dir=run_dir,
-                slurm=slurm,
+                slurm=slurm_gpu,
                 mode="gpu_run",
             ),
             encoding="utf-8",
@@ -368,7 +323,7 @@ def prepare_bayeseor_run(
             install=install,
             config_yaml=cpu_config_yaml,
             run_dir=run_dir,
-            slurm=slurm,
+            slurm=slurm_cpu,
             mode="cpu",
         ),
         encoding="utf-8",
@@ -388,6 +343,10 @@ def prepare_bayeseor_run(
         "data_path": str(data_path),
         "overrides": overrides,
         "hypothesis": hypothesis,
+        "slurm": {
+            "cpu": dict(slurm_cpu or {}),
+            "gpu": dict(slurm_gpu or {}),
+        },
         "bayeseor": {
             "install": {
                 "repo_path": str(install.repo_path),

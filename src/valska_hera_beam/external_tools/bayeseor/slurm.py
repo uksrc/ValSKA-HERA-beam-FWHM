@@ -21,7 +21,7 @@ def render_submit_script(
     This function aims to be HPC-friendly and debugging-friendly:
       - emits clear "what am I running" information
       - prints SLURM_* environment variables (helpful when diagnosing scheduling issues)
-      - uses `srun --mpi=pmi2 -n "$SLURM_NTASKS"` by default to match common site setups
+      - uses `srun --mpi=<mpi> -n "$SLURM_NTASKS"` by default to match common site setups
       - uses BayesEoR's CLI flags:
           * CPU stage:  --cpu
           * GPU stage:  --gpu --run
@@ -41,13 +41,15 @@ def render_submit_script(
         Supported keys (all optional):
           - job_name: str
           - job_name_prefix: str
-          - partition: str
+          - partition: str | None (if omitted/None/empty, no --partition line is emitted)
+          - constraint: str | None (if provided, emits --constraint=<value>)
           - time: str
           - mem: str
           - cpus_per_task: int
           - ntasks: int
           - nodes: int
           - ntasks_per_node: int
+          - mpi: str (srun --mpi=<mpi>; default: pmi2)
           - output: str (overrides default log file path)
           - error: str (optional separate stderr path)
           - extra_sbatch: list[str] (additional #SBATCH lines, without the "#SBATCH " prefix)
@@ -75,18 +77,25 @@ def render_submit_script(
         slurm.get("job_name", f"{job_name_prefix}-{run_dir.name}-{mode}")
     )
 
-    partition = str(slurm.get("partition", "cpu"))
+    partition = slurm.get("partition", None)
+    if partition is not None:
+        partition = str(partition).strip() or None
+
+    constraint = slurm.get("constraint", None)
+    if constraint is not None:
+        constraint = str(constraint).strip() or None
+
     time = str(slurm.get("time", "12:00:00"))
     mem = str(slurm.get("mem", "8G"))
     cpus = int(slurm.get("cpus_per_task", 4))
 
-    # These are commonly needed for MPI-ish launches; keep conservative defaults.
     nodes = int(slurm.get("nodes", 1))
     ntasks = int(slurm.get("ntasks", 1))
     ntasks_per_node = int(slurm.get("ntasks_per_node", 1))
 
+    mpi = str(slurm.get("mpi", "pmi2"))
+
     # Log files
-    # Use a run-dir local log by default, but allow override if user prefers slurm-out/%j.out etc.
     out_log = Path(str(slurm.get("output", run_dir / f"slurm-{mode}-%j.out")))
     err_log = slurm.get("error", None)
 
@@ -108,28 +117,19 @@ def render_submit_script(
         prefix = runner.bash_prefix()
         python_exe = "python"
     else:
-        # Future: construct a proper apptainer exec line with binds.
-        # Example:
-        #   bind_args = " ".join(f'--bind "{p}:{p}"' for p in runner.bind_paths)
-        #   python_exe = f'{runner.apptainer_exe} exec {bind_args} "{runner.image_path}" python'
         prefix = ""
         python_exe = "python  # TODO: container exec wrapper"
 
     # -------------------------
     # BayesEoR args by stage
     # -------------------------
-    # Use the "run-analysis.py <config>" calling style you currently have working.
-    # Add flags to match your existing workflow.
     if mode == "cpu":
         stage_flags = "--cpu"
     else:
         stage_flags = "--gpu --run"
 
-    # Use SLURM_NTASKS if available; otherwise fall back to configured ntasks.
-    # Keep --mpi=pmi2 to match your previous script; allow site override via extra_sbatch if needed.
-    srun_prefix = f'srun --mpi=pmi2 -n "${{SLURM_NTASKS:-{ntasks}}}"'
-
-    cmd = f'{srun_prefix} {python_exe} -u "{run_py}" "{config_yaml}" {stage_flags}'
+    srun_prefix = f'srun --mpi={mpi} -n "${{SLURM_NTASKS:-{ntasks}}}"'
+    cmd = f'{srun_prefix} {python_exe} -u "{run_py}" --config "{config_yaml}" {stage_flags}'
 
     # -------------------------
     # SBATCH header lines
@@ -137,21 +137,30 @@ def render_submit_script(
     sbatch_lines: list[str] = [
         "#!/bin/bash",
         f"#SBATCH --job-name={job_name}",
-        f"#SBATCH --partition={partition}",
-        f"#SBATCH --time={time}",
-        f"#SBATCH --mem={mem}",
-        f"#SBATCH --nodes={nodes}",
-        f"#SBATCH --ntasks={ntasks}",
-        f"#SBATCH --ntasks-per-node={ntasks_per_node}",
-        f"#SBATCH --cpus-per-task={cpus}",
-        f"#SBATCH --output={out_log}",
     ]
+
+    if partition:
+        sbatch_lines.append(f"#SBATCH --partition={partition}")
+    if constraint:
+        sbatch_lines.append(f"#SBATCH --constraint={constraint}")
+
+    sbatch_lines.extend(
+        [
+            f"#SBATCH --time={time}",
+            f"#SBATCH --mem={mem}",
+            f"#SBATCH --nodes={nodes}",
+            f"#SBATCH --ntasks={ntasks}",
+            f"#SBATCH --ntasks-per-node={ntasks_per_node}",
+            f"#SBATCH --cpus-per-task={cpus}",
+            f"#SBATCH --output={out_log}",
+        ]
+    )
+
     if err_log:
         sbatch_lines.append(f"#SBATCH --error={err_log}")
 
-    # Allow user to provide extra SBATCH directives (e.g. constraints, QoS, account, gres)
+    # Allow user to provide extra SBATCH directives (e.g. QoS, account, gres)
     for line in extra_sbatch:
-        # Be forgiving: if user included "#SBATCH", keep it; otherwise add it.
         s = str(line).strip()
         if not s:
             continue
@@ -165,10 +174,9 @@ def render_submit_script(
     # -------------------------
     # Script body
     # -------------------------
-    # Keep some of your original useful diagnostics and add a few more.
     return f"""{sbatch_block}
 
-set -euo pipefail
+set -eo pipefail
 
 # -----------------------------------------------------------------------------
 # ValSKA-generated BayesEoR submit script
@@ -182,16 +190,19 @@ set -euo pipefail
 # - GPU stage (--gpu --run) assumes the CPU stage has completed successfully.
 # -----------------------------------------------------------------------------
 
+RUN_DIR="{run_dir}"
+MODE="{mode}"
+
 echo "========================================"
 echo "ValSKA / BayesEoR SLURM job starting"
 echo "========================================"
 echo "Timestamp (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "Hostname:        $(hostname)"
 echo "Working dir:     $(pwd)"
-echo "Run dir:         {run_dir}"
+echo "Run dir:         $RUN_DIR"
 echo "Config:          {config_yaml}"
 echo "BayesEoR script: {run_py}"
-echo "Mode:            {mode}"
+echo "Mode:            $MODE"
 echo "----------------------------------------"
 
 # Helpful for debugging threading behaviour
@@ -207,7 +218,11 @@ env | sort | grep '^SLURM_' || echo "No SLURM_ variables found"
 echo "===== SLURM ENVIRONMENT (end) ====="
 echo "----------------------------------------"
 
+# Conda hook scripts are not always `nounset`-safe on all sites.
+# Temporarily disable `set -u` while activating, then restore if enabled elsewhere.
+set +u
 {prefix}
+set -u
 
 echo "Python: $(which python || true)"
 python -V || true
@@ -217,9 +232,33 @@ echo "Command:"
 echo "  {cmd}"
 echo "----------------------------------------"
 
-{cmd}
+# -----------------------------------------------------------------------------
+# Timing
+# -----------------------------------------------------------------------------
+echo "Start time (UTC):  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+START_EPOCH=$(date +%s)
 
+TIMING_FILE="$RUN_DIR/timing-$MODE-${{SLURM_JOB_ID:-unknown}}.txt"
+echo "Timing file:       $TIMING_FILE"
 echo "----------------------------------------"
+
+# Time the actual BayesEoR execution (includes srun + python).
+# -v gives useful info (max RSS, CPU %, etc.).
+/usr/bin/time -v -o "$TIMING_FILE" bash -lc '{cmd}'
+STATUS=$?
+
+END_EPOCH=$(date +%s)
+echo "----------------------------------------"
+echo "End time (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "Elapsed (s):       $((END_EPOCH - START_EPOCH))"
+echo "Exit status:       $STATUS"
+echo "----------------------------------------"
+
+if [ "$STATUS" -ne 0 ]; then
+  echo "ValSKA / BayesEoR job failed (exit $STATUS)"
+  exit "$STATUS"
+fi
+
 echo "ValSKA / BayesEoR SLURM job complete"
 echo "========================================"
 """

@@ -17,12 +17,49 @@ bayeseor:
   # Whether to enforce unique output directories by default
   unique_by_default: false
 
-  # Default SLURM settings for BayesEoR runs
+  # Submission defaults (used by valska-bayeseor-submit)
+  submit:
+    sbatch_exe: sbatch
+    record: jobs.json
+    refuse_if_jobs_exist: true
+
+  # Backwards-compatible single-profile defaults (fallback if cpu/gpu profiles not set)
   slurm_defaults:
-    partition: a100_gpu
+    # partition: a100_gpu         # optional (omit on constraint-based sites)
+    constraint: A100
     time: "1-00:00:00"
-    mem: 400G
-    cpus_per_task: 32
+    mem: 64G
+    cpus_per_task: 16
     job_name_prefix: "bayeseor"
     ntasks: 1
+    nodes: 1
+    ntasks_per_node: 1
+    mpi: pmi2
+    # extra_sbatch:
+    #   - "--account=<account>"
+    #   - "--qos=<qos>"
+
+  # Preferred: stage-specific SLURM defaults
+  slurm_defaults_cpu:
+    # partition: cpu             # optional
+    constraint: A100
+    time: "1-11:00:00"
+    mem: 64G
+    cpus_per_task: 16
+    job_name_prefix: "cpu_test1"
+    ntasks: 1
+    nodes: 1
+    ntasks_per_node: 1
+    mpi: pmi2
+
+  slurm_defaults_gpu:
+    # partition: a100_gpu        # optional
+    constraint: A100
+    time: "1-11:00:00"
+    mem: 64G
+    cpus_per_task: 8
+    job_name_prefix: "gpu_test1"
+    ntasks: 1
+    nodes: 2
+    ntasks_per_node: 2
     mpi: pmi2

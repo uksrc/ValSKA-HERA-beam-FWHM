@@ -39,7 +39,9 @@ dependencies = [
     "numpy",
     "pymultinest",
     "pyuvdata",
+    "pyyaml",
     "rich",
+    "ruamel.yaml",
     "scipy",
     "anesthetic",
     "tqdm",
@@ -57,8 +59,6 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-mock",
-  "pyyaml",
-  "ruamel.yaml",
   "ruff>=0.12.0",
   "mypy",
   "pre-commit",
@@ -81,6 +81,7 @@ Issues = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM/issues"
 # valska-beam-validate = "valska_hera_beam.cli:main"
 valska-beam-validate = "valska_hera_beam.cli.main:main"
 valska-bayeseor-prepare = "valska_hera_beam.external_tools.bayeseor.cli_prepare:main"
+valska-bayeseor-submit = "valska_hera_beam.external_tools.bayeseor.cli_submit:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

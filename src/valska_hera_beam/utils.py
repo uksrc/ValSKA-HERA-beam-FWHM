@@ -4,8 +4,18 @@ This module provides:
 
 - Path management via :class:`PathManager`
 - Loading of analysis paths from ``config/paths.yaml``
+- Loading of site/user runtime paths from ``config/runtime_paths.yaml``
 - Helpers to build perturbation groups and human-readable labels
 - Simple filtering helpers for perturbation keys
+
+Notes on runtime_paths.yaml
+---------------------------
+`config/runtime_paths.yaml` is intended for *site/user-specific* settings, e.g.
+
+- results_root (where all ValSKA outputs go)
+- data.root (a default root for input datasets; used to resolve relative --data paths)
+- BayesEoR repo_path / conda_sh / conda_env defaults
+- Other external tool paths (pyuvsim, OSKAR) in future
 """
 
 from __future__ import annotations
@@ -40,6 +50,7 @@ def load_runtime_paths(
     This configuration is intended for *site/user-specific* settings such as:
 
     - results_root (where all ValSKA outputs go)
+    - data.root (default root for input datasets; used for resolving relative --data paths)
     - BayesEoR repo_path / conda_sh / conda_env defaults
     - Other external tool paths (pyuvsim, OSKAR) in future
 
@@ -89,6 +100,49 @@ def load_runtime_paths(
         raise ValueError(f"Expected a mapping in runtime paths YAML: {p}")
 
     return data
+
+
+def resolve_data_path(
+    data_path: PathLike,
+    runtime_paths: Mapping[str, object] | None = None,
+) -> Path:
+    """Resolve an input dataset path using runtime_paths.yaml defaults.
+
+    Rules
+    -----
+    - If `data_path` is absolute: return it (expanded + resolved).
+    - If `data_path` is relative and runtime_paths contains `data.root`:
+        return `<data.root>/<data_path>` (expanded + resolved).
+    - Otherwise: resolve relative to the current working directory.
+
+    This keeps CLIs explicit (`--data` is still required) while reducing boilerplate
+    and enabling site-specific mount points.
+
+    Parameters
+    ----------
+    data_path
+        Dataset path provided by a user/CLI.
+    runtime_paths
+        Parsed runtime paths mapping (typically from `load_runtime_paths()`).
+
+    Returns
+    -------
+    Path
+        Fully resolved absolute path.
+    """
+    p = Path(data_path).expanduser()
+
+    if p.is_absolute():
+        return p.resolve()
+
+    rt = runtime_paths or {}
+    data_cfg = rt.get("data") if isinstance(rt, Mapping) else None
+    if isinstance(data_cfg, Mapping):
+        root = data_cfg.get("root")
+        if isinstance(root, str) and root.strip():
+            return (Path(root).expanduser() / p).resolve()
+
+    return p.resolve()
 
 
 # =============================================================================
@@ -150,7 +204,9 @@ class PathManager:
               - <base_dir>/chains (if exists)
               - <base_dir>/results (fallback)
         data_dir
-            Directory containing data files. If None, defaults to <base_dir>/data (created).
+            Directory containing data files (input datasets). If None, attempts:
+              - config/runtime_paths.yaml: data.root
+              - <base_dir>/data (created)
         results_dir
             Directory for ValSKA-produced results (tables/plots/summaries).
             If None, defaults to <results_root>/validation (created).
@@ -195,13 +251,28 @@ class PathManager:
             self.results_root = Path(results_root).expanduser().resolve()
         self.results_root.mkdir(exist_ok=True, parents=True)
 
-        # Set up data directory
-        if data_dir is None:
-            self.data_dir = (self.base_dir / "data").resolve()
+        # Set up data directory (input dataset root)
+        #
+        # Priority:
+        #   1) explicit constructor arg data_dir
+        #   2) runtime_paths.yaml: data.root
+        #   3) <base_dir>/data (created)
+        if data_dir is not None:
+            self.data_dir = Path(data_dir).expanduser().resolve()
+            # If the user explicitly asked for a data_dir, we can create it.
             self.data_dir.mkdir(exist_ok=True, parents=True)
         else:
-            self.data_dir = Path(data_dir).expanduser().resolve()
-            self.data_dir.mkdir(exist_ok=True, parents=True)
+            cfg_data_root = None
+            cfg_data = self.runtime_paths.get("data")
+            if isinstance(cfg_data, dict):
+                cfg_data_root = cfg_data.get("root")
+
+            if isinstance(cfg_data_root, str) and cfg_data_root.strip():
+                # For a configured data root, do not force creation (could be read-only / shared).
+                self.data_dir = Path(cfg_data_root).expanduser().resolve()
+            else:
+                self.data_dir = (self.base_dir / "data").resolve()
+                self.data_dir.mkdir(exist_ok=True, parents=True)
 
         # Set up results directory (ValSKA internal results, not external tool outputs)
         # Default to a subdir under results_root so everything stays together.
@@ -235,6 +306,13 @@ class PathManager:
             self.chains_dir = Path(chains_dir).expanduser().resolve()
 
         # Do not mkdir chains_dir here: chains are often produced externally.
+
+    def resolve_data_path(self, data_path: PathLike) -> Path:
+        """Resolve a dataset path using this PathManager's runtime_paths.
+
+        See module-level `resolve_data_path()` for the rules.
+        """
+        return resolve_data_path(data_path, self.runtime_paths)
 
     def get_paths(self) -> Dict[str, Path]:
         """Get a dictionary of all managed paths.
@@ -637,6 +715,16 @@ if __name__ == "__main__":
     # PathManager example
     path_manager = get_default_path_manager()
     print(path_manager)
+
+    # Example: resolve a relative dataset path via runtime_paths.yaml data.root (if configured)
+    try:
+        example_rel = "example_dataset.uvh5"
+        resolved = path_manager.resolve_data_path(example_rel)
+        print(
+            f"\nResolved data path:\n  input:    {example_rel}\n  resolved: {resolved}"
+        )
+    except Exception as exc:
+        print(f"\nCould not resolve example data path: {exc}")
 
     # Example usage of load_paths and grouping helpers
     try:

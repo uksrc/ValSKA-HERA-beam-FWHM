@@ -41,6 +41,23 @@ If --results-root is omitted, results_root is resolved in this order:
   4) $HOME/UKSRC/ValSKA/results
   5) ./results
 
+Data path resolution
+--------------------
+--data is always required, but may be provided as either an absolute path or a
+relative path.
+
+If --data is relative and config/runtime_paths.yaml contains:
+
+  data:
+    root: /path/to/datasets
+
+then ValSKA will resolve:
+
+  --data foo/bar.uvh5  ->  /path/to/datasets/foo/bar.uvh5
+
+Absolute paths are used as-is. The resolved absolute path is recorded in the
+manifest.
+
 Future container support
 ------------------------
 Today this assumes a conda-based runner. In the future we will support Apptainer/Singularity
@@ -90,7 +107,7 @@ from valska_hera_beam.external_tools.bayeseor import (
     list_templates,
     prepare_bayeseor_run,
 )
-from valska_hera_beam.utils import get_default_path_manager
+from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
 
 
 def _utc_stamp() -> str:
@@ -128,7 +145,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--data",
         type=Path,
         required=True,
-        help="Path to the UVH5 dataset to analyse with BayesEoR.",
+        help=(
+            "Path to the UVH5 dataset to analyse with BayesEoR.\n"
+            "May be absolute or relative. If relative, and runtime_paths.yaml sets data.root,\n"
+            "the path is resolved as <data.root>/<data>."
+        ),
     )
     parser.add_argument(
         "--results-root",
@@ -272,7 +293,10 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--job-name", type=str, default=None, help="Optional SLURM job name."
+        "--job-name",
+        type=str,
+        default=None,
+        help="Optional SLURM job name.",
     )
 
     parser.add_argument(
@@ -371,6 +395,22 @@ def main(argv: list[str] | None = None) -> int:
         results_root_src = (
             "runtime_paths.yaml" if "results_root" in runtime else "env/default"
         )
+
+    # Resolve --data using runtime_paths.yaml (data.root) if provided.
+    # Always record an absolute resolved path in manifests.
+    data_provided = args.data
+    data_resolved = resolve_data_path(data_provided, runtime)
+    data_src = (
+        "CLI(abs)"
+        if Path(data_provided).expanduser().is_absolute()
+        else "CLI(rel)"
+    )
+    if not Path(data_provided).expanduser().is_absolute():
+        # Only meaningful to mention data.root if user gave a relative path.
+        cfg_data = runtime.get("data", {}) if isinstance(runtime, dict) else {}
+        cfg_root = cfg_data.get("root") if isinstance(cfg_data, dict) else None
+        if isinstance(cfg_root, str) and cfg_root.strip():
+            data_src = "runtime_paths.yaml:data.root"
 
     repo_path = args.bayeseor_repo
     repo_src = "CLI"
@@ -491,7 +531,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"  run_label:     {run_label}   [{run_label_src}]")
         print(f"  template_yaml: {template_yaml}   [{template_src}]")
-        print(f"  data_path:     {args.data}")
+        if data_resolved != Path(data_provided).expanduser().resolve():
+            # This branch is unlikely because resolve() will normalize, but keep logic explicit.
+            print(f"  data_path:     {data_resolved}   [{data_src}]")
+        else:
+            # Still show the resolved absolute path (it is what will be recorded).
+            print(f"  data_path:     {data_resolved}   [{data_src}]")
         print(f"  bayeseor_repo: {install.repo_path}   [{repo_src}]")
         print(f"  conda_sh:      {conda_sh}   [{conda_sh_src}]")
         print(f"  conda_env:     {runner.env_name}   [{conda_env_src}]")
@@ -513,7 +558,7 @@ def main(argv: list[str] | None = None) -> int:
         run_label=run_label,
         run_dir=run_dir,
         unique=unique,
-        data_path=args.data,
+        data_path=data_resolved,
         overrides=overrides,
         slurm_cpu=slurm_cpu,
         slurm_gpu=slurm_gpu,

@@ -59,10 +59,12 @@ def render_submit_script(
           - "cpu"     : precompute instrument transfer matrices (BayesEoR --cpu)
           - "gpu_run" : run sampling assuming precompute exists (BayesEoR --gpu --run)
 
-    Future container support
-    ------------------------
-    When we support Apptainer/Singularity, only the "runner prefix" and command line
-    wrapper will change; the run directory structure and config paths remain identical.
+    Notes on timing
+    ---------------
+    We intentionally do NOT rely on `/usr/bin/time` or shell `time`, since some
+    compute-node images do not provide them. Timing is implemented using only:
+      - date (UTC timestamps + epoch seconds)
+    This should work essentially everywhere.
     """
     slurm = dict(slurm or {})
 
@@ -129,7 +131,7 @@ def render_submit_script(
         stage_flags = "--gpu --run"
 
     srun_prefix = f'srun --mpi={mpi} -n "${{SLURM_NTASKS:-{ntasks}}}"'
-    cmd = f'{srun_prefix} {python_exe} -u "{run_py}" --config "{config_yaml}" {stage_flags}'
+    inner_cmd = f'{srun_prefix} {python_exe} -u "{run_py}" --config "{config_yaml}" {stage_flags}'
 
     # -------------------------
     # SBATCH header lines
@@ -159,7 +161,6 @@ def render_submit_script(
     if err_log:
         sbatch_lines.append(f"#SBATCH --error={err_log}")
 
-    # Allow user to provide extra SBATCH directives (e.g. QoS, account, gres)
     for line in extra_sbatch:
         s = str(line).strip()
         if not s:
@@ -172,7 +173,7 @@ def render_submit_script(
     sbatch_block = "\n".join(sbatch_lines)
 
     # -------------------------
-    # Script body
+    # Script body (robust timing: no `time` dependency)
     # -------------------------
     return f"""{sbatch_block}
 
@@ -184,28 +185,22 @@ set -eo pipefail
 # Mode: {mode}
 # Config: {config_yaml}
 # Run dir: {run_dir}
-#
-# Notes:
-# - CPU stage (--cpu) typically precomputes the instrument transfer matrix.
-# - GPU stage (--gpu --run) assumes the CPU stage has completed successfully.
 # -----------------------------------------------------------------------------
-
-RUN_DIR="{run_dir}"
-MODE="{mode}"
 
 echo "========================================"
 echo "ValSKA / BayesEoR SLURM job starting"
 echo "========================================"
-echo "Timestamp (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "Hostname:        $(hostname)"
-echo "Working dir:     $(pwd)"
-echo "Run dir:         $RUN_DIR"
-echo "Config:          {config_yaml}"
-echo "BayesEoR script: {run_py}"
-echo "Mode:            $MODE"
+
+START_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "Start time (UTC):  $START_ISO"
+echo "Hostname:          $(hostname)"
+echo "Working dir:       $(pwd)"
+echo "Run dir:           {run_dir}"
+echo "Config:            {config_yaml}"
+echo "BayesEoR script:   {run_py}"
+echo "Mode:              {mode}"
 echo "----------------------------------------"
 
-# Helpful for debugging threading behaviour
 export OPENBLAS_NUM_THREADS="${{SLURM_CPUS_PER_TASK:-{cpus}}}"
 export OMP_NUM_THREADS="${{SLURM_CPUS_PER_TASK:-{cpus}}}"
 
@@ -218,47 +213,73 @@ env | sort | grep '^SLURM_' || echo "No SLURM_ variables found"
 echo "===== SLURM ENVIRONMENT (end) ====="
 echo "----------------------------------------"
 
-# Conda hook scripts are not always `nounset`-safe on all sites.
-# Temporarily disable `set -u` while activating, then restore if enabled elsewhere.
-set +u
 {prefix}
-set -u
 
 echo "Python: $(which python || true)"
 python -V || true
 echo "----------------------------------------"
 
 echo "Command:"
-echo "  {cmd}"
+echo "  {inner_cmd}"
 echo "----------------------------------------"
 
 # -----------------------------------------------------------------------------
-# Timing
+# Timing (UTC) - implemented without relying on /usr/bin/time or shell `time`.
 # -----------------------------------------------------------------------------
-echo "Start time (UTC):  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-START_EPOCH=$(date +%s)
+JOBID="${{SLURM_JOB_ID:-unknown}}"
+TIMING_FILE="{run_dir}/timing-{mode}-${{JOBID}}.txt"
 
-TIMING_FILE="$RUN_DIR/timing-$MODE-${{SLURM_JOB_ID:-unknown}}.txt"
 echo "Timing file:       $TIMING_FILE"
 echo "----------------------------------------"
 
-# Time the actual BayesEoR execution (includes srun + python).
-# -v gives useful info (max RSS, CPU %, etc.).
-/usr/bin/time -v -o "$TIMING_FILE" bash -lc '{cmd}'
-STATUS=$?
+# Epoch seconds (portable)
+START_EPOCH="$(date -u +%s)"
 
-END_EPOCH=$(date +%s)
-echo "----------------------------------------"
-echo "End time (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "Elapsed (s):       $((END_EPOCH - START_EPOCH))"
-echo "Exit status:       $STATUS"
-echo "----------------------------------------"
+# Best-effort nanoseconds (may not be supported everywhere; if not, returns non-numeric)
+START_NS="$(date -u +%s%N || true)"
 
-if [ "$STATUS" -ne 0 ]; then
-  echo "ValSKA / BayesEoR job failed (exit $STATUS)"
-  exit "$STATUS"
+# Run BayesEoR command (do not let 'set -e' stop us before capturing RC)
+set +e
+{inner_cmd}
+RC=$?
+set -e
+
+END_EPOCH="$(date -u +%s)"
+END_NS="$(date -u +%s%N || true)"
+END_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+ELAPSED_S="$((END_EPOCH - START_EPOCH))"
+ELAPSED_NS=""
+
+# Compute ns elapsed only if both look numeric
+if [[ "$START_NS" =~ ^[0-9]+$ ]] && [[ "$END_NS" =~ ^[0-9]+$ ]]; then
+  ELAPSED_NS="$((END_NS - START_NS))"
 fi
 
+# Write timing file (overwrite each run)
+{{
+  echo "Start time (UTC):  $START_ISO"
+  echo "End time (UTC):    $END_ISO"
+  echo "Elapsed (s):       $ELAPSED_S"
+  if [[ -n "$ELAPSED_NS" ]]; then
+    echo "Elapsed (ns):      $ELAPSED_NS"
+  fi
+  echo "Exit code:         $RC"
+}} > "$TIMING_FILE"
+
+echo "End time (UTC):    $END_ISO"
+echo "Elapsed (s):       $ELAPSED_S"
+if [[ -n "$ELAPSED_NS" ]]; then
+  echo "Elapsed (ns):      $ELAPSED_NS"
+fi
+echo "Exit code:         $RC"
+
+if [[ $RC -ne 0 ]]; then
+  echo "ERROR: BayesEoR command failed with exit code $RC"
+  exit $RC
+fi
+
+echo "----------------------------------------"
 echo "ValSKA / BayesEoR SLURM job complete"
 echo "========================================"
 """

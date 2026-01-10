@@ -3,6 +3,13 @@
 # Where ValSKA should write all results (BayesEoR outputs, validation plots/tables, etc.)
 results_root: /home/psims/share/validation_results/UKSRC/
 
+# Default location for input datasets.
+# If a CLI argument like --data is given as a *relative* path, ValSKA will resolve it as:
+#   <data.root>/<relative-path>
+# Absolute paths are used as-is.
+data:
+  root:  ~/share/test/Updated_BayesEoR_Nov2025/BayesEoR//UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_29102025/vis/
+
 bayeseor:
   # Path to a local clone of BayesEoR used to locate scripts/run-analysis.py
   repo_path: /home/psims/share/test/Updated_BayesEoR_Nov2025/BayesEoR
@@ -63,3 +70,7 @@ bayeseor:
     nodes: 2
     ntasks_per_node: 2
     mpi: pmi2
+
+  # Sweep configuration for valska-bayeseor-sweep
+  sweep:
+    fwhm_fracs: [-0.10, -0.05, -0.02, -0.01, 0.0, 0.01, 0.02, 0.05, 0.10]

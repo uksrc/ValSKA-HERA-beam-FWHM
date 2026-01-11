@@ -1,117 +1,104 @@
 # ValSKA-HERA-beam-FWHM
 
-**An open-source, reproducible, flexible, and extensible package for validating the sensitivity of 21-cm power spectrum forward modeling approaches to imperfect knowledge of the FWHM of the interferometric primary beam.**
+**An open-source, reproducible, flexible, and extensible package for validating the sensitivity of 21-cm power-spectrum inference to imperfect knowledge of the interferometric primary-beam FWHM.**
+
+---
 
 ## Overview
 
-ValSKA-HERA-beam-FWHM provides a Bayesian science validation case study modelling the Hydrogen Epoch of Reionization Array (HERA) using the BayesEoR modeling framework.
+ValSKA-HERA-beam-FWHM provides a Bayesian science-validation case study for the Hydrogen Epoch of Reionization Array (HERA), using the **BayesEoR** modelling framework.
 
-The focus of this repository is **validation tooling**: enabling controlled, inspectable, and reproducible studies of how modelling assumptions (here, primary-beam FWHM uncertainty) propagate through a full 21-cm power-spectrum inference pipeline.
+The focus of this repository is **validation tooling**: enabling controlled, inspectable, and reproducible studies of how modelling assumptions — here, uncertainty in the primary-beam full width at half maximum (FWHM) — propagate through a full 21-cm power-spectrum inference pipeline.
+
+This repository is developed as part of the UK Square Kilometre Array Regional Centre (UKSRC) science-validation effort.
+
+---
 
 ## Features
 
-- **Bayesian Analysis**
-  BayesEoR enables a joint Bayesian analysis of models for large-spectral-scale foreground emission and a stochastic signal from redshifted 21-cm emission emitted by neutral Hydrogen during the Epoch of Reionization (EoR).
+- **Bayesian 21-cm inference**
+  Uses BayesEoR to perform joint Bayesian modelling of spectrally smooth foreground emission and a stochastic 21-cm signal from the Epoch of Reionization.
 
-- **Sensitivity Testing**
-  This package tests the extent to which errors in beam modelling, parameterized in terms of the beam FWHM, can be tolerated without biasing the recovery of the 21-cm power spectrum.
+- **Instrumental sensitivity validation**
+  Quantifies the robustness of inferred 21-cm power spectra to controlled perturbations in the assumed primary-beam FWHM.
 
-- **Reproducible HPC Workflows**
-  Explicit separation of run preparation and job submission enables resumable, auditable, and HPC-appropriate execution.
+- **Reproducible HPC workflows**
+  Explicit separation of run preparation, CPU precompute, and GPU inference stages enables resumable, auditable, and HPC-appropriate execution.
+
+---
 
 ## Contents
 
 ValSKA-HERA-beam-FWHM includes:
-- Results from **BaNTER** (Bayesian Null-Test Evidence Ratio) validation of the forward modelling pipeline.
-- Chain files from **BayesEoR** power-spectrum estimation analyses of mock HERA foreground validation data and full-sky (foregrounds + 21-cm signal) science data.
-- Links to data artifacts and full provenance records.
+
+- Validation results from **BaNTER** (Bayesian Null-Test Evidence Ratio) analyses
+- BayesEoR chain files from mock HERA foreground-only and foreground-plus-signal datasets
+- Full provenance records for all validation runs
+- Command-line tooling for preparing, submitting, and managing ensembles of BayesEoR runs
+
+---
 
 ## Installation
 
 General guidance:
 
-- Clone the repository.
-- All dependencies can be installed with `conda` or `mamba` using the included `valska_env.yaml` file:
+- Clone the repository
+- Install dependencies using `conda` or `mamba` with the supplied environment file:
 
     conda env create -f valska_env.yaml
 
-- `valska_env.yaml` is configured for **Galahad** by default.
-  To install on **Azimuth**, comment out `cudatoolkit` and uncomment `cuda` in the environment file.
+- `valska_env.yaml` is configured for **Galahad** by default
+  For **Azimuth**, comment out `cudatoolkit` and uncomment `cuda` in the environment file
 
 **Note:**
 This repository provides *validation tooling and job orchestration*.
 It does **not** automatically create conda environments, clone BayesEoR, or manage HPC accounts.
 
-## BayesEoR validation workflow
+---
 
-This repository provides tooling to **prepare, submit, and re-run** BayesEoR analyses in a reproducible and HPC-appropriate way.
-The workflow is intentionally split into two explicit stages.
+## BayesEoR validation workflow (high-level)
 
-### 1. Prepare a run (no execution)
+This repository supports **reproducible, sweep-based validation studies** in which BayesEoR analyses are repeated across multiple controlled FWHM perturbations.
 
-Use `valska-bayeseor-prepare` to generate a self-contained *run directory* containing:
+At a high level, the workflow is:
 
-- Rendered BayesEoR configuration YAMLs
-- SLURM submit scripts (CPU precompute + GPU run stages)
-- A `manifest.json` capturing full provenance
+- Define a validation sweep over beam FWHM
+- Prepare self-contained BayesEoR run directories
+- Submit CPU and GPU stages with explicit dependencies
+- Inspect, resume, or extend runs as needed
 
-Example (stable run directory, suitable for resuming):
+The recommended user interface for this workflow is the `valska-bayeseor-sweep` command, which builds on lower-level `prepare` and `submit` tooling.
 
-    valska-bayeseor-prepare \
-        --data /path/to/dataset.uvh5 \
-        --scenario GSM_beam \
-        --run-label fwhm_-1.0e-03 \
-        --run-id baseline
+**Detailed usage examples, expected outputs, and recovery patterns are documented separately.**
 
-This creates a directory of the form:
+---
 
-    <results_root>/bayeseor/<scenario>/<run_label>/<run_id>/
+## Documentation
 
-No jobs are submitted at this stage.
-The run directory can be inspected, archived, copied, or re-used.
+Detailed command-line examples and workflow patterns are provided in:
 
-### 2. Submit a prepared run
+    docs/workflows/bayeseor_cli_examples.md
 
-Once a run directory exists, jobs can be submitted using:
+That document is the primary reference for:
+- Preparing validation sweeps
+- Submitting CPU and GPU stages
+- Partial submission and recovery
+- Resubmission after walltime
+- Inspecting manifests and job records
 
-    valska-bayeseor-submit <run_dir>
-
-This will:
-- submit the CPU precompute stage
-- submit GPU stages with appropriate `afterok` dependencies
-- record SLURM job IDs in `jobs.json`
-
-You may also submit stages explicitly:
-
-    # CPU only
-    valska-bayeseor-submit <run_dir> --stage cpu
-
-    # GPU only (after CPU has completed)
-    valska-bayeseor-submit <run_dir> --stage gpu
-
-### Resubmitting after walltime
-
-If a job hits walltime, BayesEoR / MultiNest can resume from existing output.
-
-To requeue cleanly without regenerating configs:
-
-    valska-bayeseor-submit <run_dir> --stage gpu --resubmit
-
-This archives the previous `jobs.json` (timestamped) and submits a new job, preserving a clear history of attempts.
-
-Manual submission via `sbatch submit_*.sh` remains fully supported at all times.
+---
 
 ## Contributing
 
-ValSKA-HERA-beam-FWHM is an open-source project, and contributions in any form are very welcome
-(e.g. new features, feature requests, bug reports, documentation improvements).
+ValSKA-HERA-beam-FWHM is an open-source project, and contributions of all kinds are very welcome
+(e.g. feature requests, bug reports, documentation improvements, or new validation studies).
 
-Please make contributions via issues and/or pull requests.
+Please contribute via GitHub issues and/or pull requests.
 
-For questions or discussion, contact the UKSRC science validation tooling team:
+For questions or discussion, contact the UKSRC science-validation tooling team:
 
-- Peter Sims (PO) — ps550 [at] cam.ac.uk
-- Tianyue Chen (SM) — tianyue.chen [at] manchester.ac.uk
-- Quentin Gueuning — qdg20 [at] cam.ac.uk
-- Ed Polehampton — edward.polehampton [at] stfc.ac.uk
-- Vlad Stolyarov — vs237 [at] cam.ac.uk
+- **Peter Sims** (Product Owner) — ps550 [at] cam.ac.uk
+- **Tianyue Chen** (Scrum Master) — tianyue.chen [at] manchester.ac.uk
+- **Quentin Gueuning** — qdg20 [at] cam.ac.uk
+- **Ed Polehampton** — edward.polehampton [at] stfc.ac.uk
+- **Vlad Stolyarov** — vs237 [at] cam.ac.uk

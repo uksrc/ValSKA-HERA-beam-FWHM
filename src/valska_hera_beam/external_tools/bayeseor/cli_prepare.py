@@ -14,40 +14,44 @@ This generates reproducible run artefacts for a BayesEoR analysis, without
 actually running BayesEoR itself.
 
 Specifically, it:
+  - resolves runtime paths (results_root, data root expansion, default template)
+  - instantiates the BayesEoR runner (currently conda)
+  - prepares a run directory containing:
+      * hypothesis-specific config YAMLs (signal_fit / no_signal)
+      * submit scripts for CPU precompute and GPU run stages
+      * a manifest.json recording provenance & resolved paths
 
-1) Selects a BayesEoR YAML template shipped with ValSKA (or a user-provided template path).
-2) Writes rendered BayesEoR config YAMLs into a run directory under:
-      <results_root>/bayeseor/<scenario>/<run_label>/<run_id>/
-   Optionally (with --unique) appends a timestamp:
-      <results_root>/bayeseor/<scenario>/<run_label>/<run_id>/<timestamp>/
-3) Sets BayesEoR output directories so that chains/evidence/logs are written inside that run directory.
-4) Writes SLURM submit scripts that activate a conda environment and run BayesEoR:
-      - submit_cpu_precompute.sh                 (shared CPU precompute stage: --cpu)
-      - submit_<hyp>_gpu_run.sh (signal_fit/no_signal; GPU run stage: --gpu --run)
-5) Writes a manifest.json with provenance (template used, data path, overrides, etc.).
+Design principles
+-----------------
+- setup.prepare_bayeseor_run() is the single source of truth for canonical run_dir construction.
+  This CLI only duplicates run_dir logic for --dry-run display.
 
-What it does NOT do
--------------------
-- It does not create a conda environment.
-- It does not clone BayesEoR.
-- It does not submit the job automatically (you run `sbatch ...` yourself).
+Variant concept
+---------------
+We include a <variant> directory level to separate template-level differences that should never
+collide (e.g. validation_v1d0 vs validation_v1d0_achromatic). By default it is derived from the
+template filename stem by removing the first occurrence of '_template'.
 
-Results root resolution
------------------------
-If --results-root is omitted, results_root is resolved in this order:
-  1) config/runtime_paths.yaml (results_root key)
-  2) $VALSKA_RESULTS_ROOT
-  3) $SCRATCH/UKSRC/ValSKA/results
-  4) $HOME/UKSRC/ValSKA/results
-  5) ./results
+Beam/sky taxonomy
+-----------------
+The results tree is organised by (beam_model, sky_model), replacing the earlier overloaded
+'scenario' label.
+
+Canonical non-sweep run directory:
+  <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
+
+Backwards compatibility:
+- --scenario is deprecated. If used, it must be unambiguous:
+    --scenario <beam>/<sky>   or   --scenario <beam>__<sky>
+  Any other form (e.g. 'GLEAM_beam') is rejected to prevent silent misrouting.
 
 Data path resolution
 --------------------
---data is always required, but may be provided as either an absolute path or a
-relative path.
+If you pass --data as a relative path, it is resolved using runtime_paths.yaml:data.root if set.
 
-If --data is relative and config/runtime_paths.yaml contains:
+Example runtime_paths.yaml:
 
+  results_root: /share/nas-0-3/psims/validation_results/UKSRC
   data:
     root: /path/to/datasets
 
@@ -62,35 +66,7 @@ Future container support
 ------------------------
 Today this assumes a conda-based runner. In the future we will support Apptainer/Singularity
 containers by swapping the "runner" configuration; the produced run directory, config YAML,
-and manifest stay the same.
-
-Usage examples
---------------
-Prepare a stable run directory you can re-use (good for resuming):
-
-  valska-bayeseor-prepare \\
-      --data /path/to/dataset.uvh5 \\
-      --scenario GSM_beam \\
-      --run-label fwhm_-1.0e-01 \\
-      --run-id resume_test
-
-Prepare a unique run directory (good for parameter sweeps):
-
-  valska-bayeseor-prepare \\
-      --data /path/to/dataset.uvh5 \\
-      --scenario GSM_beam \\
-      --run-label fwhm_-1.0e-01 \\
-      --run-id sweep \\
-      --unique
-
-Check where a run would be created (no filesystem changes):
-
-  valska-bayeseor-prepare \\
-      --data /path/to/dataset.uvh5 \\
-      --scenario GSM_beam \\
-      --run-label fwhm_-1.0e-01 \\
-      --run-id test \\
-      --dry-run
+and scripts are designed to remain stable.
 """
 
 from __future__ import annotations
@@ -121,15 +97,51 @@ def _format_run_label_from_fwhm_frac(frac: float) -> str:
     return f"fwhm_{s}"
 
 
+def _derive_variant_from_template_path(template_yaml: Path) -> str:
+    """
+    Derive a stable variant key from a template filename.
+
+    Rules:
+      - take filename stem
+      - remove first occurrence of "_template" if present
+
+    Examples:
+      validation_v1d0_template.yaml            -> validation_v1d0
+      validation_v1d0_template_achromatic.yaml -> validation_v1d0_achromatic
+      beam_achromatic.yaml                     -> beam_achromatic
+    """
+    stem = template_yaml.stem
+    if "_template" in stem:
+        stem = stem.replace("_template", "", 1)
+    return stem.strip("_") or template_yaml.stem
+
+
 def _compute_run_dir(
     *,
     results_root: Path,
-    scenario: str,
+    beam_model: str,
+    sky_model: str,
+    variant: str,
     run_label: str,
     run_id: str,
     unique: bool,
 ) -> Path:
-    base = results_root / "bayeseor" / scenario / run_label / run_id
+    """
+    Compute the canonical run directory for --dry-run display only.
+
+    NOTE: This duplicates the layout logic used in setup.prepare_bayeseor_run().
+    For real prepares we pass run_dir=None so setup.py computes the canonical
+    location itself (single source of truth).
+    """
+    base = (
+        results_root
+        / "bayeseor"
+        / beam_model
+        / sky_model
+        / variant
+        / run_label
+        / run_id
+    )
     return base / _utc_stamp() if unique else base
 
 
@@ -137,7 +149,33 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="valska-bayeseor-prepare",
         description=(
-            "Prepare a BayesEoR run kit (configs + SLURM scripts + manifest) under a ValSKA results directory."
+            "Prepare a BayesEoR validation run directory.\n\n"
+            "Canonical layout:\n"
+            "  <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>/\n"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    # Required science axes
+    parser.add_argument(
+        "--beam",
+        type=str,
+        default=None,
+        help="Beam / instrument model label (e.g. achromatic_Gaussian).",
+    )
+    parser.add_argument(
+        "--sky",
+        type=str,
+        default=None,
+        help="Sky model label (e.g. GLEAM, GSM, GLEAM_plus_GSM).",
+    )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default=None,
+        help=(
+            "DEPRECATED. Use --beam and --sky.\n"
+            "If used, must be '<beam>/<sky>' or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM')."
         ),
     )
 
@@ -145,51 +183,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--data",
         type=Path,
         required=True,
-        help=(
-            "Path to the UVH5 dataset to analyse with BayesEoR.\n"
-            "May be absolute or relative. If relative, and runtime_paths.yaml sets data.root,\n"
-            "the path is resolved as <data.root>/<data>."
-        ),
-    )
-    parser.add_argument(
-        "--results-root",
-        type=Path,
-        default=None,
-        help=(
-            "ValSKA results root directory. If omitted, resolves via config/runtime_paths.yaml then environment/defaults."
-        ),
-    )
-    parser.add_argument(
-        "--scenario",
-        type=str,
-        required=True,
-        help="Scenario name used in the results directory structure (e.g. GSM_beam).",
-    )
-
-    parser.add_argument(
-        "--run-label",
-        type=str,
-        default=None,
-        help=(
-            "Run label used in the results directory structure.\n"
-            "If omitted, a label is auto-generated from --fwhm-perturb-frac (e.g. fwhm_-1.0e-03).\n"
-            "If omitted and no perturbation is supplied, defaults to 'default'."
-        ),
+        help="Path to the UVH5 dataset. Relative paths may be resolved via runtime_paths.yaml:data.root.",
     )
 
     parser.add_argument(
         "--run-id",
         type=str,
-        default="default",
-        help=(
-            "Identifier for the run directory (default: 'default'). Use a stable run-id if you want to re-run/continue in the same directory."
-        ),
+        required=True,
+        help="Identifier for the run (e.g. r001).",
     )
+
+    parser.add_argument(
+        "--results-root",
+        type=Path,
+        default=None,
+        help="Results root. If omitted, resolves via config/runtime_paths.yaml then env/defaults.",
+    )
+
     parser.add_argument(
         "--unique",
         action="store_true",
         help=(
-            "Append a UTC timestamp under the run-id directory. Useful for sweeps; less convenient for resuming. "
+            "Append a UTC timestamp beneath run_id to ensure uniqueness.\n"
             "If omitted, may still be enabled via runtime_paths.yaml (bayeseor.unique_by_default)."
         ),
     )
@@ -213,40 +228,56 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Template name shipped with ValSKA OR a filesystem path to a template YAML.\n"
-            "If omitted, uses bayeseor.default_template from config/runtime_paths.yaml, otherwise defaults to validation_v1d0_template.yaml.\n"
+            "If omitted, uses bayeseor.default_template from config/runtime_paths.yaml, "
+            "otherwise defaults to validation_v1d0_template.yaml.\n"
             "To list shipped templates, use --list-templates."
         ),
     )
     parser.add_argument(
         "--list-templates",
         action="store_true",
-        help="List shipped BayesEoR validation templates and exit.",
+        help="List shipped BayesEoR templates and exit.",
+    )
+
+    parser.add_argument(
+        "--variant",
+        type=str,
+        default=None,
+        help=(
+            "Template variant key used as a directory level to avoid collisions.\n"
+            "If omitted, derived from the selected template filename stem by removing "
+            "the first occurrence of '_template'."
+        ),
+    )
+
+    parser.add_argument(
+        "--run-label",
+        type=str,
+        default=None,
+        help=(
+            "Optional run label directory component. If not provided and --fwhm-perturb-frac is set, "
+            "a label is automatically generated (e.g. fwhm_1.0e-02). Otherwise defaults to 'default'."
+        ),
     )
 
     parser.add_argument(
         "--bayeseor-repo",
         type=Path,
         default=None,
-        help=(
-            "Path to a local clone of the BayesEoR repository (used to locate scripts/run-analysis.py). If omitted, uses bayeseor.repo_path from config/runtime_paths.yaml."
-        ),
+        help="Path to local clone of BayesEoR (used to locate scripts/run-analysis.py).",
     )
 
     parser.add_argument(
         "--conda-sh",
         type=str,
         default=None,
-        help=(
-            "Command to source conda.sh inside batch jobs. If omitted, uses bayeseor.conda_sh from config/runtime_paths.yaml."
-        ),
+        help="Command to source conda.sh in batch jobs (e.g. 'source /path/to/conda.sh').",
     )
     parser.add_argument(
         "--conda-env",
         type=str,
         default=None,
-        help=(
-            "Name of the conda environment that has BayesEoR installed (e.g. bayeseor). If omitted, uses bayeseor.conda_env from config/runtime_paths.yaml."
-        ),
+        help="Conda env name containing BayesEoR.",
     )
 
     parser.add_argument(
@@ -254,74 +285,85 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="KEY=VALUE",
-        help=(
-            "Override a top-level YAML key in the template (repeatable). Example: --override fwhm_deg=9.4\nValues are parsed as strings in this MVP; keep usage simple."
-        ),
+        help="Override a top-level YAML key in the template (repeatable).",
     )
 
-    # SLURM knobs (caller-side overrides). These apply to BOTH cpu+gpu profiles for now.
+    # SLURM options are primarily configured via runtime_paths.yaml, but we allow overrides.
     parser.add_argument(
-        "--partition",
+        "--cpu-partition",
         type=str,
         default=None,
-        help=(
-            "SLURM partition. If omitted, uses bayeseor.slurm_defaults_cpu/gpu from config/runtime_paths.yaml."
-        ),
+        help="SLURM partition override for CPU stage.",
     )
     parser.add_argument(
-        "--time",
+        "--cpu-constraint",
         type=str,
         default=None,
-        help=(
-            "SLURM walltime. If omitted, uses bayeseor.slurm_defaults_cpu/gpu from config/runtime_paths.yaml."
-        ),
+        help="SLURM constraint override for CPU stage.",
     )
     parser.add_argument(
-        "--mem",
+        "--cpu-time",
         type=str,
         default=None,
-        help=(
-            "SLURM memory request. If omitted, uses bayeseor.slurm_defaults_cpu/gpu from config/runtime_paths.yaml."
-        ),
+        help="SLURM time override for CPU stage.",
     )
     parser.add_argument(
-        "--cpus",
+        "--cpu-mem",
+        type=str,
+        default=None,
+        help="SLURM mem override for CPU stage.",
+    )
+    parser.add_argument(
+        "--cpu-cpus-per-task",
         type=int,
         default=None,
-        help=(
-            "SLURM cpus-per-task. If omitted, uses bayeseor.slurm_defaults_cpu/gpu from config/runtime_paths.yaml."
-        ),
+        help="SLURM cpus-per-task for CPU stage.",
     )
+
     parser.add_argument(
-        "--job-name",
+        "--gpu-partition",
         type=str,
         default=None,
-        help="Optional SLURM job name.",
+        help="SLURM partition override for GPU stage.",
+    )
+    parser.add_argument(
+        "--gpu-constraint",
+        type=str,
+        default=None,
+        help="SLURM constraint override for GPU stage.",
+    )
+    parser.add_argument(
+        "--gpu-time",
+        type=str,
+        default=None,
+        help="SLURM time override for GPU stage.",
+    )
+    parser.add_argument(
+        "--gpu-mem",
+        type=str,
+        default=None,
+        help="SLURM mem override for GPU stage.",
+    )
+    parser.add_argument(
+        "--gpu-gres",
+        type=str,
+        default=None,
+        help="SLURM gres override for GPU stage.",
+    )
+    parser.add_argument(
+        "--gpu-cpus-per-task",
+        type=int,
+        default=None,
+        help="SLURM cpus-per-task for GPU stage.",
     )
 
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help=(
-            "Resolve paths and configuration, but do not create directories or write files. Useful for checking where a run would be prepared."
-        ),
+        help="Print resolved paths and intended run directory, but do not write files.",
     )
 
     return parser
-
-
-def _parse_overrides(kvs: list[str]) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for kv in kvs:
-        if "=" not in kv:
-            raise ValueError(f"Invalid --override '{kv}'. Expected KEY=VALUE.")
-        k, v = kv.split("=", 1)
-        k = k.strip()
-        v = v.strip()
-        if not k:
-            raise ValueError(f"Invalid --override '{kv}'. Empty KEY.")
-        out[k] = v
-    return out
 
 
 def _get_nested(d: dict[str, Any], *keys: str) -> Any:
@@ -333,16 +375,23 @@ def _get_nested(d: dict[str, Any], *keys: str) -> Any:
     return cur
 
 
-def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
-    """
-    Return SLURM defaults for a given profile:
-      profile="cpu" -> bayeseor.slurm_defaults_cpu
-      profile="gpu" -> bayeseor.slurm_defaults_gpu
+def _parse_overrides(kvs: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for kv in kvs:
+        if "=" not in kv:
+            raise SystemExit(
+                f"ERROR: Invalid --override '{kv}'. Expected KEY=VALUE."
+            )
+        k, v = kv.split("=", 1)
+        k = k.strip()
+        v = v.strip()
+        if not k:
+            raise SystemExit(f"ERROR: Invalid --override '{kv}'. Empty KEY.")
+        out[k] = v
+    return out
 
-    Backwards-compatible fallbacks:
-      - if *_cpu/gpu missing, fall back to bayeseor.slurm_defaults
-      - if that missing, fall back to hard-coded MVP defaults
-    """
+
+def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
     assert profile in {"cpu", "gpu"}
     key = "slurm_defaults_cpu" if profile == "cpu" else "slurm_defaults_gpu"
 
@@ -351,7 +400,6 @@ def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
         cfg = _get_nested(runtime, "bayeseor", "slurm_defaults")
     cfg = cfg if isinstance(cfg, dict) else {}
 
-    # Keep conservative historical defaults as last resort
     out = {
         "partition": cfg.get("partition", None),
         "constraint": cfg.get("constraint", None),
@@ -363,16 +411,71 @@ def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
         "ntasks_per_node": cfg.get("ntasks_per_node", 1),
         "job_name_prefix": cfg.get("job_name_prefix", "bayeseor"),
         "mpi": cfg.get("mpi", "pmi2"),
-        "extra_sbatch": cfg.get("extra_sbatch", []),
+        "account": cfg.get("account", None),
+        "qos": cfg.get("qos", None),
+        "mail_type": cfg.get("mail_type", None),
+        "mail_user": cfg.get("mail_user", None),
+        "exclude": cfg.get("exclude", None),
+        "nice": cfg.get("nice", None),
+        "chdir": cfg.get("chdir", None),
+        "export": cfg.get("export", None),
+        "comment": cfg.get("comment", None),
+        "dependency": cfg.get("dependency", None),
+        "requeue": cfg.get("requeue", None),
+        "open_mode": cfg.get("open_mode", None),
+        "signal": cfg.get("signal", None),
+        "gpus": cfg.get("gpus", None),
+        "gres": cfg.get("gres", None),
     }
 
-    # Remove keys that are explicitly None so the renderer can omit them cleanly.
-    if out.get("partition", None) in ("", None):
-        out.pop("partition", None)
-    if out.get("constraint", None) in ("", None):
-        out.pop("constraint", None)
+    # Profile-specific safe defaults
+    if profile == "gpu":
+        if out.get("gres") is None:
+            out["gres"] = "gpu:1"
 
     return out
+
+
+def _parse_beam_sky(
+    *, beam: str | None, sky: str | None, scenario: str | None
+) -> tuple[str, str, str]:
+    """
+    Preferred: --beam and --sky.
+
+    Deprecated: --scenario in the form '<beam>/<sky>' or '<beam>__<sky>'.
+
+    Returns (beam_model, sky_model, source_tag) where source_tag is one of:
+      - "CLI(--beam/--sky)"
+      - "DEPRECATED(--scenario)"
+    """
+    if beam and sky:
+        b = beam.strip()
+        k = sky.strip()
+        if not b or not k:
+            raise SystemExit(
+                "ERROR: --beam and --sky must be non-empty strings."
+            )
+        return b, k, "CLI(--beam/--sky)"
+
+    if scenario:
+        s = scenario.strip()
+        if "/" in s:
+            b, k = s.split("/", 1)
+            b, k = b.strip(), k.strip()
+            if b and k:
+                return b, k, "DEPRECATED(--scenario)"
+        if "__" in s:
+            b, k = s.split("__", 1)
+            b, k = b.strip(), k.strip()
+            if b and k:
+                return b, k, "DEPRECATED(--scenario)"
+        raise SystemExit(
+            "ERROR: --scenario is deprecated and must be of the form '<beam>/<sky>' "
+            "or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM'). "
+            "Please use --beam and --sky."
+        )
+
+    raise SystemExit("ERROR: You must provide --beam and --sky (recommended).")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -384,34 +487,53 @@ def main(argv: list[str] | None = None) -> int:
             print(name)
         return 0
 
+    beam_model, sky_model, beam_sky_src = _parse_beam_sky(
+        beam=args.beam, sky=args.sky, scenario=args.scenario
+    )
+
     pm = get_default_path_manager()
     runtime = pm.runtime_paths
 
+    # results_root
     if args.results_root is not None:
-        results_root = args.results_root
+        results_root = Path(args.results_root).expanduser()
         results_root_src = "CLI"
     else:
-        results_root = pm.results_root
+        results_root = Path(pm.results_root).expanduser()
         results_root_src = (
             "runtime_paths.yaml" if "results_root" in runtime else "env/default"
         )
 
-    # Resolve --data using runtime_paths.yaml (data.root) if provided.
-    # Always record an absolute resolved path in manifests.
-    data_provided = args.data
-    data_resolved = resolve_data_path(data_provided, runtime)
-    data_src = (
-        "CLI(abs)"
-        if Path(data_provided).expanduser().is_absolute()
-        else "CLI(rel)"
-    )
-    if not Path(data_provided).expanduser().is_absolute():
-        # Only meaningful to mention data.root if user gave a relative path.
-        cfg_data = runtime.get("data", {}) if isinstance(runtime, dict) else {}
-        cfg_root = cfg_data.get("root") if isinstance(cfg_data, dict) else None
-        if isinstance(cfg_root, str) and cfg_root.strip():
-            data_src = "runtime_paths.yaml:data.root"
+    # unique default via runtime_paths.yaml
+    unique = bool(args.unique)
+    if not args.unique:
+        cfg_unique = _get_nested(runtime, "bayeseor", "unique_by_default")
+        if isinstance(cfg_unique, bool):
+            unique = cfg_unique
 
+    # data resolution (supports runtime_paths.yaml:data.root)
+    try:
+        data_path = resolve_data_path(args.data, runtime)
+        data_src = "runtime_paths.yaml:data.root"
+    except Exception:
+        data_path = Path(args.data).expanduser()
+        data_src = "CLI"
+
+    # run_label
+    if args.run_label is not None and str(args.run_label).strip():
+        run_label = str(args.run_label).strip()
+        run_label_src = "CLI(--run-label)"
+    else:
+        if args.fwhm_perturb_frac is not None:
+            run_label = _format_run_label_from_fwhm_frac(
+                float(args.fwhm_perturb_frac)
+            )
+            run_label_src = "auto(--fwhm-perturb-frac)"
+        else:
+            run_label = "default"
+            run_label_src = "default"
+
+    # BayesEoR repo path
     repo_path = args.bayeseor_repo
     repo_src = "CLI"
     if repo_path is None:
@@ -420,34 +542,35 @@ def main(argv: list[str] | None = None) -> int:
             repo_path = Path(str(cfg_repo)).expanduser()
             repo_src = "runtime_paths.yaml"
     if repo_path is None:
-        raise SystemExit(
-            "ERROR: BayesEoR repo path not provided. Pass --bayeseor-repo or set bayeseor.repo_path in config/runtime_paths.yaml."
+        print(
+            "ERROR: BayesEoR repo path not provided. Pass --bayeseor-repo or set bayeseor.repo_path in config/runtime_paths.yaml.",
+            flush=True,
         )
+        return 2
 
+    # conda settings
     conda_sh = args.conda_sh
-    conda_sh_src = "CLI"
-    if conda_sh is None:
-        cfg_conda_sh = _get_nested(runtime, "bayeseor", "conda_sh")
-        if cfg_conda_sh:
-            conda_sh = str(cfg_conda_sh)
-            conda_sh_src = "runtime_paths.yaml"
-    if conda_sh is None:
-        raise SystemExit(
-            "ERROR: conda.sh activation command not provided. Pass --conda-sh or set bayeseor.conda_sh in config/runtime_paths.yaml."
-        )
-
     conda_env = args.conda_env
-    conda_env_src = "CLI"
+    conda_src = "CLI"
+    if conda_sh is None:
+        cfg = _get_nested(runtime, "bayeseor", "conda_sh")
+        if cfg:
+            conda_sh = str(cfg)
+            conda_src = "runtime_paths.yaml"
     if conda_env is None:
-        cfg_conda_env = _get_nested(runtime, "bayeseor", "conda_env")
-        if cfg_conda_env:
-            conda_env = str(cfg_conda_env)
-            conda_env_src = "runtime_paths.yaml"
-    if conda_env is None:
-        raise SystemExit(
-            "ERROR: conda env not provided. Pass --conda-env or set bayeseor.conda_env in config/runtime_paths.yaml."
-        )
+        cfg = _get_nested(runtime, "bayeseor", "conda_env")
+        if cfg:
+            conda_env = str(cfg)
+            conda_src = "runtime_paths.yaml"
 
+    if conda_sh is None or conda_env is None:
+        print(
+            "ERROR: conda settings not fully specified. Provide --conda-sh and --conda-env or set bayeseor.conda_sh and bayeseor.conda_env in config/runtime_paths.yaml.",
+            flush=True,
+        )
+        return 2
+
+    # Template
     template_arg = args.template
     template_src = "CLI"
     if template_arg is None:
@@ -459,150 +582,145 @@ def main(argv: list[str] | None = None) -> int:
             template_arg = "validation_v1d0_template.yaml"
             template_src = "default"
 
-    template_path = Path(template_arg)
+    template_path = Path(str(template_arg)).expanduser()
     if template_path.exists():
         template_yaml = template_path
     else:
-        template_yaml = get_template_path(template_arg)
+        template_yaml = get_template_path(str(template_arg))
 
-    install = BayesEoRInstall(repo_path=repo_path)
+    # Variant
+    if args.variant is not None and str(args.variant).strip():
+        variant = str(args.variant).strip()
+        variant_src = "CLI(--variant)"
+    else:
+        variant = _derive_variant_from_template_path(Path(template_yaml))
+        variant_src = "auto(template)"
+
+    # SLURM defaults + overrides
+    slurm_cpu = _slurm_defaults(runtime, "cpu")
+    slurm_gpu = _slurm_defaults(runtime, "gpu")
+
+    # Apply CLI overrides (preserve existing behaviour)
+    if args.cpu_partition is not None:
+        slurm_cpu["partition"] = args.cpu_partition
+    if args.cpu_constraint is not None:
+        slurm_cpu["constraint"] = args.cpu_constraint
+    if args.cpu_time is not None:
+        slurm_cpu["time"] = args.cpu_time
+    if args.cpu_mem is not None:
+        slurm_cpu["mem"] = args.cpu_mem
+    if args.cpu_cpus_per_task is not None:
+        slurm_cpu["cpus_per_task"] = args.cpu_cpus_per_task
+
+    if args.gpu_partition is not None:
+        slurm_gpu["partition"] = args.gpu_partition
+    if args.gpu_constraint is not None:
+        slurm_gpu["constraint"] = args.gpu_constraint
+    if args.gpu_time is not None:
+        slurm_gpu["time"] = args.gpu_time
+    if args.gpu_mem is not None:
+        slurm_gpu["mem"] = args.gpu_mem
+    if args.gpu_gres is not None:
+        slurm_gpu["gres"] = args.gpu_gres
+    if args.gpu_cpus_per_task is not None:
+        slurm_gpu["cpus_per_task"] = args.gpu_cpus_per_task
+
+    # dry-run preview run_dir
+    preview_run_dir = _compute_run_dir(
+        results_root=results_root,
+        beam_model=beam_model,
+        sky_model=sky_model,
+        variant=variant,
+        run_label=run_label,
+        run_id=args.run_id,
+        unique=unique,
+    )
+
+    if args.dry_run:
+        print("\n[DRY RUN] Prepare would be executed with:")
+        print(f"  results_root:       {results_root} [{results_root_src}]")
+        print(f"  beam_model:         {beam_model} [{beam_sky_src}]")
+        print(f"  sky_model:          {sky_model} [{beam_sky_src}]")
+        print(f"  run_id:             {args.run_id}")
+        print(f"  run_label:          {run_label} [{run_label_src}]")
+        print(f"  unique:             {unique}")
+        print(f"  template:           {template_yaml} [{template_src}]")
+        print(f"  variant:            {variant} [{variant_src}]")
+        print(f"  data:               {data_path} [{data_src}]")
+        if args.fwhm_perturb_frac is not None:
+            print(f"  fwhm_perturb_frac:  {args.fwhm_perturb_frac:+.6g}")
+        else:
+            print("  fwhm_perturb_frac:  (none)")
+        print(f"  bayeseor_repo:      {repo_path} [{repo_src}]")
+        print(f"  conda:              env={conda_env} [{conda_src}]")
+        print(f"  run_dir (preview):  {preview_run_dir}")
+        print("\n[DRY RUN] SLURM defaults to be written:")
+        print(f"  cpu: {slurm_cpu}")
+        print(f"  gpu: {slurm_gpu}")
+        print("\n[DRY RUN] No files will be created.")
+        return 0
+
+    install = BayesEoRInstall(repo_path=Path(repo_path))
     runner = CondaRunner(conda_activate=conda_sh, env_name=conda_env)
 
     overrides = _parse_overrides(args.override)
 
-    unique = bool(args.unique)
-    unique_src = "CLI" if args.unique else "default"
-    if not args.unique:
-        cfg_unique = _get_nested(runtime, "bayeseor", "unique_by_default")
-        if isinstance(cfg_unique, bool):
-            unique = cfg_unique
-            unique_src = "runtime_paths.yaml"
-
-    scenario = args.scenario
-    run_id = args.run_id
-
-    if args.run_label is not None:
-        run_label = args.run_label
-        run_label_src = "CLI"
-    else:
-        if args.fwhm_perturb_frac is not None:
-            run_label = _format_run_label_from_fwhm_frac(
-                float(args.fwhm_perturb_frac)
-            )
-            run_label_src = "auto(fwhm_perturb_frac)"
-        else:
-            run_label = "default"
-            run_label_src = "default"
-
-    run_dir = _compute_run_dir(
-        results_root=Path(results_root).expanduser(),
-        scenario=scenario,
-        run_label=run_label,
-        run_id=run_id,
-        unique=unique,
-    )
-
-    # Build separate SLURM profiles, then apply CLI overrides to BOTH profiles for now.
-    slurm_cpu = _slurm_defaults(runtime, "cpu")
-    slurm_gpu = _slurm_defaults(runtime, "gpu")
-
-    if args.partition is not None:
-        slurm_cpu["partition"] = args.partition
-        slurm_gpu["partition"] = args.partition
-    if args.time is not None:
-        slurm_cpu["time"] = args.time
-        slurm_gpu["time"] = args.time
-    if args.mem is not None:
-        slurm_cpu["mem"] = args.mem
-        slurm_gpu["mem"] = args.mem
-    if args.cpus is not None:
-        slurm_cpu["cpus_per_task"] = args.cpus
-        slurm_gpu["cpus_per_task"] = args.cpus
-
-    if args.job_name:
-        slurm_cpu["job_name"] = args.job_name
-        slurm_gpu["job_name"] = args.job_name
-
-    if args.dry_run:
-        print("\n[DRY RUN] BayesEoR run would be prepared with:")
-        print(f"  results_root:  {results_root}   [{results_root_src}]")
-        print(
-            f"  run_dir:       {run_dir}   [{'unique' if unique else 'stable'}; {unique_src}]"
-        )
-        print(f"  run_label:     {run_label}   [{run_label_src}]")
-        print(f"  template_yaml: {template_yaml}   [{template_src}]")
-        if data_resolved != Path(data_provided).expanduser().resolve():
-            # This branch is unlikely because resolve() will normalize, but keep logic explicit.
-            print(f"  data_path:     {data_resolved}   [{data_src}]")
-        else:
-            # Still show the resolved absolute path (it is what will be recorded).
-            print(f"  data_path:     {data_resolved}   [{data_src}]")
-        print(f"  bayeseor_repo: {install.repo_path}   [{repo_src}]")
-        print(f"  conda_sh:      {conda_sh}   [{conda_sh_src}]")
-        print(f"  conda_env:     {runner.env_name}   [{conda_env_src}]")
-        print(
-            f"  fwhm_perturb:  {args.fwhm_perturb_frac if args.fwhm_perturb_frac is not None else '(none)'} (frac)"
-        )
-        print(f"  overrides:     {overrides or '{}'}")
-        print("  slurm_cpu:     " + str(slurm_cpu))
-        print("  slurm_gpu:     " + str(slurm_gpu))
-        print("\n[DRY RUN] No files or directories have been created.")
-        return 0
-
     out = prepare_bayeseor_run(
-        template_yaml=template_yaml,
+        template_yaml=Path(template_yaml),
         install=install,
         runner=runner,
-        results_root=Path(results_root).expanduser(),
-        scenario=scenario,
+        results_root=Path(results_root),
+        beam_model=beam_model,
+        sky_model=sky_model,
+        variant=variant,
         run_label=run_label,
-        run_dir=run_dir,
+        run_id=args.run_id,
+        run_dir=None,  # single source of truth for canonical path construction
         unique=unique,
-        data_path=data_resolved,
+        data_path=Path(data_path),
         overrides=overrides,
         slurm_cpu=slurm_cpu,
         slurm_gpu=slurm_gpu,
         fwhm_perturb_frac=args.fwhm_perturb_frac,
+        hypothesis="both",
     )
 
-    print("\nPrepared BayesEoR run artefacts:")
-    print(f"  run_dir:       {out['run_dir']}")
-    print(f"  manifest_json: {out['manifest_json']}")
+    run_dir = Path(out["run_dir"])
+    manifest = Path(out["manifest_json"])
 
-    if "submit_sh_cpu_precompute" in out:
-        print("\n  [shared]")
-        print(f"    submit_cpu_precompute: {out['submit_sh_cpu_precompute']}")
+    print("\nRun prepared:")
+    print(f"  run_dir:      {run_dir}")
+    print(f"  manifest:     {manifest}")
+    print(f"  beam_model:   {beam_model}")
+    print(f"  sky_model:    {sky_model}")
+    print(f"  variant:      {variant}")
+    print(f"  run_label:    {run_label}")
+    print(f"  run_id:       {args.run_id}")
 
-    for hyp in ("signal_fit", "no_signal"):
-        cfg_key = f"config_yaml_{hyp}"
-        gpu_key = f"submit_sh_{hyp}_gpu_run"
-        if cfg_key in out:
-            print(f"\n  [{hyp}]")
-            print(f"    config_yaml:    {out[cfg_key]}")
-            if gpu_key in out:
-                print(f"    submit_gpu_run: {out[gpu_key]}")
-
+    # ---------------------------------------------------------------------
+    # Next steps (recommended submit CLI + manual fallback)
+    # ---------------------------------------------------------------------
     print("\nNext steps (typical BayesEoR two-stage workflow):")
 
     print("  Option A) Submit via ValSKA (recommended):")
-    print(f"     valska-bayeseor-submit {out['run_dir']}")
+    print(f"     valska-bayeseor-submit {run_dir}")
     print("     # CPU only:")
-    print(f"     valska-bayeseor-submit {out['run_dir']} --stage cpu")
+    print(f"     valska-bayeseor-submit {run_dir} --stage cpu")
     print(
         "     # GPU only (depends on recorded CPU job ID, or provide --depend-afterok):"
     )
-    print(f"     valska-bayeseor-submit {out['run_dir']} --stage gpu")
+    print(f"     valska-bayeseor-submit {run_dir} --stage gpu")
     print(
         "     # If a job hits walltime, you can requeue easily (MultiNest should resume):"
     )
-    print(
-        f"     valska-bayeseor-submit {out['run_dir']} --stage gpu --resubmit"
-    )
+    print(f"     valska-bayeseor-submit {run_dir} --stage gpu --resubmit")
 
     print("\n  Option B) Manual submission (inspect scripts, then sbatch):")
-    if "submit_sh_cpu_precompute" in out:
+
+    cpu_key = "submit_sh_cpu_precompute"
+    if cpu_key in out:
         print("     1) CPU precompute stage (shared):")
-        print(f"        sbatch {out['submit_sh_cpu_precompute']}")
+        print(f"        sbatch {out[cpu_key]}")
 
     gpu_cmds: list[str] = []
     for hyp in ("signal_fit", "no_signal"):

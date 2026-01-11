@@ -13,10 +13,210 @@ from valska_hera_beam.external_tools.bayeseor import (
 )
 from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
 
+from . import sweep as sweep_mod  # for DRY helpers (run_label + point dirs)
 from .sweep import run_fwhm_sweep, sweep_root
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
+
+
+def _shell_quote(s: str) -> str:
+    """
+    Conservative shell quoting for printing copy/paste-ready commands.
+    Uses single quotes and escapes embedded single quotes safely.
+
+    Example:
+      abc'd -> 'abc'"'"'d'
+    """
+    if s == "":
+        return "''"
+    if all(ch.isalnum() or ch in "._/-=+:" for ch in s):
+        return s
+    return "'" + s.replace("'", "'\"'\"'") + "'"
+
+
+def _build_rerunnable_sweep_cmd(
+    *,
+    beam_model: str,
+    sky_model: str,
+    data_arg: Path,
+    run_id: str,
+    fwhm_fracs: list[float] | None,
+    fwhm_fracs_file: Path | None,
+    template_arg: str | None,
+    variant: str | None,
+    results_root_arg: Path | None,
+    bayeseor_repo_arg: Path | None,
+    conda_sh_arg: str | None,
+    conda_env_arg: str | None,
+    overrides: list[str],
+    unique: bool,
+    hypothesis: str,
+    depend_afterok: str | None,
+    sbatch_exe: str | None,
+    submit_dry_run: bool,
+    force: bool,
+    resubmit: bool,
+    submit_stage: _STAGE,
+) -> str:
+    """
+    Construct a copy/paste-ready valska-bayeseor-sweep command that mirrors user args.
+    We intentionally only include flags that are relevant and were explicitly specified
+    (or are needed to re-run in the same environment).
+    """
+    parts: list[str] = ["valska-bayeseor-sweep"]
+
+    # Prefer explicit beam/sky (even if user used deprecated scenario).
+    parts += ["--beam", _shell_quote(beam_model)]
+    parts += ["--sky", _shell_quote(sky_model)]
+
+    parts += ["--data", _shell_quote(str(data_arg))]
+    parts += ["--run-id", _shell_quote(run_id)]
+
+    # Fractions source
+    if fwhm_fracs is not None:
+        parts.append("--fwhm-fracs")
+        parts += [_shell_quote(str(x)) for x in fwhm_fracs]
+    elif fwhm_fracs_file is not None:
+        parts += ["--fwhm-fracs-file", _shell_quote(str(fwhm_fracs_file))]
+
+    # Template / variant
+    if template_arg is not None:
+        parts += ["--template", _shell_quote(str(template_arg))]
+    if variant is not None:
+        parts += ["--variant", _shell_quote(str(variant))]
+
+    # Results root (only if explicitly provided)
+    if results_root_arg is not None:
+        parts += ["--results-root", _shell_quote(str(results_root_arg))]
+
+    # Repo / conda (only if explicitly provided on CLI; runtime_paths.yaml covers otherwise)
+    if bayeseor_repo_arg is not None:
+        parts += ["--bayeseor-repo", _shell_quote(str(bayeseor_repo_arg))]
+    if conda_sh_arg is not None:
+        parts += ["--conda-sh", _shell_quote(str(conda_sh_arg))]
+    if conda_env_arg is not None:
+        parts += ["--conda-env", _shell_quote(str(conda_env_arg))]
+
+    # Overrides
+    for ov in overrides:
+        parts += ["--override", _shell_quote(ov)]
+
+    # Misc flags
+    if unique:
+        parts.append("--unique")
+    if hypothesis != "both":
+        parts += ["--hypothesis", _shell_quote(hypothesis)]
+    if depend_afterok is not None:
+        parts += ["--depend-afterok", _shell_quote(depend_afterok)]
+    if sbatch_exe is not None:
+        parts += ["--sbatch-exe", _shell_quote(sbatch_exe)]
+    if submit_dry_run:
+        parts.append("--submit-dry-run")
+    if force:
+        parts.append("--force")
+    if resubmit:
+        parts.append("--resubmit")
+
+    parts += ["--submit", _shell_quote(submit_stage)]
+
+    return " ".join(parts)
+
+
+def _print_submit_results(submit_results: Any) -> None:
+    """
+    Pretty-print submit results from sweep_res.submit_results.
+
+    Expected shapes:
+      - list[dict] with keys like: run_dir, commands (list[str]), error (str), jobs (dict)
+      - anything else: printed via json for debugging
+    """
+    if not submit_results:
+        print("  (no submit_results recorded)")
+        return
+
+    def _extract_job_ids(r: dict[str, Any]) -> list[str]:
+        """
+        Return printable job id lines from a submit result dict (if present).
+        We support both:
+          - jobs.cpu_precompute.job_id
+          - jobs.gpu.{signal_fit,no_signal}.job_id
+        """
+        out: list[str] = []
+        jobs = r.get("jobs")
+        if not isinstance(jobs, dict):
+            return out
+
+        cpu = jobs.get("cpu_precompute")
+        if isinstance(cpu, dict):
+            jid = cpu.get("job_id")
+            if jid:
+                out.append(f"job_id(cpu_precompute): {jid}")
+
+        gpu = jobs.get("gpu")
+        if isinstance(gpu, dict):
+            dep = gpu.get("dependency")
+            if dep:
+                out.append(f"dependency(gpu): {dep}")
+
+            sf = gpu.get("signal_fit")
+            if isinstance(sf, dict):
+                jid = sf.get("job_id")
+                if jid:
+                    out.append(f"job_id(gpu:signal_fit): {jid}")
+
+            ns = gpu.get("no_signal")
+            if isinstance(ns, dict):
+                jid = ns.get("job_id")
+                if jid:
+                    out.append(f"job_id(gpu:no_signal): {jid}")
+
+        return out
+
+    if isinstance(submit_results, list):
+        for r in submit_results:
+            if not isinstance(r, dict):
+                print(f"  - {r}")
+                continue
+
+            run_dir = r.get("run_dir", "<unknown run_dir>")
+            stage = r.get("stage", "")
+            hyp = r.get("hypothesis", "")
+            prefix = f"  - {run_dir}"
+            meta = []
+            if stage:
+                meta.append(f"stage={stage}")
+            if hyp:
+                meta.append(f"hyp={hyp}")
+            if meta:
+                prefix += " [" + ", ".join(meta) + "]"
+
+            print(prefix)
+
+            # job ids / dependencies
+            for line in _extract_job_ids(r):
+                print(f"      {line}")
+
+            if "error" in r:
+                print(f"      ERROR: {r['error']}")
+                continue
+
+            cmds = r.get("commands")
+            if isinstance(cmds, list) and cmds:
+                for c in cmds:
+                    print(f"      {c}")
+            else:
+                compact = {k: v for k, v in r.items() if k not in {"run_dir"}}
+                print("      (no commands field; raw result follows)")
+                print(
+                    "      "
+                    + json.dumps(compact, indent=2).replace("\n", "\n      ")
+                )
+        return
+
+    # unexpected structure
+    print("  (submit_results has unexpected type; raw dump)")
+    print(json.dumps(submit_results, indent=2))
 
 
 def _parse_fracs(vals: list[str]) -> list[float]:
@@ -85,13 +285,108 @@ def _get_nested(d: dict[str, Any], *keys: str) -> Any:
     return cur
 
 
+def _derive_variant_from_template_path(template_yaml: Path) -> str:
+    stem = template_yaml.stem
+    if "_template" in stem:
+        stem = stem.replace("_template", "", 1)
+    return stem.strip("_") or template_yaml.stem
+
+
+def _parse_beam_sky(
+    *, beam: str | None, sky: str | None, scenario: str | None
+) -> tuple[str, str, str]:
+    """
+    Preferred: --beam and --sky.
+
+    Deprecated: --scenario in the form '<beam>/<sky>' or '<beam>__<sky>'.
+
+    Returns (beam_model, sky_model, source_tag) where source_tag is one of:
+      - "CLI(--beam/--sky)"
+      - "DEPRECATED(--scenario)"
+    """
+    if beam and sky:
+        b = beam.strip()
+        k = sky.strip()
+        if not b or not k:
+            raise SystemExit(
+                "ERROR: --beam and --sky must be non-empty strings."
+            )
+        return b, k, "CLI(--beam/--sky)"
+
+    if scenario:
+        s = scenario.strip()
+        if "/" in s:
+            b, k = s.split("/", 1)
+            b, k = b.strip(), k.strip()
+            if b and k:
+                return b, k, "DEPRECATED(--scenario)"
+        if "__" in s:
+            b, k = s.split("__", 1)
+            b, k = b.strip(), k.strip()
+            if b and k:
+                return b, k, "DEPRECATED(--scenario)"
+        raise SystemExit(
+            "ERROR: --scenario is deprecated and must be of the form '<beam>/<sky>' "
+            "or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM'). "
+            "Please use --beam and --sky."
+        )
+
+    raise SystemExit("ERROR: You must provide --beam and --sky (recommended).")
+
+
+def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
+    """
+    Mirror cli_prepare.py behaviour: read slurm defaults from runtime_paths.yaml.
+    """
+    assert profile in {"cpu", "gpu"}
+    key = "slurm_defaults_cpu" if profile == "cpu" else "slurm_defaults_gpu"
+
+    cfg = _get_nested(runtime, "bayeseor", key)
+    if not isinstance(cfg, dict):
+        cfg = _get_nested(runtime, "bayeseor", "slurm_defaults")
+    cfg = cfg if isinstance(cfg, dict) else {}
+
+    out = {
+        "partition": cfg.get("partition", None),
+        "constraint": cfg.get("constraint", None),
+        "time": cfg.get("time", "12:00:00"),
+        "mem": cfg.get("mem", "8G"),
+        "cpus_per_task": cfg.get("cpus_per_task", 4),
+        "nodes": cfg.get("nodes", 1),
+        "ntasks": cfg.get("ntasks", 1),
+        "ntasks_per_node": cfg.get("ntasks_per_node", 1),
+        "job_name_prefix": cfg.get("job_name_prefix", "bayeseor"),
+        "mpi": cfg.get("mpi", "pmi2"),
+        "account": cfg.get("account", None),
+        "qos": cfg.get("qos", None),
+        "mail_type": cfg.get("mail_type", None),
+        "mail_user": cfg.get("mail_user", None),
+        "exclude": cfg.get("exclude", None),
+        "nice": cfg.get("nice", None),
+        "chdir": cfg.get("chdir", None),
+        "export": cfg.get("export", None),
+        "comment": cfg.get("comment", None),
+        "dependency": cfg.get("dependency", None),
+        "requeue": cfg.get("requeue", None),
+        "open_mode": cfg.get("open_mode", None),
+        "signal": cfg.get("signal", None),
+        "gpus": cfg.get("gpus", None),
+        "gres": cfg.get("gres", None),
+    }
+
+    if profile == "gpu" and out.get("gres") is None:
+        out["gres"] = "gpu:1"
+
+    return out
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="valska-bayeseor-sweep",
         description=(
             "Prepare (and optionally submit) a sweep of BayesEoR runs across multiple FWHM perturbations.\n\n"
-            "Writes sweep_manifest.json under:\n"
-            "  <results_root>/bayeseor/<scenario>/_sweeps/<run_id>/"
+            "Sweep output layout:\n"
+            "  <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/<variant>/<run_label>/\n"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -99,12 +394,32 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--data", type=Path, required=True, help="Path to the UVH5 dataset."
     )
+
+    # New preferred axes
+    p.add_argument(
+        "--beam",
+        type=str,
+        default=None,
+        help="Beam / instrument model label (e.g. achromatic_Gaussian).",
+    )
+    p.add_argument(
+        "--sky",
+        type=str,
+        default=None,
+        help="Sky model label (e.g. GLEAM, GSM).",
+    )
+
+    # Deprecated compatibility
     p.add_argument(
         "--scenario",
         type=str,
-        required=True,
-        help="Scenario name (e.g. GLEAM_beam).",
+        default=None,
+        help=(
+            "DEPRECATED. Use --beam and --sky.\n"
+            "If used, must be '<beam>/<sky>' or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM')."
+        ),
     )
+
     p.add_argument(
         "--run-id",
         type=str,
@@ -153,6 +468,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p.add_argument(
+        "--variant",
+        type=str,
+        default=None,
+        help=(
+            "Template variant key used as a directory level to avoid collisions.\n"
+            "If omitted, derived from the selected template filename stem by removing "
+            "the first occurrence of '_template'."
+        ),
+    )
+
+    p.add_argument(
         "--bayeseor-repo",
         type=Path,
         default=None,
@@ -183,7 +509,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--unique",
         action="store_true",
-        help="Append a UTC timestamp beneath run_id for each point (not recommended for resumable sweeps).",
+        help="Append a UTC timestamp beneath run_label for each point (not recommended for resumable sweeps).",
     )
 
     # Optional submission orchestration
@@ -212,7 +538,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--submit-dry-run",
         action="store_true",
-        help="Dry-run submission only: prepare for real, but print sbatch commands without submitting.",
+        help="Prepare for real, but print sbatch commands only.",
     )
     p.add_argument(
         "--force", action="store_true", help="Pass through force to submission."
@@ -245,6 +571,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
+    beam_model, sky_model, beam_sky_src = _parse_beam_sky(
+        beam=args.beam, sky=args.sky, scenario=args.scenario
+    )
+
     pm = get_default_path_manager()
     runtime = pm.runtime_paths
 
@@ -258,21 +588,22 @@ def main(argv: list[str] | None = None) -> int:
             "runtime_paths.yaml" if "results_root" in runtime else "env/default"
         )
 
-    # Resolve data path (supports runtime_paths.yaml:data.root) for consistent display + execution
+    # Resolve data path (supports runtime_paths.yaml:data.root)
     try:
         data_resolved = resolve_data_path(args.data, runtime)
         data_src = "runtime_paths.yaml:data.root"
     except Exception:
-        # Fallback: behave like before (but still expanduser)
         data_resolved = Path(args.data).expanduser()
         data_src = "CLI"
 
     # repo_path
     repo_path = args.bayeseor_repo
+    repo_src = "CLI"
     if repo_path is None:
         cfg_repo = _get_nested(runtime, "bayeseor", "repo_path")
         if cfg_repo:
             repo_path = Path(str(cfg_repo)).expanduser()
+            repo_src = "runtime_paths.yaml"
     if repo_path is None and not args.dry_run:
         print(
             "ERROR: BayesEoR repo path not provided. Pass --bayeseor-repo or set bayeseor.repo_path in config/runtime_paths.yaml.",
@@ -282,15 +613,18 @@ def main(argv: list[str] | None = None) -> int:
 
     # conda_sh/env
     conda_sh = args.conda_sh
+    conda_env = args.conda_env
+    conda_src = "CLI"
     if conda_sh is None:
         cfg = _get_nested(runtime, "bayeseor", "conda_sh")
         if cfg:
             conda_sh = str(cfg)
-    conda_env = args.conda_env
+            conda_src = "runtime_paths.yaml"
     if conda_env is None:
         cfg = _get_nested(runtime, "bayeseor", "conda_env")
         if cfg:
             conda_env = str(cfg)
+            conda_src = "runtime_paths.yaml"
 
     if not args.dry_run:
         if conda_sh is None:
@@ -308,18 +642,29 @@ def main(argv: list[str] | None = None) -> int:
 
     # template
     template_arg = args.template
+    template_src = "CLI"
     if template_arg is None:
         cfg_t = _get_nested(runtime, "bayeseor", "default_template")
         if cfg_t:
             template_arg = str(cfg_t)
+            template_src = "runtime_paths.yaml"
         else:
             template_arg = "validation_v1d0_template.yaml"
+            template_src = "default"
 
     template_path = Path(str(template_arg)).expanduser()
     if template_path.exists():
         template_yaml = template_path
     else:
         template_yaml = get_template_path(str(template_arg))
+
+    # variant
+    if args.variant is not None and str(args.variant).strip():
+        variant = str(args.variant).strip()
+        variant_src = "CLI(--variant)"
+    else:
+        variant = _derive_variant_from_template_path(Path(template_yaml))
+        variant_src = "auto(template)"
 
     # ---- fwhm fracs precedence ----
     fracs: list[float] | None = None
@@ -351,28 +696,53 @@ def main(argv: list[str] | None = None) -> int:
         else:
             sbatch_exe = "sbatch"
 
-    overrides = _parse_overrides(args.override)
+    # slurm defaults for scripts (match cli_prepare behaviour)
+    slurm_cpu = _slurm_defaults(runtime, "cpu")
+    slurm_gpu = _slurm_defaults(runtime, "gpu")
+
+    overrides_dict = _parse_overrides(args.override)
 
     if args.dry_run:
-        sd = sweep_root(results_root, args.scenario, args.run_id)
+        sd = sweep_root(results_root, beam_model, sky_model, args.run_id)
         print("\n[DRY RUN] Sweep would be executed with:")
         print(f"  results_root: {results_root} [{results_root_src}]")
-        print(f"  scenario:     {args.scenario}")
+        print(f"  beam_model:   {beam_model} [{beam_sky_src}]")
+        print(f"  sky_model:    {sky_model} [{beam_sky_src}]")
         print(f"  run_id:       {args.run_id}")
         print(f"  sweep_dir:    {sd}")
-        print(f"  template:     {template_yaml}")
+        print(f"  template:     {template_yaml} [{template_src}]")
+        print(f"  variant:      {variant} [{variant_src}]")
         print(f"  data:         {data_resolved} [{data_src}]")
         print(
             f"  fwhm_fracs:   {fracs if fracs is not None else '(built-in default 9-point set)'} [{fracs_src}]"
         )
         print(f"  unique:       {bool(args.unique)}")
         print(f"  submit:       {args.submit}")
+        print(f"  sbatch_exe:   {sbatch_exe}")
+        print(f"  submit_dry:   {bool(args.submit_dry_run)}")
+        print(f"  force:        {bool(args.force)}")
+        print(f"  resubmit:     {bool(args.resubmit)}")
         if args.submit != "none":
             print(f"  hypothesis:   {args.hypothesis}")
-            print(f"  sbatch_exe:   {sbatch_exe}")
-            print(f"  submit_dry:   {bool(args.submit_dry_run)}")
-            print(f"  force:        {bool(args.force)}")
-            print(f"  resubmit:     {bool(args.resubmit)}")
+
+        # DRY: compute point dirs using sweep.py helpers
+        fracs_to_show = (
+            fracs if fracs is not None else sweep_mod._default_fwhm_fracs()
+        )
+        print("\n[DRY RUN] Points:")
+        for frac in fracs_to_show:
+            run_label = sweep_mod._format_run_label_from_fwhm_frac(float(frac))
+            base = sweep_mod.sweep_point_dir(
+                results_root,
+                beam_model,
+                sky_model,
+                args.run_id,
+                variant=variant,
+                run_label=run_label,
+            )
+            run_dir = base / "<UTCSTAMP>" if args.unique else base
+            print(f"  {float(frac):+0.3f}  {run_label}  ->  {run_dir}")
+
         print("\n[DRY RUN] No files or jobs will be created/submitted.")
         return 0
 
@@ -384,12 +754,16 @@ def main(argv: list[str] | None = None) -> int:
         install=install,
         runner=runner,
         results_root=results_root,
-        scenario=args.scenario,
+        beam_model=beam_model,
+        sky_model=sky_model,
+        variant=variant,
         run_id=args.run_id,
         data_path=Path(data_resolved).expanduser(),
-        overrides=overrides,
+        overrides=overrides_dict,
         fwhm_fracs=fracs,
         unique=bool(args.unique),
+        slurm_cpu=slurm_cpu,
+        slurm_gpu=slurm_gpu,
         submit=args.submit,  # type: ignore[arg-type]
         hypothesis=args.hypothesis,  # type: ignore[arg-type]
         depend_afterok=args.depend_afterok,
@@ -404,7 +778,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         payload = {
             "results_root": str(sweep_res.results_root),
-            "scenario": sweep_res.scenario,
+            "beam_model": sweep_res.beam_model,
+            "sky_model": sweep_res.sky_model,
+            "variant": sweep_res.variant,
             "run_id": sweep_res.run_id,
             "data_path": str(sweep_res.data_path),
             "created_utc": sweep_res.created_utc,
@@ -431,14 +807,19 @@ def main(argv: list[str] | None = None) -> int:
     print("\nSweep prepared:")
     print(f"  sweep_dir:           {sweep_res.sweep_dir}")
     print(f"  sweep_manifest.json: {sweep_res.sweep_manifest_json}")
+    print(f"  beam_model:          {sweep_res.beam_model}")
+    print(f"  sky_model:           {sweep_res.sky_model}")
+    print(f"  variant:             {sweep_res.variant}")
     print(f"  points:              {len(sweep_res.points)}")
 
-    if args.submit != "none":
+    did_submit = args.submit != "none"
+    if did_submit:
         n_err = sum(
             1
             for r in sweep_res.submit_results
             if isinstance(r, dict) and "error" in r
         )
+
         print(
             f"  submit:              {args.submit} ({'with errors' if n_err else 'ok'})"
         )
@@ -447,9 +828,179 @@ def main(argv: list[str] | None = None) -> int:
                 f"  submit_errors:       {n_err} (see sweep_manifest.json submit_results)"
             )
 
+        print("\nSubmission summary:")
+        if bool(args.submit_dry_run):
+            print(
+                "  submit_dry_run: true (no jobs submitted; commands/errors shown below)"
+            )
+        else:
+            print("  submit_dry_run: false (jobs submitted)")
+
+        _print_submit_results(sweep_res.submit_results)
+
     print("\nPoints:")
     for p in sweep_res.points:
         print(f"  {p.fwhm_perturb_frac:+.3f}  {p.run_label}  ->  {p.run_dir}")
+
+    # Build copy/paste-ready follow-on commands
+    cmd_cpu = _build_rerunnable_sweep_cmd(
+        beam_model=beam_model,
+        sky_model=sky_model,
+        data_arg=args.data,
+        run_id=args.run_id,
+        fwhm_fracs=fracs,
+        fwhm_fracs_file=args.fwhm_fracs_file,
+        template_arg=args.template,
+        variant=args.variant,
+        results_root_arg=args.results_root,
+        bayeseor_repo_arg=args.bayeseor_repo,
+        conda_sh_arg=args.conda_sh,
+        conda_env_arg=args.conda_env,
+        overrides=args.override,
+        unique=bool(args.unique),
+        hypothesis=args.hypothesis,
+        depend_afterok=args.depend_afterok,
+        sbatch_exe=args.sbatch_exe,
+        submit_dry_run=bool(args.submit_dry_run),
+        force=bool(args.force),
+        resubmit=bool(args.resubmit),
+        submit_stage="cpu",
+    )
+    cmd_gpu = _build_rerunnable_sweep_cmd(
+        beam_model=beam_model,
+        sky_model=sky_model,
+        data_arg=args.data,
+        run_id=args.run_id,
+        fwhm_fracs=fracs,
+        fwhm_fracs_file=args.fwhm_fracs_file,
+        template_arg=args.template,
+        variant=args.variant,
+        results_root_arg=args.results_root,
+        bayeseor_repo_arg=args.bayeseor_repo,
+        conda_sh_arg=args.conda_sh,
+        conda_env_arg=args.conda_env,
+        overrides=args.override,
+        unique=bool(args.unique),
+        hypothesis=args.hypothesis,
+        depend_afterok=args.depend_afterok,
+        sbatch_exe=args.sbatch_exe,
+        submit_dry_run=bool(args.submit_dry_run),
+        force=bool(args.force),
+        resubmit=bool(args.resubmit),
+        submit_stage="gpu",
+    )
+    cmd_all = _build_rerunnable_sweep_cmd(
+        beam_model=beam_model,
+        sky_model=sky_model,
+        data_arg=args.data,
+        run_id=args.run_id,
+        fwhm_fracs=fracs,
+        fwhm_fracs_file=args.fwhm_fracs_file,
+        template_arg=args.template,
+        variant=args.variant,
+        results_root_arg=args.results_root,
+        bayeseor_repo_arg=args.bayeseor_repo,
+        conda_sh_arg=args.conda_sh,
+        conda_env_arg=args.conda_env,
+        overrides=args.override,
+        unique=bool(args.unique),
+        hypothesis=args.hypothesis,
+        depend_afterok=args.depend_afterok,
+        sbatch_exe=args.sbatch_exe,
+        submit_dry_run=bool(args.submit_dry_run),
+        force=bool(args.force),
+        resubmit=bool(args.resubmit),
+        submit_stage="all",
+    )
+
+    # Also build "actual submit" variants (without --submit-dry-run) for next-step guidance.
+    cmd_cpu_real = cmd_cpu.replace(" --submit-dry-run", "")
+    cmd_gpu_real = cmd_gpu.replace(" --submit-dry-run", "")
+    cmd_all_real = cmd_all.replace(" --submit-dry-run", "")
+
+    print("\nNext steps:")
+
+    # Smarter UX:
+    # - After CPU submit (real): suggest GPU next, not re-running CPU.
+    # - After GPU submit (real): suggest monitoring / submitting remaining points if any.
+    # - After submit-dry-run: suggest re-run without submit-dry-run for that stage.
+    # - If submit none: show the standard trio.
+
+    if args.submit == "none":
+        print("  Option A) Submit via valska-bayeseor-sweep (recommended):")
+        print("     # CPU stage across all sweep points:")
+        print(f"     {cmd_cpu_real}")
+        print("     # GPU stage across all sweep points (after CPU completes):")
+        print(f"     {cmd_gpu_real}")
+        print("     # Or do both in one go:")
+        print(f"     {cmd_all_real}")
+
+    elif args.submit == "cpu":
+        print("  Option A) Next step via valska-bayeseor-sweep (recommended):")
+        if args.submit_dry_run:
+            print(
+                "     # You ran a submit dry-run for CPU. To actually submit CPU jobs:"
+            )
+            print(f"     {cmd_cpu_real}")
+            print("     # After CPU jobs finish, submit GPU:")
+            print(f"     {cmd_gpu_real}")
+        else:
+            print(
+                "     # CPU jobs submitted. Next: submit GPU once CPU completes successfully:"
+            )
+            print(f"     {cmd_gpu_real}")
+            print(
+                "     # If you intended to do both in one go for a fresh sweep, use --submit all next time."
+            )
+
+    elif args.submit == "gpu":
+        print("  Option A) Next step via valska-bayeseor-sweep (recommended):")
+        if args.submit_dry_run:
+            print(
+                "     # You ran a submit dry-run for GPU. To actually submit GPU jobs:"
+            )
+            print(f"     {cmd_gpu_real}")
+        else:
+            print(
+                "     # GPU jobs submitted. Typical next step is to monitor jobs:"
+            )
+            print("     squeue -u $USER")
+            print(
+                "     # If you want to submit additional points, re-run with the missing fwhm fracs."
+            )
+
+    elif args.submit == "all":
+        print("  Option A) Next step:")
+        if args.submit_dry_run:
+            print(
+                "     # You ran a submit dry-run for --submit all. To actually submit:"
+            )
+            print(f"     {cmd_all_real}")
+        else:
+            print(
+                "     # CPU+GPU jobs submitted. Typical next step is to monitor jobs:"
+            )
+            print("     squeue -u $USER")
+
+    print(
+        "\n  Option B) Submit per-point via valska-bayeseor-submit (advanced):"
+    )
+    print(
+        "     # valska-bayeseor-submit expects a run_dir containing manifest.json"
+    )
+    print("     # CPU stage across sweep:")
+    print(
+        f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/fwhm_*; do valska-bayeseor-submit "$d" --stage cpu; done'
+    )
+    print("     # GPU stage across sweep:")
+    print(
+        f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/fwhm_*; do valska-bayeseor-submit "$d" --stage gpu; done'
+    )
+
+    print("\n  Option C) Manual submission:")
+    print("     sbatch <point_run_dir>/submit_cpu_precompute.sh")
+    print("     sbatch <point_run_dir>/submit_signal_fit_gpu_run.sh")
+    print("     sbatch <point_run_dir>/submit_no_signal_gpu_run.sh")
 
     return 0
 

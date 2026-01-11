@@ -46,6 +46,10 @@ def _dump_yaml(data: Mapping[str, Any], path: Path) -> None:
 
 
 def _as_flow_seq(seq: Any) -> CommentedSeq:
+    """
+    Convert a sequence into a flow-style ruamel sequence, and ensure any nested
+    sequences also become flow-style. This preserves the compact prior formatting.
+    """
     if isinstance(seq, CommentedSeq):
         out = seq
     else:
@@ -63,6 +67,31 @@ def _as_flow_seq(seq: Any) -> CommentedSeq:
 
 
 # -----------------------------------------------------------------------------
+# Template / variant helpers
+# -----------------------------------------------------------------------------
+
+
+def _default_variant_from_template(template_yaml: Path) -> str:
+    """
+    Derive a stable variant key from a template filename.
+
+    Rules (align with CLI):
+      - take filename stem
+      - remove first occurrence of "_template" if present
+      - strip leading/trailing underscores
+
+    Examples:
+      validation_v1d0_template.yaml            -> validation_v1d0
+      validation_v1d0_template_achromatic.yaml -> validation_v1d0_achromatic
+      validation_achromatic_Gaussian.yaml      -> validation_achromatic_Gaussian
+    """
+    stem = Path(template_yaml).stem
+    stem = stem.replace("_template", "", 1)
+    stem = stem.strip("_")
+    return stem or Path(template_yaml).stem
+
+
+# -----------------------------------------------------------------------------
 # FWHM perturbation
 # -----------------------------------------------------------------------------
 
@@ -72,6 +101,10 @@ def _apply_fwhm_perturbation(
     *,
     fwhm_perturb_frac: float | None,
 ) -> dict[str, Any] | None:
+    """
+    If provided, apply a multiplicative perturbation to fwhm_deg in the config:
+      fwhm_deg <- fwhm_deg * (1 + fwhm_perturb_frac)
+    """
     if fwhm_perturb_frac is None:
         return None
 
@@ -111,6 +144,12 @@ def _materialise_hypothesis_config(
     hypothesis: str,
     run_dir: Path,
 ) -> CommentedMap:
+    """
+    Create a hypothesis-specific BayesEoR config:
+      - sets output_dir under run_dir/output/<hypothesis>
+      - selects priors from signal_fit_priors / no_signal_priors (fallback to priors)
+      - removes hypothesis-specific prior keys from the rendered config
+    """
     if hypothesis not in {"signal_fit", "no_signal"}:
         raise ValueError("hypothesis must be one of: 'signal_fit', 'no_signal'")
 
@@ -136,6 +175,7 @@ def _materialise_hypothesis_config(
             )
         cfg["priors"] = _as_flow_seq(pri)
 
+    # Clean up hypothesis-only keys if present
     for k in (
         "signal_fit_priors",
         "no_signal_priors",
@@ -179,7 +219,8 @@ def prepare_bayeseor_run(
     install: BayesEoRInstall,
     runner: CondaRunner | ContainerRunner,
     results_root: Path,
-    scenario: str,
+    beam_model: str,
+    sky_model: str,
     run_label: str,
     data_path: Path,
     overrides: Mapping[str, Any] | None = None,
@@ -187,6 +228,8 @@ def prepare_bayeseor_run(
     slurm_cpu: Mapping[str, object] | None = None,
     slurm_gpu: Mapping[str, object] | None = None,
     run_dir: Path | None = None,
+    run_id: str = "default",
+    variant: str | None = None,
     unique: bool = False,
     fwhm_perturb_frac: float | None = None,
     hypothesis: str = "both",
@@ -194,77 +237,71 @@ def prepare_bayeseor_run(
     """
     Prepare a BayesEoR run directory containing hypothesis-specific artefacts.
 
-    By default (hypothesis="both"), this prepares:
-      - two BayesEoR configs:
-          config_signal_fit.yaml
-          config_no_signal.yaml
-      - one shared CPU precompute submit script:
-          submit_cpu_precompute.sh
-      - two GPU run submit scripts:
-          submit_signal_fit_gpu_run.sh
-          submit_no_signal_gpu_run.sh
-      - manifest.json (provenance)
+    Canonical non-sweep layout (when run_dir is None):
+      <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
 
-    SLURM configuration
-    -------------------
-    Backwards compatible behaviour:
-      - If `slurm_cpu` / `slurm_gpu` are not provided, `slurm` is used for both stages.
-      - If `slurm_cpu` / `slurm_gpu` are provided, they are used for their respective stages.
+    Where:
+      - variant defaults to a name derived from the template filename stem
+        (first occurrence of '_template' removed).
+      - if unique=True, we append a timestamp beneath run_id.
 
-    Notes
-    -----
-    - We assume BayesEoR is already installed/available via the runner environment.
-    - Container support later: only runner + command-line changes; run artefacts remain the same.
+    FWHM perturbation semantics:
+      If provided, fwhm_perturb_frac applies a multiplicative perturbation to
+      fwhm_deg in the rendered config at prepare time.
 
-    - Run directory semantics:
-        *Recommended (resumable):*
-          Pass an explicit ``run_dir`` (computed by the caller) and this function will
-          write artefacts there without adding timestamps.
-
-        *Legacy behaviour (unique by timestamp):*
-          If ``run_dir`` is not provided and ``unique=True``, a UTC timestamp is appended.
-
-        *Default:*
-          If ``run_dir`` is not provided and ``unique=False``, the run directory is
-          stable at:
-              <results_root>/bayeseor/<scenario>/<run_label>/
-
-    - FWHM perturbation semantics:
-        If provided, ``fwhm_perturb_frac`` applies a multiplicative perturbation
-        to ``fwhm_deg`` in the rendered config at prepare time.
-
-    - CPU precompute sharing:
-        The instrument transfer matrix precompute is typically shared between
-        signal_fit and no_signal. We therefore generate a single CPU submit script,
-        driven by one of the hypothesis configs (prefer signal_fit if present).
+    CPU precompute sharing:
+      We generate one shared CPU precompute script and point it at whichever
+      hypothesis config exists first (signal_fit preferred if both).
     """
     overrides = dict(overrides or {})
-
-    if hypothesis not in {"signal_fit", "no_signal", "both"}:
-        raise ValueError(
-            "hypothesis must be one of: 'signal_fit', 'no_signal', 'both'"
-        )
-
-    # Resolve SLURM mappings (backwards compatible)
-    if slurm_cpu is None:
-        slurm_cpu = slurm
-    if slurm_gpu is None:
-        slurm_gpu = slurm
-
     results_root = Path(results_root).expanduser().resolve()
+    template_yaml = Path(template_yaml).expanduser().resolve()
+    data_path = Path(data_path).expanduser().resolve()
 
-    # Determine run_dir
-    if run_dir is not None:
-        run_dir = Path(run_dir).expanduser().resolve()
+    beam_model = str(beam_model).strip()
+    sky_model = str(sky_model).strip()
+    if not beam_model:
+        raise ValueError("beam_model must be a non-empty string")
+    if not sky_model:
+        raise ValueError("sky_model must be a non-empty string")
+
+    # Variant: respect explicit argument; otherwise derive from template filename.
+    variant_clean = (variant or "").strip()
+    if not variant_clean:
+        variant_clean = _default_variant_from_template(template_yaml)
+
+    # Backwards-compatible SLURM handling:
+    # If slurm_cpu/slurm_gpu are not supplied, fall back to slurm for both stages.
+    if slurm_cpu is None and slurm_gpu is None:
+        slurm_cpu = dict(slurm or {})
+        slurm_gpu = dict(slurm or {})
     else:
-        base_dir = results_root / "bayeseor" / scenario / run_label
-        run_dir = base_dir / _utc_stamp() if unique else base_dir
+        slurm_cpu = dict(slurm_cpu or {})
+        slurm_gpu = dict(slurm_gpu or {})
 
-    run_dir.mkdir(parents=True, exist_ok=not unique)
+    # Canonical run_dir (only if not explicitly supplied)
+    if run_dir is None:
+        base_dir = (
+            results_root
+            / "bayeseor"
+            / beam_model
+            / sky_model
+            / variant_clean
+            / run_label
+            / run_id
+        )
+        run_dir = base_dir / _utc_stamp() if unique else base_dir
+    else:
+        run_dir = Path(run_dir).expanduser().resolve()
+
+    # Always allow resumable directories (exist_ok=True). "unique" should normally
+    # yield a fresh timestamp directory anyway.
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     base_cfg = _load_yaml(template_yaml)
 
     # Required linkage between ValSKA and BayesEoR:
+    # Always overwrite any placeholder (e.g. "__SET_BY_VALSKA__").
     base_cfg["data_path"] = str(data_path)
 
     # Apply FWHM perturbation before overrides so overrides can still force a value.
@@ -282,6 +319,7 @@ def prepare_bayeseor_run(
     else:
         hypotheses = [hypothesis]
 
+    # CPU stage uses a single config; prefer signal_fit if present
     cpu_precompute_driver_hypothesis = (
         "signal_fit" if "signal_fit" in hypotheses else hypotheses[0]
     )
@@ -335,18 +373,19 @@ def prepare_bayeseor_run(
     manifest = {
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "valska_version": __version__,
-        "scenario": scenario,
+        "beam_model": beam_model,
+        "sky_model": sky_model,
+        "variant": variant_clean,
         "run_label": run_label,
+        "run_id": run_id,
         "results_root": str(results_root),
         "run_dir": str(run_dir),
         "template_yaml": str(template_yaml),
+        "template_name": template_yaml.name,
         "data_path": str(data_path),
         "overrides": overrides,
         "hypothesis": hypothesis,
-        "slurm": {
-            "cpu": dict(slurm_cpu or {}),
-            "gpu": dict(slurm_gpu or {}),
-        },
+        "slurm": {"cpu": dict(slurm_cpu or {}), "gpu": dict(slurm_gpu or {})},
         "bayeseor": {
             "install": {
                 "repo_path": str(install.repo_path),

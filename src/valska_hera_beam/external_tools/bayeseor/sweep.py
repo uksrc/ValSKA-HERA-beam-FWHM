@@ -36,26 +36,40 @@ def _default_fwhm_fracs() -> list[float]:
     return [-0.10, -0.05, -0.02, -0.01, 0.0, 0.01, 0.02, 0.05, 0.10]
 
 
-def sweep_root(results_root: Path, scenario: str, run_id: str) -> Path:
+def sweep_root(
+    results_root: Path, beam_model: str, sky_model: str, run_id: str
+) -> Path:
     """
     Central sweep output location.
 
     Layout:
-      <results_root>/bayeseor/<scenario>/_sweeps/<run_id>/
+      <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/
     """
-    return results_root / "bayeseor" / scenario / "_sweeps" / run_id
+    return (
+        results_root / "bayeseor" / beam_model / sky_model / "_sweeps" / run_id
+    )
 
 
 def sweep_point_dir(
-    results_root: Path, scenario: str, run_id: str, run_label: str
+    results_root: Path,
+    beam_model: str,
+    sky_model: str,
+    run_id: str,
+    *,
+    variant: str,
+    run_label: str,
 ) -> Path:
     """
     Per-point run directory for sweeps.
 
     Layout:
-      <results_root>/bayeseor/<scenario>/_sweeps/<run_id>/<run_label>/
+      <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/<variant>/<run_label>/
     """
-    return sweep_root(results_root, scenario, run_id) / run_label
+    return (
+        sweep_root(results_root, beam_model, sky_model, run_id)
+        / variant
+        / run_label
+    )
 
 
 def _jobs_path(run_dir: Path) -> Path:
@@ -87,7 +101,9 @@ class SweepPoint:
 @dataclass(frozen=True)
 class SweepResult:
     results_root: Path
-    scenario: str
+    beam_model: str
+    sky_model: str
+    variant: str
     run_id: str
     data_path: Path
     created_utc: str
@@ -101,7 +117,9 @@ class SweepResult:
 def write_sweep_manifest(
     *,
     results_root: Path,
-    scenario: str,
+    beam_model: str,
+    sky_model: str,
+    variant: str,
     run_id: str,
     data_path: Path,
     template_yaml: Path,
@@ -114,7 +132,9 @@ def write_sweep_manifest(
 
     payload: dict[str, Any] = {
         "results_root": str(results_root),
-        "scenario": scenario,
+        "beam_model": beam_model,
+        "sky_model": sky_model,
+        "variant": variant,
         "run_id": run_id,
         "data_path": str(data_path),
         "template_yaml": str(template_yaml),
@@ -148,7 +168,9 @@ def run_fwhm_sweep(
     install: BayesEoRInstall,
     runner: CondaRunner | ContainerRunner,
     results_root: Path,
-    scenario: str,
+    beam_model: str,
+    sky_model: str,
+    variant: str,
     run_id: str,
     data_path: Path,
     slurm_cpu: dict[str, object] | None = None,
@@ -175,17 +197,14 @@ def run_fwhm_sweep(
     ----------------------
     For sweeps we intentionally colocate all points so they can be archived/removed as a unit:
 
-      <results_root>/bayeseor/<scenario>/_sweeps/<run_id>/<run_label>/
-
-    (This differs from single-run layout, which is:
-      <results_root>/bayeseor/<scenario>/<run_label>/<run_id>/ )
+      <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/<variant>/<run_label>/
 
     Behaviour
     ---------
     - Prepares one run_dir per fwhm frac (stable by default unless unique=True).
     - Optionally submits per run_dir via submit_bayeseor_run with stage cpu/gpu/all.
     - Writes/updates sweep_manifest.json under:
-        <results_root>/bayeseor/<scenario>/_sweeps/<run_id>/
+        <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/
 
     Resubmission behaviour
     ----------------------
@@ -198,11 +217,21 @@ def run_fwhm_sweep(
     data_path = Path(data_path).expanduser().resolve()
     template_yaml = Path(template_yaml).expanduser().resolve()
 
+    beam_model = str(beam_model).strip()
+    sky_model = str(sky_model).strip()
+    variant = str(variant).strip()
+    if not beam_model:
+        raise ValueError("beam_model must be a non-empty string")
+    if not sky_model:
+        raise ValueError("sky_model must be a non-empty string")
+    if not variant:
+        raise ValueError("variant must be a non-empty string")
+
     fracs = list(_default_fwhm_fracs() if fwhm_fracs is None else fwhm_fracs)
     if not fracs:
         raise ValueError("No FWHM fractions provided for sweep.")
 
-    sweep_dir = sweep_root(results_root, scenario, run_id)
+    sweep_dir = sweep_root(results_root, beam_model, sky_model, run_id)
     sweep_manifest_path = sweep_dir / "sweep_manifest.json"
 
     points: list[SweepPoint] = []
@@ -214,7 +243,14 @@ def run_fwhm_sweep(
     if dry_run:
         for frac in fracs:
             run_label = _format_run_label_from_fwhm_frac(float(frac))
-            base = sweep_point_dir(results_root, scenario, run_id, run_label)
+            base = sweep_point_dir(
+                results_root,
+                beam_model,
+                sky_model,
+                run_id,
+                variant=variant,
+                run_label=run_label,
+            )
             run_dir = base / _utc_now_compact() if unique else base
             manifest_json = run_dir / "manifest.json"
             points.append(
@@ -228,7 +264,9 @@ def run_fwhm_sweep(
 
         return SweepResult(
             results_root=results_root,
-            scenario=scenario,
+            beam_model=beam_model,
+            sky_model=sky_model,
+            variant=variant,
             run_id=run_id,
             data_path=data_path,
             created_utc=_utc_now_iso(),
@@ -247,7 +285,12 @@ def run_fwhm_sweep(
         run_label = _format_run_label_from_fwhm_frac(frac_f)
 
         base_run_dir = sweep_point_dir(
-            results_root, scenario, run_id, run_label
+            results_root,
+            beam_model,
+            sky_model,
+            run_id,
+            variant=variant,
+            run_label=run_label,
         )
         run_dir = base_run_dir / _utc_now_compact() if unique else base_run_dir
 
@@ -256,8 +299,11 @@ def run_fwhm_sweep(
             install=install,
             runner=runner,
             results_root=results_root,
-            scenario=scenario,
+            beam_model=beam_model,
+            sky_model=sky_model,
+            variant=variant,
             run_label=run_label,
+            run_id=run_id,  # recorded provenance; run_dir is explicit sweep layout
             run_dir=run_dir,  # explicit: sweep layout
             unique=False,  # unique already handled above (if desired)
             data_path=data_path,
@@ -265,6 +311,7 @@ def run_fwhm_sweep(
             slurm_cpu=slurm_cpu or {},
             slurm_gpu=slurm_gpu or {},
             fwhm_perturb_frac=frac_f,
+            hypothesis="both",
         )
 
         prepared_run_dir = Path(str(out["run_dir"])).expanduser().resolve()
@@ -337,11 +384,13 @@ def run_fwhm_sweep(
                 )
 
     # --------------------
-    # Write sweep manifest (includes per-point jobs.json paths if present)
+    # Write sweep manifest
     # --------------------
     write_sweep_manifest(
         results_root=results_root,
-        scenario=scenario,
+        beam_model=beam_model,
+        sky_model=sky_model,
+        variant=variant,
         run_id=run_id,
         data_path=data_path,
         template_yaml=template_yaml,
@@ -352,7 +401,9 @@ def run_fwhm_sweep(
 
     return SweepResult(
         results_root=results_root,
-        scenario=scenario,
+        beam_model=beam_model,
+        sky_model=sky_model,
+        variant=variant,
         run_id=run_id,
         data_path=data_path,
         created_utc=_utc_now_iso(),

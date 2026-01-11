@@ -1,336 +1,475 @@
-# ValSKA BayesEoR CLI Examples
+# BayesEoR CLI workflows (ValSKA)
 
-> ## Recommended workflow (quick start)
->
-> For most validation tasks, we recommend the following pattern:
->
-> 1. **Prepare runs explicitly** using `valska-bayeseor-prepare` or `valska-bayeseor-sweep`
->    - Use **stable run directories** (avoid `--unique`) for resumability
->    - Inspect generated configs and SLURM scripts before submission
->
-> 2. **Submit via ValSKA** using `valska-bayeseor-submit`
->    - Submit CPU and GPU stages separately or together
->    - Let ValSKA record job IDs in `jobs.json`
->
-> 3. **Resubmit GPU jobs as needed**
->    - Use `--resubmit` if GPU jobs hit walltime
->    - MultiNest will resume from existing output
->
-> 4. **Use sweeps for validation**
->    - Encode physics parameters (e.g. FWHM perturbations) in `run_label`
->    - Encode experiments / batches in `run_id`
->    - Track sweep-wide provenance via `sweep_manifest.json`
->
-> This workflow prioritises **inspectability, reproducibility, and safe resumption**
-> over opaque automation.
+This page is a practical, “example gallery”-style guide to running BayesEoR validation workflows using ValSKA.
+
+It is written to be:
+- copy/paste friendly (commands shown as indented code blocks)
+- HPC-friendly (explicit about dry-runs, SLURM submission, and dependencies)
+- reproducible (paths, templates, and variants recorded in manifests)
+
+If you are new, start with **Quick Start**. If you are iterating on a validation campaign, use **Detailed examples**.
 
 ---
 
-This document provides a **gallery-style collection of tested, copy-pasteable CLI workflows**
-for preparing, submitting, and sweeping BayesEoR validation runs using ValSKA.
+## Contents
 
-The examples are organised by **intent**, not by exhaustive argument reference.
-They are designed to answer:
-
-  “What does a *reasonable*, *reproducible*, *resumable* workflow look like?”
-
-All commands assume that:
-- ValSKA is installed in an active environment
-- BayesEoR is installed and configured via `runtime_paths.yaml` or CLI flags
-- SLURM is available on the target system
+- Quick Start
+  - 1) Prepare a single run kit (no jobs submitted)
+  - 2) Submit CPU stage
+  - 3) Submit GPU stage (after CPU completes)
+  - 4) Prepare & submit a sweep
+- Concepts
+  - Beam / sky taxonomy (directory layout)
+  - Template + variant concept (collision-free template differences)
+  - What gets created where
+- Lifecycle diagram
+- Detailed examples
+  - A) Prepare (dry-run vs real)
+  - B) Sweep (dry-run vs real)
+  - C) Submitting with dependency handling (CPU → GPU)
+  - D) Resubmitting (GPU stage) and job records
+  - E) Advanced: per-point submission with valska-bayeseor-submit
+  - F) Backwards compatibility: deprecated --scenario
 
 ---
 
-## 1. Prepare a single resumable run (no submission)
+## Quick Start
 
-This prepares a BayesEoR run directory with rendered configs and SLURM scripts,
-but does not submit any jobs.
+Assumptions:
+- You have configured `config/runtime_paths.yaml` (see your repo’s example).
+- You have a BayesEoR checkout and conda env accessible to batch jobs (also configured in runtime_paths.yaml).
+- You are on a SLURM cluster (e.g. Galahad).
 
-This is the safest and most inspectable workflow.
+Replace:
+- `achromatic_Gaussian` with your beam model label
+- `GLEAM` with your sky model label
+- `...uvh5` with your dataset
+- `RUN_ID` / `SWEEP_ID` with something meaningful
+
+### 1) Prepare a single run kit (no jobs submitted)
+
+This creates a run directory containing:
+- BayesEoR config YAML(s)
+- SLURM submit scripts for CPU and GPU stages
+- a manifest recording provenance and resolved paths
 
     valska-bayeseor-prepare \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-label fwhm_0.0 \
-      --run-id default
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id RUN_ID \
+      --fwhm-perturb-frac 0.01
 
-Resulting directory structure:
-
-    <results_root>/bayeseor/GLEAM_beam/fwhm_0.0/default/
-
-This directory can be reused to resume runs (e.g. after walltime).
-
----
-
-## 2. Prepare a unique run (parameter sweeps, experiments)
-
-Use `--unique` when you want to avoid collisions and do not intend to resume
-into the same directory.
+If you want to see what would happen without creating files:
 
     valska-bayeseor-prepare \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-label fwhm_1.0e-02 \
-      --run-id sweep_test \
-      --unique
-
-This appends a UTC timestamp under the run directory.
-
----
-
-## 3. Dry-run preparation (no filesystem changes)
-
-Useful to verify directory layout, template resolution, and defaults.
-
-    valska-bayeseor-prepare \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id test \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id RUN_ID \
       --fwhm-perturb-frac 0.01 \
       --dry-run
 
-Nothing is written; all resolved paths are printed.
+### 2) Submit CPU stage
+
+If you are using the submit CLI:
+
+    valska-bayeseor-submit /path/to/run_dir --stage cpu
+
+Or manually (inside the run_dir output from prepare):
+
+    sbatch /path/to/run_dir/submit_cpu_precompute.sh
+
+### 3) Submit GPU stage (after CPU completes)
+
+GPU stage submissions should depend on the CPU job finishing successfully (`afterok:<CPU_JOBID>`).
+If you submitted CPU using `valska-bayeseor-submit`, it records the CPU job id in `jobs.json`,
+which GPU submission can then use.
+
+Using the submit CLI:
+
+    valska-bayeseor-submit /path/to/run_dir --stage gpu
+
+Or manually:
+
+    sbatch --dependency=afterok:<CPU_JOBID> /path/to/run_dir/submit_signal_fit_gpu_run.sh
+    sbatch --dependency=afterok:<CPU_JOBID> /path/to/run_dir/submit_no_signal_gpu_run.sh
+
+### 4) Prepare & submit a sweep
+
+A sweep prepares N run dirs (one per FWHM perturbation) and can optionally submit CPU/GPU stages
+across all points.
+
+Prepare only (no submission):
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id SWEEP_ID \
+      --fwhm-fracs 0.01 0.0 \
+      --submit none
+
+Submit CPU stage across all points:
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id SWEEP_ID \
+      --fwhm-fracs 0.01 0.0 \
+      --submit cpu
+
+Submit GPU stage across all points (after CPU job IDs have been recorded in each point’s `jobs.json`):
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id SWEEP_ID \
+      --fwhm-fracs 0.01 0.0 \
+      --submit gpu
+
+Dry-run submission (show `sbatch` commands but do not submit):
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id SWEEP_ID \
+      --fwhm-fracs 0.01 0.0 \
+      --submit cpu \
+      --submit-dry-run
 
 ---
 
-## 4. Using `data.root` to shorten `--data` paths
+## Concepts
 
-If your datasets live under a common directory, you can configure a default
-data root in `config/runtime_paths.yaml`:
+### Beam / sky taxonomy (directory layout)
 
-    data:
-      root: /share/nas-0-3/psims/data/uvh5
+We organise results by the two “observation-defining” axes:
 
-Once this is set, `--data` may be given as a **relative path**:
+- `beam_model`: instrument / beam model label (e.g. `achromatic_Gaussian`, `chromatic_Gaussian`, `airy`)
+- `sky_model`: sky model label (e.g. `GLEAM`, `GSM`, `GLEAM_plus_GSM`)
+
+This keeps campaigns predictable when you explore multiple sky models and multiple beam models.
+
+### Template + variant concept (collision-free template differences)
+
+Many BayesEoR runs differ only by template-level settings (chromatic vs achromatic, alternate priors, etc).
+To avoid collisions, we include a `<variant>` directory level.
+
+- If you do not specify `--variant`, it is derived from the template filename stem by removing the first `_template`.
+
+Examples:
+- `validation_v1d0_template.yaml`            → `validation_v1d0`
+- `validation_v1d0_template_achromatic.yaml` → `validation_v1d0_achromatic`
+- `validation_achromatic_Gaussian.yaml`      → `validation_achromatic_Gaussian`
+
+You can override the auto-derived value with `--variant`.
+
+### What gets created where
+
+Canonical single-run directory:
+
+    <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
+
+Canonical sweep root and points:
+
+    <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<sweep_id>/<variant>/<run_label>[/<UTCSTAMP>]
+
+Notes:
+- `<run_label>` is typically `fwhm_<value>` (e.g. `fwhm_1.0e-02`) and is auto-generated from FWHM frac.
+- `--unique` appends a UTC timestamp suffix (useful for one-off runs; usually not recommended for resumable sweeps).
+
+---
+
+## Lifecycle diagram
+
+This is the “mental model” for the typical workflow.
+
+    +---------------------------+
+    | Choose beam + sky + data  |
+    | Choose template (optional)|
+    +-------------+-------------+
+                  |
+                  v
+    +---------------------------+
+    | PREPARE (per run)         |
+    | valska-bayeseor-prepare   |
+    | - writes run_dir          |
+    | - config_*.yaml           |
+    | - submit_*.sh             |
+    | - manifest.json           |
+    +-------------+-------------+
+                  |
+                  v
+    +---------------------------+
+    | CPU stage (precompute)    |
+    | valska-bayeseor-submit    |
+    |   --stage cpu             |
+    | or sbatch submit_cpu*.sh  |
+    | - records CPU job id      |
+    |   into jobs.json          |
+    +-------------+-------------+
+                  |
+                  v
+    +---------------------------+
+    | GPU stage (run analyses)  |
+    | valska-bayeseor-submit    |
+    |   --stage gpu             |
+    | - uses afterok:<CPU_JOBID>|
+    | - submits signal/no-signal|
+    | - records GPU job ids     |
+    +---------------------------+
+
+Sweeps are a thin wrapper that repeats PREPARE across multiple FWHM fractions:
+
+    valska-bayeseor-sweep --submit none   (prepare all points)
+    valska-bayeseor-sweep --submit cpu    (submit CPU across points)
+    valska-bayeseor-sweep --submit gpu    (submit GPU across points; needs CPU job ids)
+    valska-bayeseor-sweep --submit all    (submit CPU+GPU in one go per point)
+
+---
+
+## Detailed examples
+
+The examples below are intentionally explicit, and many include abridged output snippets.
+
+### A) Prepare (dry-run)
 
     valska-bayeseor-prepare \
-      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id sweep_v1 \
-      --fwhm-perturb-frac 1e-1
-
-ValSKA will resolve this internally as:
-
-    <data.root>/gsm_plus_gleam-158.30-167.10-MHz-nf-38.uvh5
-
-The fully resolved absolute path is recorded in:
-- `manifest.json`
-- `sweep_manifest.json`
-- SLURM job logs
-
-If `--data` is provided as an **absolute path**, it is used as-is and
-`data.root` is ignored.
-
----
-
-## 5. Manual submission (inspect scripts, then sbatch)
-
-After preparation, you can submit manually using `sbatch`.
-
-    cd <run_dir>
-
-    sbatch submit_cpu_precompute.sh
-    sbatch submit_signal_fit_gpu_run.sh
-    sbatch submit_no_signal_gpu_run.sh
-
-This mode is:
-- fully supported
-- maximally inspectable
-- ideal for debugging SLURM behaviour
-
----
-
-## 6. ValSKA-managed submission (recommended)
-
-ValSKA can submit prepared runs and record job IDs in `jobs.json`.
-
-### 6.1 Submit CPU stage only
-
-    valska-bayeseor-submit <run_dir> --stage cpu
-
-This records the CPU job ID and is safe to run multiple times with `--resubmit`.
-
----
-
-### 6.2 Submit GPU stage only (after CPU)
-
-If CPU has already been submitted (or is still running):
-
-    valska-bayeseor-submit <run_dir> --stage gpu
-
-GPU jobs are submitted with an `afterok` dependency on the recorded CPU job ID.
-
----
-
-### 6.3 Submit all stages at once
-
-    valska-bayeseor-submit <run_dir> --stage all
-
-CPU is submitted first; GPU jobs depend on it automatically.
-
----
-
-### 6.4 Dry-run submission (print sbatch commands)
-
-    valska-bayeseor-submit <run_dir> --stage all --dry-run
-
-No jobs are submitted; commands are printed.
-
----
-
-## 7. Resubmitting jobs (walltime, failures)
-
-If a job hits walltime, MultiNest can resume safely.
-
-### 7.1 GPU-only resubmission
-
-    valska-bayeseor-submit <run_dir> --stage gpu --resubmit
-
-This:
-- archives the existing `jobs.json`
-- requeues GPU jobs
-- leaves CPU artefacts untouched
-
----
-
-### 7.2 Full resubmission
-
-    valska-bayeseor-submit <run_dir> --stage all --resubmit
-
-Both CPU and GPU jobs are requeued.
-
----
-
-## 8. FWHM validation sweeps (core use case)
-
-Sweeps prepare *multiple independent run directories*, one per FWHM perturbation,
-and write a single `sweep_manifest.json` for provenance.
-
----
-
-### 8.1 Standard 9-point FWHM sweep (prepare only)
-
-    valska-bayeseor-sweep \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id sweep_v1 \
-      --fwhm-fracs -0.10 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.10
-
-Directories created:
-
-    .../GLEAM_beam/fwhm_-1.0e-01/sweep_v1/
-    .../GLEAM_beam/fwhm_-5.0e-02/sweep_v1/
-    ...
-    .../GLEAM_beam/fwhm_1.0e-01/sweep_v1/
-
-A sweep manifest is written under:
-
-    <results_root>/bayeseor/GLEAM_beam/_sweeps/sweep_v1/sweep_manifest.json
-
----
-
-### 8.2 Narrow sweep (quick smoke test)
-
-    valska-bayeseor-sweep \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id sweep_smoke_test \
-      --fwhm-fracs -0.01 0.0 0.01 \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id test_prepare1 \
+      --fwhm-perturb-frac 0.01 \
       --dry-run
 
-Useful when testing templates or SLURM settings.
+Example output (abridged):
 
----
+    [DRY RUN] Prepare would be executed with:
+      results_root:       /share/.../validation_results/UKSRC
+      beam_model:         achromatic_Gaussian
+      sky_model:          GLEAM
+      run_id:             test_prepare1
+      run_label:          fwhm_1.0e-02
+      template:           .../templates/validation_achromatic_Gaussian.yaml
+      variant:            validation_achromatic_Gaussian
+      data:               /share/.../gsm_plus_gleam...uvh5
+      run_dir (preview):  /share/.../bayeseor/achromatic_Gaussian/GLEAM/validation_achromatic_Gaussian/fwhm_1.0e-02/test_prepare1
+      ...
+    [DRY RUN] No files will be created.
 
-### 8.3 File-driven sweep
+### B) Prepare (real)
 
-Create a file, e.g. `config/fwhm_fracs.txt`:
+    valska-bayeseor-prepare \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id test_prepare1 \
+      --fwhm-perturb-frac 0.01
 
-    # Standard FWHM sweep
-    -0.10
-    -0.05
-    -0.02
-    -0.01
-    0.0
-    0.01
-    0.02
-    0.05
-    0.10
+Example output (abridged):
 
-Then run:
+    Run prepared:
+      run_dir:      /share/.../bayeseor/achromatic_Gaussian/GLEAM/validation_achromatic_Gaussian/fwhm_1.0e-02/test_prepare1
+      manifest:     /share/.../manifest.json
+      beam_model:   achromatic_Gaussian
+      sky_model:    GLEAM
+      variant:      validation_achromatic_Gaussian
+      run_label:    fwhm_1.0e-02
+      run_id:       test_prepare1
+
+    Next steps:
+      Option A) Submit via ValSKA (recommended):
+        valska-bayeseor-submit /share/.../test_prepare1 --stage cpu
+        valska-bayeseor-submit /share/.../test_prepare1 --stage gpu
+      Option B) Manual submission:
+        sbatch /share/.../submit_cpu_precompute.sh
+        sbatch /share/.../submit_signal_fit_gpu_run.sh
+        sbatch /share/.../submit_no_signal_gpu_run.sh
+
+### C) Sweep (dry-run with point directories)
 
     valska-bayeseor-sweep \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id sweep_v1 \
-      --fwhm-fracs-file config/fwhm_fracs.txt
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --dry-run
 
----
+Example output (abridged):
 
-### 8.4 Prepare and submit the entire sweep
+    [DRY RUN] Sweep would be executed with:
+      sweep_dir: /share/.../bayeseor/achromatic_Gaussian/GLEAM/_sweeps/sweep_test2
+      variant:   validation_achromatic_Gaussian
+      ...
+
+    [DRY RUN] Points:
+      +0.010  fwhm_1.0e-02  ->  /share/.../_sweeps/sweep_test2/validation_achromatic_Gaussian/fwhm_1.0e-02
+      +0.000  fwhm_0.0e+00  ->  /share/.../_sweeps/sweep_test2/validation_achromatic_Gaussian/fwhm_0.0e+00
+
+### D) Sweep (prepare only)
 
     valska-bayeseor-sweep \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id sweep_v1 \
-      --fwhm-fracs -0.10 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.10 \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --submit none
+
+This writes:
+- sweep manifest: `.../_sweeps/<sweep_id>/sweep_manifest.json`
+- per-point run dirs containing `manifest.json`, configs, and SLURM scripts
+
+### E) Submit CPU across sweep points
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --submit cpu
+
+Typical output includes a “Submission summary” listing the sbatch calls per point.
+It should also record job ids into each point’s `jobs.json` (real submit).
+
+To preview the sbatch commands without submitting:
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --submit cpu \
+      --submit-dry-run
+
+### F) Submit GPU across sweep points (after CPU)
+
+GPU-only submission needs a dependency job id per point (typically from that point’s `jobs.json`).
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --submit gpu
+
+If you attempt GPU submission before CPU job ids exist, ValSKA should report an error explaining
+you must either:
+- submit CPU in the same invocation (`--submit all`), or
+- pass `--depend-afterok <JOBID>` (advanced), or
+- ensure `jobs.json` exists with a recorded CPU job id
+
+Dry-run GPU submission (show commands, no jobs submitted):
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --submit gpu \
+      --submit-dry-run
+
+Example output (abridged; dependency read from jobs.json):
+
+    sbatch --dependency=afterok:<CPU_JOBID> .../submit_signal_fit_gpu_run.sh
+    sbatch --dependency=afterok:<CPU_JOBID> .../submit_no_signal_gpu_run.sh
+
+### G) Submit CPU+GPU together (fresh sweep)
+
+If you want “one command per point” orchestration (CPU then GPU dependent), use:
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
       --submit all
 
-Each sweep point is submitted independently with its own CPU → GPU dependency chain.
+This is convenient for “fresh” runs, but some teams prefer splitting CPU and GPU stages into
+separate invocations for clearer control.
 
----
+### H) Advanced: per-point submission with valska-bayeseor-submit
 
-### 8.5 GPU-only resubmission across a sweep
+Sometimes you only want to submit a subset of points or a single point, especially when testing.
 
-If CPU stages already completed:
+Example: submit GPU for just one perturbation fraction (assuming CPU already submitted and recorded):
 
     valska-bayeseor-sweep \
-      --data /path/to/data.uvh5 \
-      --scenario GLEAM_beam \
-      --run-id sweep_v1 \
-      --fwhm-fracs -0.10 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.10 \
-      --submit gpu \
-      --resubmit
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 \
+      --submit gpu
 
-This is the recommended pattern when GPU jobs hit walltime.
+Or, if you know the run_dir explicitly:
+
+    valska-bayeseor-submit /share/.../_sweeps/sweep_test2/validation_achromatic_Gaussian/fwhm_1.0e-02 --stage gpu
+
+### I) Monitoring jobs
+
+Common SLURM checks:
+
+    squeue -u $USER
+    sacct -j <JOBID> --format=JobID,JobName,State,Elapsed,ExitCode
+    tail -n 200 /path/to/run_dir/slurm-<JOBID>.out
+
+ValSKA also records submission information into:
+- per-point `jobs.json`
+- sweep-level `sweep_manifest.json` (including submit results)
+
+### J) Backwards compatibility: deprecated --scenario
+
+Older scripts used `--scenario` as a single label that mixed multiple concepts.
+
+ValSKA now prefers `--beam` and `--sky` explicitly.
+
+If you must use `--scenario`, it is deprecated and must be unambiguous:
+
+    --scenario <beam>/<sky>
+    --scenario <beam>__<sky>
+
+Examples:
+
+    valska-bayeseor-sweep \
+      --scenario achromatic_Gaussian/GLEAM \
+      --data ...uvh5 \
+      --run-id sweep_oldstyle \
+      --fwhm-fracs 0.01 0.0 \
+      --submit none
+
+Ambiguous older patterns like `GLEAM_beam` are rejected to prevent silent misrouting.
 
 ---
 
-## 9. Naming conventions and directory layout
+## Notes for UKSRC users
 
-ValSKA uses two distinct naming axes:
-
-- `run_label` → **physics parameter value**
-  (e.g. `fwhm_-1.0e-02`)
-- `run_id` → **experiment or sweep identifier**
-  (e.g. `sweep_v1`, `jan2026_test`)
-
-This separation allows:
-- clean grouping of related runs
-- safe repetition with updated templates or priors
-- unambiguous provenance tracking
+- Keep beam/sky labels stable across campaigns. Your analysis notebooks, plots, and archiving will thank you.
+- Prefer `--submit-dry-run` before real submissions when testing new templates or SLURM settings.
+- For large sweeps, consider committing a standard `bayeseor.sweep.fwhm_fracs` set in runtime_paths.yaml
+  and only override with `--fwhm-fracs` for special experiments.
+- If you run into walltime, MultiNest is typically resumable; ValSKA supports resubmission patterns
+  (see `--resubmit` in your CLI help).
 
 ---
 
-## 10. Debugging and inspection tips
+## Related files (in this repo)
 
-- Use `--dry-run` aggressively
-- Inspect generated SLURM scripts before submission
-- Check `jobs.json` to understand submission state
-- SLURM environment variables are printed at job start
-- All logs are written inside each run directory
+- `src/valska_hera_beam/external_tools/bayeseor/cli_prepare.py`
+- `src/valska_hera_beam/external_tools/bayeseor/cli_sweep.py`
+- `src/valska_hera_beam/external_tools/bayeseor/cli_submit.py`
+- `src/valska_hera_beam/external_tools/bayeseor/setup.py`
+- `src/valska_hera_beam/external_tools/bayeseor/sweep.py`
+- `src/valska_hera_beam/external_tools/bayeseor/submit.py`
+- `config/runtime_paths.yaml`
 
----
-
-## Summary
-
-This document is intended to be:
-- practical
-- explicit
-- stable over time
-
-If an example here stops working, that indicates a **regression** or **API break**
-that should be addressed.
-
-For questions or proposed additions, open an issue or extend this document
-with another concrete, tested example.

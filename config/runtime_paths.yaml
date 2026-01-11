@@ -19,7 +19,8 @@ bayeseor:
   conda_env: bayeseor_test2
 
   # Default shipped template to use if --template is not provided
-  default_template: validation_v1d0_template.yaml
+  # default_template: validation_v1d0_template.yaml
+  default_template: validation_achromatic_Gaussian.yaml
 
   # Whether to enforce unique output directories by default
   unique_by_default: false

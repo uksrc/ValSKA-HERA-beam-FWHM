@@ -30,18 +30,6 @@ classifiers = [
 
 # TODO: consider fixing to a specific versions for reproducibility
 dependencies = [
-    "astropy",
-    "astropy-healpix",
-    "h5py",
-    "jsonargparse",
-    "numpy",
-    "pymultinest",
-    "pyuvdata",
-    "rich",
-    "scipy",
-    "setuptools_scm",
-    "anesthetic",
-    "tqdm",
     # "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"
     "bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure"
 ]
@@ -51,26 +39,26 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "black",
-  "flake8",
-  "isort",
-  "pylint",
-  "pylint-junit",
-  "pytest",
-  "pytest-cov",
-  "pytest-mock",
-  "ruff>=0.12.0",
-  "mypy",
-  "pre-commit",
-  "ipykernel",
-  "nbstripout",
-  "build",
-  "twine",
-  "nbmake"
+  "black>=25.12.0",
+  "flake8>=7.3.0",
+  "isort>7.0.0",
+  "pylint>=4.04",
+  "pylint-junit>=0.3.5",
+  "pytest>=9.0.2",
+  "pytest-cov>=7.0.0",
+  "pytest-mock>=3.15.1",
+  "ruff>=0.14.11",
+  "mypy>=1.19.1",
+  "pre-commit>=4.5.1",
+  "ipykernel>=7.1.0",
+  "nbstripout>=0.8.2",
+  "build>=1.4.0",
+  "twine>=6.2.0",
+  "nbmake>=1.5.5"
 ]
 docs = [
-  "mkdocs",
-  "mkdocs-material"
+  "mkdocs>=1.6.1",
+  "mkdocs-material>=9.7.1"
 ]
 
 [project.urls]

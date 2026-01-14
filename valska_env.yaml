@@ -12,31 +12,29 @@ name: valska
 channels:
   - conda-forge
 dependencies:
-  - anesthetic>=2.11.0
-  - astropy>=7.2.0
-  - astropy-healpix>=1.1.2
-  - cudatoolkit>=11.8.0 # Uncomment only on Galahad
-  # - cuda>=13.1.0 # Uncomment everywhere except Galahad
-  - gcc_linux-64>=15.2.0
-  - h5py>=3.15.1
-  - jsonargparse>=4.45.0
-  - magma>=0.3.9
-  - matplotlib>=3.10.8
+  - astropy
+  - astropy-healpix
+  - cudatoolkit # Uncomment only on Galahad
+  # - cuda # Uncomment everywhere except Galahad
+  - gcc_linux-64
+  - h5py
+  - jsonargparse
+  - magma
+  - matplotlib
   - mpi4py>=3.0.0
-  - numpy>=2.4.1
-  - pip>=25.3
-  - pycuda>=2025.1.2
-  - pymultinest>=2.12
-  - python>=3.12
-  - pyuvdata>=3.2.5
-  - rich>=14.2.0
-  - scipy>=1.17.0
-  - setuptools>=80.9.0
-  - setuptools_scm>=9.2.2
-  - sphinx>=9.1.0
-  - threadpoolctl>=3.6.0
-  - tqdm>=4.67.1
-  - pandas>=2.3.3
+  - numpy
+  - pip
+  - pycuda
+  - pymultinest
+  - python
+  - pyuvdata
+  - rich
+  - scipy
+  - setuptools
+  - setuptools_scm
+  - sphinx
+  - threadpoolctl
+  - pandas
 
   - pip:
       # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt

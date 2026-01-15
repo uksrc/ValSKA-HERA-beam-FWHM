@@ -15,7 +15,7 @@ dependencies:
   - anesthetic>=2.11.0
   - astropy>=7.2.0
   - astropy-healpix>=1.1.2
-  - cudatoolkit>=12.9 # Uncomment only on Galahad
+  - cudatoolkit # Uncomment only on Galahad
   # - cuda>=13.1.0 # Uncomment everywhere except Galahad
   - gcc_linux-64>=15.2.0
   - h5py>=3.15.1
@@ -25,7 +25,7 @@ dependencies:
   - mpi4py>=3.0.0
   - numpy
   - pip>=25.3
-  - pycuda>=2025.1.2
+  - pycuda
   - pymultinest>=2.12
   - python>=3.12
   - pyuvdata>=3.2.5

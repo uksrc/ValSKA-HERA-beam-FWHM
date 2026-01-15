@@ -19,7 +19,7 @@ dependencies:
   # - cuda>=13.1.0 # Uncomment everywhere except Galahad
   - gcc_linux-64>=15.2.0
   - h5py>=3.15.1
-  - jsonargparse>=4.45.0
+  - jsonargparse>=4.40.2
   - magma>=0.3.9
   - matplotlib>=3.10.8
   - mpi4py>=3.0.0

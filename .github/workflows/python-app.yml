@@ -18,7 +18,7 @@ jobs:
         python-version: "3.12"
     - name: Install dependencies
       run: |
-        $CONDA/bin/conda env update --file valska_env.yaml  --prune --name base
+        $CONDA/bin/conda env update --file valska_env.yaml  --prune
     - name: Test with pytest
       run: |
         make python-test

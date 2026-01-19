@@ -130,13 +130,11 @@ def test_repr(path_manager):
     }
 
     repr_string = path_manager.__repr__()
-    print(repr_string)
 
     expected_strs = [
         f"  {name}: {path}" for name, path in expected_dictionary.items()
     ]
     expected_string = "PathManager:\n" + "\n".join(expected_strs)
-    print(expected_string)
 
     assert expected_string == repr_string
 
@@ -209,7 +207,7 @@ def test_create_path_manager_default(pm, chains):
 
             if pm == "class":
                 path_manager = utils.PathManager()
-            if pm == "method":
+            elif pm == "method":
                 path_manager = utils.get_default_path_manager()
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
@@ -236,7 +234,7 @@ def test_create_path_manager_default(pm, chains):
         ("GSM_FgEoR_-1e-3pp", "GSM_FgEoR_", None, "GSM -0.001%"),
         ("GSM_FgEoR_-1.123e0pp", "GSM_FgEoR_", None, "GSM -1.12%"),
         ("GSM_FgEoR_1e0pp", "GSM_FgEoR_", None, "GSM +1%"),
-        ("GSM_FgEoR_1e0pp", "GSM_FgEoR_", None, "GSM +1%"),
+        ("GSM_FgEoR_1e1pp", "GSM_FgEoR_", None, "GSM +10%"),
         ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", "MyPrefix", "MyPrefix -1%"),
         ("GSM_FgEoR_-1e0pp", "MyPrefix_", None, None),
         ("GSM_FgEoR_-1e0", "GSM_FgEoR_", None, None),
@@ -303,15 +301,6 @@ def test_build_pp_groups_from_paths_default():
         (
             ["Test2_"],
             {"Dummy": "something"},
-            {
-                "Test2 -2%": ["Test2_-2e0pp"],
-                "Test2 -5%": ["Test2_-5e0pp"],
-                "Test2 -10%": ["Test2_-1e1pp"],
-            },
-        ),
-        (
-            ["Test2_"],
-            None,
             {
                 "Test2 -2%": ["Test2_-2e0pp"],
                 "Test2 -5%": ["Test2_-5e0pp"],

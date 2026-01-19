@@ -21,7 +21,7 @@ jobs:
       with:
         activate-environment: valska
       run: |
-        $CONDA/bin/conda env update --file valska_env.yaml  --prune
+        $CONDA/bin/conda env create --file valska_env.yaml
     - name: Test with pytest
       run: |
         make python-test

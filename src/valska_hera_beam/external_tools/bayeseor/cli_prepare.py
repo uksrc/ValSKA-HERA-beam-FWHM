@@ -392,6 +392,13 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
 
 
 def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
+    """
+    Extract SLURM defaults from runtime_paths.yaml.
+
+    Passes through ALL keys from the config to support any SBATCH directive.
+    Only truly universal defaults are set here; cluster-specific options
+    should be configured in runtime_paths.yaml.
+    """
     assert profile in {"cpu", "gpu"}
     key = "slurm_defaults_cpu" if profile == "cpu" else "slurm_defaults_gpu"
 
@@ -400,41 +407,25 @@ def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
         cfg = _get_nested(runtime, "bayeseor", "slurm_defaults")
     cfg = cfg if isinstance(cfg, dict) else {}
 
-    out = {
-        "partition": cfg.get("partition", None),
-        "constraint": cfg.get("constraint", None),
-        "time": cfg.get("time", "12:00:00"),
-        "mem": cfg.get("mem", "8G"),
-        "cpus_per_task": cfg.get("cpus_per_task", 4),
-        "nodes": cfg.get("nodes", 1),
-        "ntasks": cfg.get("ntasks", 1),
-        "ntasks_per_node": cfg.get("ntasks_per_node", 1),
-        "job_name_prefix": cfg.get("job_name_prefix", "bayeseor"),
-        "mpi": cfg.get("mpi", "pmi2"),
-        "account": cfg.get("account", None),
-        "qos": cfg.get("qos", None),
-        "mail_type": cfg.get("mail_type", None),
-        "mail_user": cfg.get("mail_user", None),
-        "exclude": cfg.get("exclude", None),
-        "nice": cfg.get("nice", None),
-        "chdir": cfg.get("chdir", None),
-        "export": cfg.get("export", None),
-        "comment": cfg.get("comment", None),
-        "dependency": cfg.get("dependency", None),
-        "requeue": cfg.get("requeue", None),
-        "open_mode": cfg.get("open_mode", None),
-        "signal": cfg.get("signal", None),
-        "gpus": cfg.get("gpus", None),
-        "gres": cfg.get("gres", None),
+    # Start with universal defaults (can all be overridden to None in YAML)
+    defaults = {
+        "time": "12:00:00",
+        "mem": "8G",
+        "cpus_per_task": 4,
+        "nodes": 1,
+        "ntasks": 1,
+        "ntasks_per_node": 1,
+        "job_name_prefix": "bayeseor",
+        "mpi": "pmi2",
     }
 
-    # Profile-specific safe defaults
-    if profile == "gpu":
-        if out.get("gres") is None:
-            out["gres"] = "gpu:1"
+    # Merge config on top of defaults (config wins, including None to suppress)
+    out = {**defaults, **cfg}
+
+    # No more hardcoded gres fallback - let the user configure gpus_per_task OR gres
+    # in their runtime_paths.yaml as appropriate for their cluster.
 
     return out
-
 
 def _parse_beam_sky(
     *, beam: str | None, sky: str | None, scenario: str | None

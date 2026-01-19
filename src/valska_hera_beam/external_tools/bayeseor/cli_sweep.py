@@ -14,6 +14,7 @@ from valska_hera_beam.external_tools.bayeseor import (
 from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
 
 from . import sweep as sweep_mod  # for DRY helpers (run_label + point dirs)
+from .cli_prepare import _get_nested, _slurm_defaults
 from .sweep import run_fwhm_sweep, sweep_root
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
@@ -276,15 +277,6 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
     return out
 
 
-def _get_nested(d: dict[str, Any], *keys: str) -> Any:
-    cur: Any = d
-    for k in keys:
-        if not isinstance(cur, dict):
-            return None
-        cur = cur.get(k)
-    return cur
-
-
 def _derive_variant_from_template_path(template_yaml: Path) -> str:
     stem = template_yaml.stem
     if "_template" in stem:
@@ -332,52 +324,6 @@ def _parse_beam_sky(
         )
 
     raise SystemExit("ERROR: You must provide --beam and --sky (recommended).")
-
-
-def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
-    """
-    Mirror cli_prepare.py behaviour: read slurm defaults from runtime_paths.yaml.
-    """
-    assert profile in {"cpu", "gpu"}
-    key = "slurm_defaults_cpu" if profile == "cpu" else "slurm_defaults_gpu"
-
-    cfg = _get_nested(runtime, "bayeseor", key)
-    if not isinstance(cfg, dict):
-        cfg = _get_nested(runtime, "bayeseor", "slurm_defaults")
-    cfg = cfg if isinstance(cfg, dict) else {}
-
-    out = {
-        "partition": cfg.get("partition", None),
-        "constraint": cfg.get("constraint", None),
-        "time": cfg.get("time", "12:00:00"),
-        "mem": cfg.get("mem", "8G"),
-        "cpus_per_task": cfg.get("cpus_per_task", 4),
-        "nodes": cfg.get("nodes", 1),
-        "ntasks": cfg.get("ntasks", 1),
-        "ntasks_per_node": cfg.get("ntasks_per_node", 1),
-        "job_name_prefix": cfg.get("job_name_prefix", "bayeseor"),
-        "mpi": cfg.get("mpi", "pmi2"),
-        "account": cfg.get("account", None),
-        "qos": cfg.get("qos", None),
-        "mail_type": cfg.get("mail_type", None),
-        "mail_user": cfg.get("mail_user", None),
-        "exclude": cfg.get("exclude", None),
-        "nice": cfg.get("nice", None),
-        "chdir": cfg.get("chdir", None),
-        "export": cfg.get("export", None),
-        "comment": cfg.get("comment", None),
-        "dependency": cfg.get("dependency", None),
-        "requeue": cfg.get("requeue", None),
-        "open_mode": cfg.get("open_mode", None),
-        "signal": cfg.get("signal", None),
-        "gpus": cfg.get("gpus", None),
-        "gres": cfg.get("gres", None),
-    }
-
-    if profile == "gpu" and out.get("gres") is None:
-        out["gres"] = "gpu:1"
-
-    return out
 
 
 def build_parser() -> argparse.ArgumentParser:

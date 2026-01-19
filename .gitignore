@@ -220,3 +220,4 @@ file_structure.txt
 config/runtime_paths.yaml
 validation_results/*
 validation_results
+*.py.backup

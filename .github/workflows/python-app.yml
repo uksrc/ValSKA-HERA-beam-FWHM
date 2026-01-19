@@ -9,7 +9,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
     - uses: actions/checkout@v5
     - name: Set up Python 3.12
@@ -21,7 +23,7 @@ jobs:
       with:
         activate-environment: valska
         environment-file: valska_env.yaml
-        auto-activate: true
+        auto-activate: false
     - name: Test with pytest
       run: |
         conda info

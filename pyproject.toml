@@ -28,11 +28,8 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Astronomy"
 ]
 
-# TODO: consider fixing to a specific versions for reproducibility
-dependencies = [
-    # "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"
-    "bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure"
-]
+# Dependencies are specified in valska_env.yaml not here
+# dependencies = []
 
 # Version is derived from your Git tags by setuptools-scm
 # dynamic = ["version"]

@@ -25,7 +25,7 @@ dependencies:
   - mpi4py>=3.0.0
   - numpy>=2.3.5
   - pip>=25.3
-  - pycuda
+  - pycuda>=2025.1.1
   - pymultinest>=2.12
   - python>=3.12
   - pyuvdata>=3.2.5
@@ -39,6 +39,8 @@ dependencies:
   - pandas>=2.3.3
 
   - pip:
+      # - "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"
+      - bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure
       # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt
       # - -e . # editable-installs valska and standard deps from pyproject.toml
       - -e .[dev] # editable-installs valska and all deps from pyproject.toml

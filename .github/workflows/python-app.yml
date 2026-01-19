@@ -21,9 +21,11 @@ jobs:
       with:
         activate-environment: valska
         environment-file: valska_env.yaml
-        auto-activate: false
+        auto-activate: true
     - name: Test with pytest
       run: |
+        conda info
+        conda list
         make python-test
     - name: Test notebooks
       run: |

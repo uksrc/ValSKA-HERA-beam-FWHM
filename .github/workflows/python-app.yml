@@ -20,8 +20,8 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: valska
-      run: |
-        $CONDA/bin/conda env create --file valska_env.yaml
+        environment-file: valska_env.yaml
+        auto-activate: false
     - name: Test with pytest
       run: |
         make python-test

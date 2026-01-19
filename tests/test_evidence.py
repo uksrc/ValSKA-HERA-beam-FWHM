@@ -52,6 +52,7 @@ def test_calculate_bayes_factor(monkeypatch):
             Path(f"{chains_dir}/chains_2.txt"),
             "Model 1",
             "Model 2",
+            verbose=False,
         )
 
         expected_result = {
@@ -76,6 +77,7 @@ def test_calculate_bayes_factor_error():
         Path("dummy/chains_2.txt"),
         "Model 1",
         "Model 2",
+        verbose=False,
     )
 
     assert result["error"].split("Could not find any compatible chains:")[

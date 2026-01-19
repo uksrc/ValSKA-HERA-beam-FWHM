@@ -117,7 +117,7 @@ def test_find_single_mn_subdir_multiple_error():
             evidence._find_single_mn_subdir(Path(root))
 
         assert str(error.value) == (
-            f"Multiple subdirectories under {root}: ['subdir2', 'subdir']"
+            f"Multiple subdirectories under {root}: ['subdir', 'subdir2']"
         )
 
 

@@ -41,7 +41,7 @@ make notebook-test    # Run notebook validation tests
 
 The project uses `pyproject.toml` to manage dependencies. Development dependencies include testing tools, linters, and notebook validation utilities.
 
-**Core development dependencies** (defined in `[project.optional-dependencies]` in [`pyproject.toml`](pyproject.toml#L51-L74)):
+**Core development dependencies** (defined in `[project.optional-dependencies]` in [`pyproject.toml`](pyproject.toml#L52-L70)):
 - `pytest` - Testing framework
 - `pytest-cov` - Coverage reporting
 - `pytest-mock` - Mocking support

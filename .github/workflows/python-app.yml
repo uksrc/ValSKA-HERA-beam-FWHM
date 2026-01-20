@@ -15,17 +15,13 @@ jobs:
         shell: bash -l {0}
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
     - name: Install dependencies
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: valska
         environment-file: valska_env.yaml
         # We do not need the base environment to be activated as well
-        auto-activate: false
+        auto-activate: true
     - name: Test with pytest
       run: |
         make python-test

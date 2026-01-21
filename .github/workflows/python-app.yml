@@ -26,3 +26,6 @@ jobs:
     - name: Test notebooks
       run: |
         make notebook-test
+    - name: Build docs
+      run: |
+        sphinx-build -W -b html docs/ docs/_build/html

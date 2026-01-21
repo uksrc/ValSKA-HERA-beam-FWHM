@@ -216,7 +216,7 @@ def _find_single_mn_subdir(root: Path) -> Path:
     Assumes there is exactly one subdirectory; raises if 0 or >1.
     This keeps the logic explicit and surfaces layout issues early.
     """
-    subdirs = sorted((p for p in root.iterdir() if p.is_dir()), key=lambda p: p.name)
+    subdirs = [p for p in root.iterdir() if p.is_dir()]
     if len(subdirs) == 0:
         raise RuntimeError(f"No subdirectories found under {root}")
     if len(subdirs) > 1:

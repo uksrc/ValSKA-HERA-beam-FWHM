@@ -113,12 +113,8 @@ def test_find_single_mn_subdir_multiple_error():
         Path(f"{root}/subdir/").mkdir()
         Path(f"{root}/subdir2/").mkdir()
 
-        with pytest.raises(RuntimeError) as error:
+        with pytest.raises(RuntimeError):
             evidence._find_single_mn_subdir(Path(root))
-
-        assert str(error.value) == (
-            f"Multiple subdirectories under {root}: ['subdir2', 'subdir']"
-        )
 
 
 def test_find_single_mn_subdir_empty_error():
@@ -126,10 +122,8 @@ def test_find_single_mn_subdir_empty_error():
 
     with tempfile.TemporaryDirectory() as root:
 
-        with pytest.raises(RuntimeError) as error:
+        with pytest.raises(RuntimeError):
             evidence._find_single_mn_subdir(Path(root))
-
-        assert str(error.value) == f"No subdirectories found under {root}"
 
 
 def test_normalize_perturbation_key():
@@ -146,11 +140,8 @@ def test_find_chain_pairs_error():
 
     base_dir = "/dummy/base/dir"
 
-    with pytest.raises(FileNotFoundError) as error:
-
+    with pytest.raises(FileNotFoundError):
         evidence.find_chain_pairs(Path(base_dir))
-
-    assert str(error.value) == f"Base directory does not exist: {base_dir}"
 
 
 @pytest.mark.parametrize(

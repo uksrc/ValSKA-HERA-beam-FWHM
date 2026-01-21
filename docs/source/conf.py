@@ -46,6 +46,8 @@ autodoc_mock_imports = ['bayeseor',
 templates_path = ['_templates']
 exclude_patterns = []
 
+myst_heading_anchors = 5  # to avoid uneeded warnings, cf. 
+# https://github.com/executablebooks/MyST-Parser/issues/885
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

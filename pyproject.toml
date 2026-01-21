@@ -67,7 +67,8 @@ dev = [
   "build",
   "twine",
   "nbmake",
-  "sphinx"
+  "sphinx",
+  "myst_parser"
 ]
 docs = [
   "mkdocs",

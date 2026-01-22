@@ -57,4 +57,5 @@ myst_heading_anchors = 5  # to avoid uneeded warnings, cf.
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+# This would be the location for custom CSS or static assets
+html_static_path = []

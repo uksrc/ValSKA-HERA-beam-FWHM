@@ -176,9 +176,9 @@ def ensure_run_dir(run_dir: Path, exist_ok: bool = False) -> None:
 
 ---
 
-#### 3.2.2 `core/manifest.py`
+### 3.2.2 `core/manifest.py`
 
-**Responsibility:** Manifest schema definition, reading, and writing.
+**Responsibility:** Manifest definition, reading, and writing.
 
 **Candidate functions:**
 
@@ -192,7 +192,6 @@ from typing import Any
 @dataclass
 class ManifestBase:
     """Required fields for all manifests."""
-    schema_version: str
     tool: str
     created_utc: str
     valska_version: str
@@ -213,7 +212,6 @@ def write_manifest(
     Write manifest.json with required fields plus tool-specific extras.
 
     Automatically includes:
-    - schema_version
     - tool
     - created_utc
     - valska_version
@@ -236,9 +234,9 @@ def load_manifest(run_dir: Path) -> dict[str, Any]:
     pass
 
 
-def validate_manifest_schema(manifest: dict[str, Any]) -> None:
+def validate_manifest(manifest: dict[str, Any]) -> None:
     """
-    Validate that manifest contains all required fields.
+    Validate that manifest contains all required fields and raise clear errors.
     """
     pass
 ```
@@ -276,7 +274,6 @@ def write_jobs_json(
     Write jobs.json with submission details.
 
     Automatically includes:
-    - schema_version
     - run_dir
     - manifest path
     - submitted_utc
@@ -855,7 +852,7 @@ Tool modules depend on core; core never imports from tools.
 
 3. **CLI framework** — Is `argparse` sufficient, or should core provide argument parsing helpers?
 
-4. **Schema validation** — Should core validate manifest/jobs.json schemas formally (e.g., with Pydantic)?
+4. **Schema validation** — Should core provide formal validators (e.g., Pydantic) or lightweight validate-on-read helpers that produce user-friendly errors and include `valska_version` in messages?
 
 ### 9.2 To be resolved during migration
 

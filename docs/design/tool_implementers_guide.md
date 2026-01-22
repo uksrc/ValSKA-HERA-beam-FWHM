@@ -350,7 +350,6 @@ def write_manifest(
 
     manifest = {
         # Required fields (per spec §6.1.3)
-        "schema_version": "1.0",
         "tool": "pyuvsim",
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "valska_version": __version__,
@@ -1275,7 +1274,6 @@ class TestPrepareExecution:
         manifest = json.loads(result["manifest"].read_text())
 
         # Required fields per spec §6.1.3
-        assert manifest["schema_version"] == "1.0"
         assert manifest["tool"] == "pyuvsim"
         assert "created_utc" in manifest
         assert "valska_version" in manifest
@@ -1456,12 +1454,12 @@ hash -r  # Clear shell command cache
 
 ### B.3 Manifest missing required fields
 
-**Symptom:** Tests fail on manifest schema validation
+**Symptom:** Tests fail on manifest validation
 
-**Check:** Ensure `schema_version` and `tool` fields are included:
+**Check:** Ensure `tool` field is included:
+
 ```python
 manifest = {
-    "schema_version": "1.0",
     "tool": "pyuvsim",
     # ...
 }

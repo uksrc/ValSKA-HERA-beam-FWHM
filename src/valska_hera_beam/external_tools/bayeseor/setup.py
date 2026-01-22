@@ -9,6 +9,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from ... import __version__
+from . import TOOL_NAME
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 from .slurm import render_submit_script
 
@@ -371,6 +372,7 @@ def prepare_bayeseor_run(
 
     # Manifest
     manifest = {
+        "tool": TOOL_NAME,
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "valska_version": __version__,
         "beam_model": beam_model,

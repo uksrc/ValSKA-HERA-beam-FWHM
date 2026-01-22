@@ -12,6 +12,9 @@ from .setup import prepare_bayeseor_run
 from .submit import SubmissionError, submit_bayeseor_run
 from .templates import get_template_path, list_templates
 
+# Public identity for this tool integration
+TOOL_NAME = "bayeseor"
+
 __all__ = [
     "prepare_bayeseor_run",
     "submit_bayeseor_run",
@@ -21,4 +24,5 @@ __all__ = [
     "BayesEoRInstall",
     "CondaRunner",
     "ContainerRunner",
+    "TOOL_NAME",
 ]

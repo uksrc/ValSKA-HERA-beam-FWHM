@@ -7,9 +7,12 @@ from constants import (
     BASE_DIR,
     CHAINS_DIR,
     DATA_DIR,
+    EOR_PS,
+    NOISE_RATIO,
     RESULTS_DIR,
 )
 
+from valska_hera_beam.plotting import BeamAnalysisPlotter
 from valska_hera_beam.utils import PathManager
 
 
@@ -19,16 +22,34 @@ def path_manager_fixture():
     PathManager
     """
 
-    base_dir = BASE_DIR
-    chains_dir = CHAINS_DIR
-    data_dir = DATA_DIR
-    results_dir = RESULTS_DIR
-
     path_manager = PathManager(
-        base_dir,
-        chains_dir,
-        data_dir,
-        results_dir,
+        BASE_DIR,
+        CHAINS_DIR,
+        DATA_DIR,
+        RESULTS_DIR,
     )
 
     yield path_manager
+
+
+@pytest.fixture(scope="package", name="beam_analysis")
+def beam_analysis_fixture():
+    """
+    BeamAnalysisPlotter
+    """
+
+    paths = {
+        "Test1": "test/directory1/",
+        "Test2": "test/directory2/",
+        "Test3": "test/directory3/",
+        "Test4": "test/directory4/",
+    }
+
+    beam_analysis_plotter = BeamAnalysisPlotter(
+        base_chains_dir=CHAINS_DIR,
+        paths=paths,
+        eor_ps=EOR_PS,
+        noise_ratio=NOISE_RATIO,
+    )
+
+    yield beam_analysis_plotter

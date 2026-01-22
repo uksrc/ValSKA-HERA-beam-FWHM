@@ -88,6 +88,10 @@ That document is the primary reference for:
 
 ---
 
+## Documentation
+
+The documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/).
+
 ## Contributing
 
 ValSKA-HERA-beam-FWHM is an open-source project, and contributions of all kinds are very welcome

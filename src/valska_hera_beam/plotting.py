@@ -41,7 +41,8 @@ class BeamAnalysisPlotter:
             Default expected power spectrum to use in plots. If None, uses noise_ps.
         """
         if base_chains_dir is None:
-            self.cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
+            # self.cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
+            self.cwd = Path("/home/ps550/ValSKA-HERA-beam-FWHM/notebooks/")
             self.dir_prefix = self.cwd / Path("../chains/")
         else:
             self.dir_prefix = Path(base_chains_dir)
@@ -58,7 +59,9 @@ class BeamAnalysisPlotter:
         self.noise_ps = self.eor_ps * noise_ratio  # mK^2 Mpc^3
         # Set default expected PS value (if not provided, use noise_ps)
         self.default_expected_ps = (
-            default_expected_ps if default_expected_ps is not None else self.noise_ps
+            default_expected_ps
+            if default_expected_ps is not None
+            else self.noise_ps
         )
 
     def add_analysis_path(self, key: str, path: str) -> None:
@@ -252,7 +255,10 @@ class BeamAnalysisPlotter:
                 # Replace single-letter texts with full labels
                 for i, text in enumerate(texts):
                     current_text = text.get_text()
-                    if len(current_text) == 1 and current_text in letter_to_label:
+                    if (
+                        len(current_text) == 1
+                        and current_text in letter_to_label
+                    ):
                         text.set_text(letter_to_label[current_text])
                     elif current_text == "Expected":
                         text.set_text(expected_label)
@@ -266,7 +272,9 @@ class BeamAnalysisPlotter:
                 else:
                     # Calculate a reasonable number of columns (sqrt of n_items, rounded)
                     # This creates a roughly square legend
-                    ncol = min(int(np.sqrt(n_items) + 0.5), 4)  # Cap at 4 columns max
+                    ncol = min(
+                        int(np.sqrt(n_items) + 0.5), 4
+                    )  # Cap at 4 columns max
 
                 # Create a new legend with the updated texts and multiple columns
                 ax.legend(

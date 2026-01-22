@@ -453,7 +453,8 @@ def load_paths(custom_paths_file: Optional[PathLike] = None) -> Dict[str, str]:
     if custom_paths_file is None:
         # Get the directory of this file
         this_dir = Path(__file__).parent.resolve()
-        paths_file = this_dir / "config" / "paths.yaml"
+        # paths_file = this_dir / "config" / "paths.yaml"
+        paths_file = this_dir.parent.parent / "config" / "paths.yaml"
     else:
         paths_file = Path(custom_paths_file)
 

@@ -291,11 +291,14 @@ def build_pp_groups_from_paths(
 
     Examples
     --------
-    ``prefixes=['GSM_FgEoR_']``                            -> GSM v5d0 EoR+Fg
-    ``prefixes=['GL_FgEoR_']``                             -> GSM+GLEAM v7d0 EoR+Fg
-    ``prefixes=['GSM_FgEoR_', 'GL_FgEoR_']``               -> combined
+    ``prefixes=['GSM_FgEoR_']`` -> GSM v5d0 EoR+Fg
+
+    ``prefixes=['GL_FgEoR_']`` -> GSM+GLEAM v7d0 EoR+Fg
+
+    ``prefixes=['GSM_FgEoR_', 'GL_FgEoR_']`` -> combined
+
     ``label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}``
-        -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
+    -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
     paths = load_paths(custom_paths_file)
     raw_groups: Dict[str, list[str]] = {}

@@ -41,7 +41,7 @@ make notebook-test    # Run notebook validation tests
 
 The project uses `pyproject.toml` to manage dependencies. Development dependencies include testing tools, linters, and notebook validation utilities.
 
-**Core development dependencies** (defined in `[project.optional-dependencies]` in [`pyproject.toml`](pyproject.toml#L52-L70)):
+**Core development dependencies** (defined in the `[project.optional-dependencies]` in `pyproject.toml`):
 - `pytest` - Testing framework
 - `pytest-cov` - Coverage reporting
 - `pytest-mock` - Mocking support
@@ -54,7 +54,7 @@ The project uses `pyproject.toml` to manage dependencies. Development dependenci
 
 #### Method 1: Conda Environment (Recommended)
 
-The [`valska_env.yaml`](valska_env.yaml) file provides a complete conda environment specification:
+The `valska_env.yaml` file provides a complete conda environment specification:
 
 ```bash
 # Create environment
@@ -151,7 +151,7 @@ make notebook-format
 
 ## Make Targets Reference
 
-All testing targets are defined in [`python.mk`](python.mk). Below is a summary of commonly used targets:
+All testing targets are defined in `python.mk`. Below is a summary of commonly used targets:
 
 | Target | Description | Key Variables |
 |--------|-------------|---------------|
@@ -182,7 +182,7 @@ make notebook-test NOTEBOOK_IGNORE_FILES="not 01_validation_GSM_beam.ipynb"
 
 ## CI/CD Integration
 
-The project uses GitHub Actions for continuous integration. The workflow is defined in [`.github/workflows/python-app.yml`](.github/workflows/python-app.yml).
+The project uses GitHub Actions for continuous integration. The workflow is defined in `.github/workflows/python-app.yml`.
 
 **CI Pipeline:**
 1. Checkout code

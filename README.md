@@ -41,8 +41,7 @@ The documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readt
 ## Testing
 
 For comprehensive testing instructions, see:
-- [TESTING.md](TESTING.md) - Complete testing guide (quickstart, Make targets, CI integration, troubleshooting)
-- [Testing Documentation](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html) - Same content on ReadTheDocs
+- [Testing Documentation](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html)
 
 Quick start:
 ```bash

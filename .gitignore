@@ -221,3 +221,6 @@ config/runtime_paths.yaml
 validation_results/*
 validation_results
 *.py.backup
+UKSRC_val_mock_vis
+*.sh.swp
+*.sh.swo

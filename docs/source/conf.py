@@ -36,6 +36,10 @@ autodoc_default_options = {
     "private-members": True,
 }
 
+# This uses both the class docstring and the
+# __init__ docstring for class documentation
+autoclass_content = 'both'
+
 autodoc_mock_imports = ['bayeseor',
 			'anesthetic',
 			'matplotlib',

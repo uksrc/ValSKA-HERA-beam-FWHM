@@ -4,9 +4,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from constants import mock_read_chains
 
 from valska_hera_beam import evidence
+
+from .constants import mock_read_chains
 
 
 @pytest.mark.parametrize(
@@ -41,7 +42,6 @@ def test_calculate_bayes_factor(monkeypatch):
     monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
 
     with tempfile.TemporaryDirectory() as chains_dir:
-
         with open(f"{chains_dir}/chains_1.txt", "a") as file:
             file.write("20")
         with open(f"{chains_dir}/chains_2.txt", "a") as file:
@@ -95,7 +95,6 @@ def test_find_single_mn_subdir():
     """Test find subdirectories under root"""
 
     with tempfile.TemporaryDirectory() as root:
-
         Path(f"{root}/subdir/").mkdir()
         # Should ignore files and only find subdirectories
         Path(f"{root}/dummy.txt").touch()
@@ -109,7 +108,6 @@ def test_find_single_mn_subdir_multiple_error():
     """Test find subdirectories under root with too many subdirs"""
 
     with tempfile.TemporaryDirectory() as root:
-
         Path(f"{root}/subdir/").mkdir()
         Path(f"{root}/subdir2/").mkdir()
 
@@ -121,7 +119,6 @@ def test_find_single_mn_subdir_empty_error():
     """Test find subdirectories under root with no subdirs"""
 
     with tempfile.TemporaryDirectory() as root:
-
         with pytest.raises(RuntimeError):
             evidence._find_single_mn_subdir(Path(root))
 
@@ -165,7 +162,6 @@ def test_find_chain_pairs(
     """
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         fgeor_paths = {}
         for suffix in fgeor_suffix:
             fgeor_paths[suffix] = Path(
@@ -261,7 +257,6 @@ def test_analyze_chain_pair(
     monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         fgeor_path = Path(f"{base_dir}/dummy_prefix1_{key}/subdir")
         fgeor_path.mkdir(parents=True, exist_ok=True)
 
@@ -291,9 +286,7 @@ def test_analyze_chain_pair(
         # If there was an error, only check the first part
         # and omit the traceback!
         if result["bayes_factor_result"]["error"] is not None:
-            assert (
-                result["bayes_factor_result"]["error"].split(":")[0] == error
-            )
+            assert result["bayes_factor_result"]["error"].split(":")[0] == error
 
         result["bayes_factor_result"].pop("error")
 
@@ -425,19 +418,17 @@ def test_run_full_analysis(monkeypatch, input_list, summary, successful):
     monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         chain_pair_map = {}
         expected_results = []
 
         for inputs in input_list:
-
             expected_results.append(
                 {
                     "perturbation": inputs["key"],
                     "plot_success": True,
                     "bayes_factor_result": {
-                        "model_1": f"FgEoR_{inputs["key"]}",
-                        "model_2": f"FgOnly_{inputs["key"]}",
+                        "model_1": f"FgEoR_{inputs['key']}",
+                        "model_2": f"FgOnly_{inputs['key']}",
                         "log_evidence_1": inputs["log_evidence"][0],
                         "log_evidence_2": inputs["log_evidence"][1],
                         "log_bayes_factor": inputs["log_evidence"][2],
@@ -449,22 +440,22 @@ def test_run_full_analysis(monkeypatch, input_list, summary, successful):
             )
 
             fgeor_path = Path(
-                f"{base_dir}/dummy_prefix1_{inputs["key"]}/subdir"
+                f"{base_dir}/dummy_prefix1_{inputs['key']}/subdir"
             )
             fgeor_path.mkdir(parents=True, exist_ok=True)
 
             fgonly_path = Path(
-                f"{base_dir}/dummy_prefix2_{inputs["key"]}/subdir"
+                f"{base_dir}/dummy_prefix2_{inputs['key']}/subdir"
             )
             fgonly_path.mkdir(parents=True, exist_ok=True)
 
             if inputs["log_evidence"][0]:
                 with open(f"{fgeor_path}/data-", "a") as file:
-                    file.write(f"{inputs["log_evidence"][0]:.9f}")
+                    file.write(f"{inputs['log_evidence'][0]:.9f}")
 
             if inputs["log_evidence"][1]:
                 with open(f"{fgonly_path}/data-", "a") as file:
-                    file.write(f"{inputs["log_evidence"][1]:.9f}")
+                    file.write(f"{inputs['log_evidence'][1]:.9f}")
 
             assert fgonly_path.exists()
 

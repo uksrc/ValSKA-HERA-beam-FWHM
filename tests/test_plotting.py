@@ -7,27 +7,26 @@ from unittest.mock import patch
 
 import numpy
 import pytest
-from constants import (
-    CHAINS_DIR,
+
+from valska_hera_beam import plotting
+
+from .constants import (
+    # CHAINS_DIR,
     EOR_PS,
     NOISE_RATIO,
     MockDataContainer,
 )
 
-from valska_hera_beam import plotting
 
-
-def test_create_beam_plotter_with_paths_file():
+def test_create_beam_plotter_with_paths_file(path_manager):
     """Test creating beam plotter with paths in yaml file"""
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
-        yaml_file.writelines(
-            "Test1: test/directory1/\n" "Test2: test/directory2/"
-        )
+        yaml_file.writelines("Test1: test/directory1/\nTest2: test/directory2/")
         yaml_file.seek(0)
 
         beam_analysis_plotter = plotting.BeamAnalysisPlotter(
-            base_chains_dir=CHAINS_DIR,
+            base_chains_dir=path_manager.chains_dir,
             paths_file=yaml_file.name,
         )
 
@@ -37,7 +36,7 @@ def test_create_beam_plotter_with_paths_file():
         assert beam_analysis_plotter.paths["Test2"] == "test/directory2/"
 
 
-def test_create_beam_plotter_with_paths_dict():
+def test_create_beam_plotter_with_paths_dict(path_manager):
     """Test creating beam plotter with paths in dictionary"""
 
     paths = {
@@ -46,7 +45,7 @@ def test_create_beam_plotter_with_paths_dict():
     }
 
     beam_analysis_plotter = plotting.BeamAnalysisPlotter(
-        base_chains_dir=CHAINS_DIR,
+        base_chains_dir=path_manager.chains_dir,
         paths=paths,
     )
 
@@ -74,7 +73,7 @@ def test_add_analysis_path(beam_analysis):
             None,
             {
                 "dirnames": ["test/directory1/"],
-                "dir_prefix": Path(CHAINS_DIR),
+                "dir_prefix": None,
                 "exp_ps": EOR_PS * NOISE_RATIO,
                 "labels": ["Test1"],
             },
@@ -85,7 +84,7 @@ def test_add_analysis_path(beam_analysis):
             None,
             {
                 "dirnames": ["test/directory1/", "test/directory2/"],
-                "dir_prefix": Path(CHAINS_DIR),
+                "dir_prefix": None,
                 "exp_ps": EOR_PS * NOISE_RATIO,
                 "labels": ["Test1", "Test2"],
             },
@@ -96,7 +95,7 @@ def test_add_analysis_path(beam_analysis):
             1.0,
             {
                 "dirnames": ["test/directory1/"],
-                "dir_prefix": Path(CHAINS_DIR),
+                "dir_prefix": None,
                 "exp_ps": 1.0,
                 "labels": ["Label1"],
             },
@@ -122,7 +121,14 @@ def test_get_data_container(
 
     assert data_container.Ndirs == len(expected_results["dirnames"])
     assert data_container.dirnames == expected_results["dirnames"]
-    assert data_container.dir_prefix == expected_results["dir_prefix"]
+    # dir_prefix depends on the runtime beam_analysis base_chains_dir;
+    # if expected_results["dir_prefix"] is None, use the beam_analysis value.
+    expected_dir_prefix = (
+        Path(expected_results["dir_prefix"])
+        if expected_results["dir_prefix"] is not None
+        else Path(beam_analysis.base_chains_dir)
+    )
+    assert data_container.dir_prefix == expected_dir_prefix
     assert data_container.expected_ps == expected_results["exp_ps"]
     assert data_container.labels == expected_results["labels"]
 
@@ -365,7 +371,7 @@ def test_create_comparison_plot(beam_analysis, input_args, expected_results):
 
 
 @patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
-def test_plot_gleam_analysis():
+def test_plot_gleam_analysis(path_manager):
     """
     Test plot_gleam_analysis
 
@@ -373,7 +379,7 @@ def test_plot_gleam_analysis():
     GLEAM analysis
     """
 
-    fig = plotting.plot_gleam_analysis(CHAINS_DIR)
+    fig = plotting.plot_gleam_analysis(path_manager.chains_dir)
 
     expected_title = (
         "UKSRC validation: Burba et al. 2023, Case 1. \n"
@@ -390,7 +396,7 @@ def test_plot_gleam_analysis():
 
 
 @patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
-def test_plot_gsm_comparison():
+def test_plot_gsm_comparison(path_manager):
     """
     Test plot_gsm_comparison
 
@@ -398,7 +404,7 @@ def test_plot_gsm_comparison():
     GSM foreground analysis
     """
 
-    fig = plotting.plot_gsm_comparison(CHAINS_DIR)
+    fig = plotting.plot_gsm_comparison(path_manager.chains_dir)
 
     assert (
         fig.suptitle

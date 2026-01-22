@@ -47,6 +47,10 @@ class BeamAnalysisPlotter:
         else:
             self.dir_prefix = Path(base_chains_dir)
 
+        # Backwards-compatibility: some callers/tests expect attribute
+        # `base_chains_dir`. Expose it as an alias to dir_prefix.
+        self.base_chains_dir = self.dir_prefix
+
         # Define paths to different analysis directories
         # Load paths from file if not provided directly
         if paths is None:

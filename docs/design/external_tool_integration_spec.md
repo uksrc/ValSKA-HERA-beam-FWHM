@@ -892,7 +892,7 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 | Prepare/submit separation | §3, §4 | ✅ Compliant | |
 | `--dry-run` support | §3.4, §4.3 | ✅ Compliant | |
 | Run directory structure | §5 | ✅ Compliant | |
-| `manifest.json` creation | §6.1 | ✅ Compliant | |
+| `manifest.json` creation | §6.1 | ✅ Compliant | Resolved: 2026-01-25 |
 | `jobs.json` creation | §6.2 | ✅ Compliant | |
 | Configuration hierarchy | §7 | ✅ Compliant | |
 | Stage abstraction | §8 | ✅ Compliant | |

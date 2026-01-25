@@ -20,6 +20,18 @@ class SubmissionError(RuntimeError):
     """Raised when submission cannot proceed safely or sbatch fails."""
 
 
+class InvalidArgumentError(SubmissionError):
+    """Raised when CLI arguments are invalid for submission."""
+
+
+class MissingDependencyError(SubmissionError):
+    """Raised when required inputs or artefacts are missing."""
+
+
+class SbatchError(SubmissionError):
+    """Raised when sbatch fails or returns unparseable output."""
+
+
 @dataclass(frozen=True)
 class SubmitPlan:
     run_dir: Path
@@ -37,11 +49,13 @@ def _utc_now_iso() -> str:
 def load_manifest(run_dir: Path) -> dict[str, Any]:
     manifest_path = run_dir / "manifest.json"
     if not manifest_path.exists():
-        raise SubmissionError(f"Missing manifest.json in run_dir: {run_dir}")
+        raise MissingDependencyError(
+            f"Missing manifest.json in run_dir: {run_dir}"
+        )
     try:
         return json.loads(manifest_path.read_text(encoding="utf-8"))
     except Exception as e:  # pragma: no cover
-        raise SubmissionError(
+        raise MissingDependencyError(
             f"Failed to parse manifest.json: {manifest_path}\n{e}"
         ) from e
 
@@ -58,13 +72,15 @@ def build_submit_plan(run_dir: Path) -> SubmitPlan:
 
     artefacts = manifest.get("artefacts", {})
     if not isinstance(artefacts, dict):
-        raise SubmissionError("manifest['artefacts'] is missing or not a dict")
+        raise MissingDependencyError(
+            "manifest['artefacts'] is missing or not a dict"
+        )
 
     def _get_path(key: str, required: bool = True) -> Path | None:
         p = artefacts.get(key)
         if p is None:
             if required:
-                raise SubmissionError(
+                raise MissingDependencyError(
                     f"manifest artefact missing required key: {key}"
                 )
             return None
@@ -105,9 +121,9 @@ def build_submit_plan(run_dir: Path) -> SubmitPlan:
 
 def _ensure_script_exists(path: Path, label: str) -> None:
     if not path.exists():
-        raise SubmissionError(f"Missing {label} script: {path}")
+        raise MissingDependencyError(f"Missing {label} script: {path}")
     if not path.is_file():
-        raise SubmissionError(f"{label} script is not a file: {path}")
+        raise MissingDependencyError(f"{label} script is not a file: {path}")
 
 
 def _run_sbatch(
@@ -142,7 +158,7 @@ def _run_sbatch(
     err = (proc.stderr or "").strip()
 
     if proc.returncode != 0:
-        raise SubmissionError(
+        raise SbatchError(
             "sbatch failed.\n"
             f"Command: {cmd_str}\n"
             f"Return code: {proc.returncode}\n"
@@ -152,7 +168,7 @@ def _run_sbatch(
 
     m = _JOBID_RE.search(out)
     if not m:
-        raise SubmissionError(
+        raise SbatchError(
             "Could not parse job id from sbatch stdout.\n"
             f"Command: {cmd_str}\n"
             f"stdout:\n{out}\n"
@@ -311,7 +327,7 @@ def submit_bayeseor_run(
     _ensure_script_exists(plan.cpu_script, "CPU precompute")
 
     if record == "manifest":
-        raise SubmissionError(
+        raise InvalidArgumentError(
             "record='manifest' is not enabled in the MVP to avoid mutating provenance. "
             "Use record='jobs.json' (default)."
         )
@@ -332,7 +348,7 @@ def submit_bayeseor_run(
                 and isinstance(jobs.get("cpu_precompute"), dict)
                 and jobs["cpu_precompute"].get("job_id")
             ):
-                raise SubmissionError(
+                raise InvalidArgumentError(
                     f"CPU precompute already recorded in jobs.json for {plan.run_dir}. "
                     "Refusing to submit CPU again. Use --force or --resubmit."
                 )
@@ -343,7 +359,7 @@ def submit_bayeseor_run(
                 if (isinstance(sf, dict) and sf.get("job_id")) or (
                     isinstance(ns, dict) and ns.get("job_id")
                 ):
-                    raise SubmissionError(
+                    raise InvalidArgumentError(
                         f"GPU jobs already recorded in jobs.json for {plan.run_dir}. "
                         "Refusing to submit GPU again. Use --force or --resubmit."
                     )
@@ -398,7 +414,7 @@ def submit_bayeseor_run(
             if dry_run and stage == "all":
                 dep = "<CPU_JOBID>"
             else:
-                raise SubmissionError(
+                raise MissingDependencyError(
                     "GPU submission requested but no dependency job id is available. "
                     "Either submit CPU in the same invocation (--stage all), "
                     "or pass --depend-afterok <JOBID>, "
@@ -410,7 +426,7 @@ def submit_bayeseor_run(
 
         if hypothesis in ("signal_fit", "both"):
             if plan.gpu_signal_fit_script is None:
-                raise SubmissionError(
+                raise MissingDependencyError(
                     "manifest does not contain a signal_fit GPU submit script artefact "
                     "(submit_sh_signal_fit_gpu_run)."
                 )
@@ -430,7 +446,7 @@ def submit_bayeseor_run(
 
         if hypothesis in ("no_signal", "both"):
             if plan.gpu_no_signal_script is None:
-                raise SubmissionError(
+                raise MissingDependencyError(
                     "manifest does not contain a no_signal GPU submit script artefact "
                     "(submit_sh_no_signal_gpu_run)."
                 )

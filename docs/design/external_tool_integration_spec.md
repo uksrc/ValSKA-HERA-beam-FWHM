@@ -1,7 +1,7 @@
 # External Tool Integration Specification
 
-**Version:** 1.0.0-draft
-**Status:** Draft
+**Version:** 1.0.0
+**Status:** Released
 **Last updated:** 2026-01-25
 
 ---
@@ -897,7 +897,7 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 | Configuration hierarchy | §7 | ✅ Compliant | |
 | Stage abstraction | §8 | ✅ Compliant | |
 | Runner abstraction | §9 | ✅ Compliant | |
-| Exit codes | §10 | ⚠️ Unverified | See C.2.2 |
+| Exit codes | §10 | ✅ Compliant | Resolved: 2026-01-25 |
 | SLURM dependency handling | §4.5 | ✅ Compliant | |
 | Resubmission with archival | §4.6 | ✅ Compliant | |
 
@@ -919,14 +919,11 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 
 **Specification reference:** §10.1
 
-**Current state:** The CLI entry points return `int` exit codes, but it has not been verified whether specific codes (2, 3, 4) are used consistently per the specification.
+**Current state:** Resolved — exit codes are mapped consistently across prepare, submit, and sweep CLIs.
 
-**Required change:** Audit `cli_prepare.py`, `cli_submit.py`, and `cli_sweep.py` to ensure:
-- Exit code 2 for invalid arguments
-- Exit code 3 for missing dependencies (e.g., run directory not found)
-- Exit code 4 for SLURM submission failures
+**Resolution:** Updated error handling to use exit codes 2/3/4 per the specification, including submit-time differentiation between invalid arguments, missing dependencies, and SLURM failures.
 
-**Priority:** Low — Does not affect correctness; improves operational consistency.
+**Priority:** Resolved.
 
 ---
 
@@ -934,19 +931,14 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 
 **Specification reference:** §3.3
 
-**Current state:** It has not been confirmed whether `valska-bayeseor-prepare` supports `--results-root` as a CLI argument.
+**Current state:** Resolved — `valska-bayeseor-prepare` already supports `--results-root` as a CLI argument.
 
-**Required change:** Verify presence; add if missing.
+**Resolution:** Verified in `src/valska_hera_beam/external_tools/bayeseor/cli_prepare.py` (argument defined with default resolution via runtime paths).
 
-**Priority:** Low — Most users rely on `runtime_paths.yaml`.
+**Priority:** Resolved.
 
 ---
 
 ### C.3 Resolution plan
 
-These items should be addressed in the following order:
-
-1. **`--results-root` verification (C.2.3)** — Quick audit
-2. **Exit code audit (C.2.2)** — May require minor refactoring
-
-Once all items are resolved, this appendix should be updated to reflect full conformance, and the specification status changed from "Draft" to "1.0".
+All outstanding items in Appendix C are now resolved. The specification status has been updated from "Draft" to "1.0" released.

@@ -72,6 +72,7 @@ and scripts are designed to remain stable.
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -379,14 +380,14 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for kv in kvs:
         if "=" not in kv:
-            raise SystemExit(
+            raise ValueError(
                 f"ERROR: Invalid --override '{kv}'. Expected KEY=VALUE."
             )
         k, v = kv.split("=", 1)
         k = k.strip()
         v = v.strip()
         if not k:
-            raise SystemExit(f"ERROR: Invalid --override '{kv}'. Empty KEY.")
+            raise ValueError(f"ERROR: Invalid --override '{kv}'. Empty KEY.")
         out[k] = v
     return out
 
@@ -427,6 +428,7 @@ def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
 
     return out
 
+
 def _parse_beam_sky(
     *, beam: str | None, sky: str | None, scenario: str | None
 ) -> tuple[str, str, str]:
@@ -443,7 +445,7 @@ def _parse_beam_sky(
         b = beam.strip()
         k = sky.strip()
         if not b or not k:
-            raise SystemExit(
+            raise ValueError(
                 "ERROR: --beam and --sky must be non-empty strings."
             )
         return b, k, "CLI(--beam/--sky)"
@@ -460,13 +462,13 @@ def _parse_beam_sky(
             b, k = b.strip(), k.strip()
             if b and k:
                 return b, k, "DEPRECATED(--scenario)"
-        raise SystemExit(
+        raise ValueError(
             "ERROR: --scenario is deprecated and must be of the form '<beam>/<sky>' "
             "or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM'). "
             "Please use --beam and --sky."
         )
 
-    raise SystemExit("ERROR: You must provide --beam and --sky (recommended).")
+    raise ValueError("ERROR: You must provide --beam and --sky (recommended).")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -478,9 +480,13 @@ def main(argv: list[str] | None = None) -> int:
             print(name)
         return 0
 
-    beam_model, sky_model, beam_sky_src = _parse_beam_sky(
-        beam=args.beam, sky=args.sky, scenario=args.scenario
-    )
+    try:
+        beam_model, sky_model, beam_sky_src = _parse_beam_sky(
+            beam=args.beam, sky=args.sky, scenario=args.scenario
+        )
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
 
     pm = get_default_path_manager()
     runtime = pm.runtime_paths
@@ -616,6 +622,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.gpu_cpus_per_task is not None:
         slurm_gpu["cpus_per_task"] = args.gpu_cpus_per_task
 
+    try:
+        overrides = _parse_overrides(args.override)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+
     # dry-run preview run_dir
     preview_run_dir = _compute_run_dir(
         results_root=results_root,
@@ -653,8 +665,6 @@ def main(argv: list[str] | None = None) -> int:
 
     install = BayesEoRInstall(repo_path=Path(repo_path))
     runner = CondaRunner(conda_activate=conda_sh, env_name=conda_env)
-
-    overrides = _parse_overrides(args.override)
 
     out = prepare_bayeseor_run(
         template_yaml=Path(template_yaml),

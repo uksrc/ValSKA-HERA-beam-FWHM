@@ -7,7 +7,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .submit import SubmissionError, submit_bayeseor_run
+from .submit import (
+    InvalidArgumentError,
+    MissingDependencyError,
+    SbatchError,
+    SubmissionError,
+    submit_bayeseor_run,
+)
 
 
 def _utc_now_compact() -> str:
@@ -322,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"ERROR: Failed to archive existing jobs.json: {e}",
                     file=sys.stderr,
                 )
-                return 2
+                return 1
 
     # Stage-aware guardrails.
     #
@@ -394,9 +400,18 @@ def main(argv: list[str] | None = None) -> int:
             force=force,
             record=record,
         )
-    except SubmissionError as e:
+    except MissingDependencyError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 3
+    except SbatchError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 4
+    except InvalidArgumentError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
+    except SubmissionError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         print("Interrupted.", file=sys.stderr)
         return 130

@@ -226,7 +226,7 @@ def _parse_fracs(vals: list[str]) -> list[float]:
         try:
             out.append(float(v))
         except Exception as e:
-            raise SystemExit(
+            raise ValueError(
                 f"ERROR: Could not parse fwhm frac '{v}' as float: {e}"
             )
     return out
@@ -242,7 +242,7 @@ def _parse_fracs_file(path: Path) -> list[float]:
     """
     p = Path(path).expanduser()
     if not p.exists():
-        raise SystemExit(f"ERROR: fwhm fracs file does not exist: {p}")
+        raise ValueError(f"ERROR: fwhm fracs file does not exist: {p}")
     lines = p.read_text(encoding="utf-8").splitlines()
     vals: list[str] = []
     for ln in lines:
@@ -255,7 +255,7 @@ def _parse_fracs_file(path: Path) -> list[float]:
         if s:
             vals.append(s)
     if not vals:
-        raise SystemExit(
+        raise ValueError(
             f"ERROR: No numeric entries found in fwhm fracs file: {p}"
         )
     return _parse_fracs(vals)
@@ -265,14 +265,14 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for kv in kvs:
         if "=" not in kv:
-            raise SystemExit(
+            raise ValueError(
                 f"ERROR: Invalid --override '{kv}'. Expected KEY=VALUE."
             )
         k, v = kv.split("=", 1)
         k = k.strip()
         v = v.strip()
         if not k:
-            raise SystemExit(f"ERROR: Invalid --override '{kv}'. Empty KEY.")
+            raise ValueError(f"ERROR: Invalid --override '{kv}'. Empty KEY.")
         out[k] = v
     return out
 
@@ -300,7 +300,7 @@ def _parse_beam_sky(
         b = beam.strip()
         k = sky.strip()
         if not b or not k:
-            raise SystemExit(
+            raise ValueError(
                 "ERROR: --beam and --sky must be non-empty strings."
             )
         return b, k, "CLI(--beam/--sky)"
@@ -317,13 +317,13 @@ def _parse_beam_sky(
             b, k = b.strip(), k.strip()
             if b and k:
                 return b, k, "DEPRECATED(--scenario)"
-        raise SystemExit(
+        raise ValueError(
             "ERROR: --scenario is deprecated and must be of the form '<beam>/<sky>' "
             "or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM'). "
             "Please use --beam and --sky."
         )
 
-    raise SystemExit("ERROR: You must provide --beam and --sky (recommended).")
+    raise ValueError("ERROR: You must provide --beam and --sky (recommended).")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -517,9 +517,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    beam_model, sky_model, beam_sky_src = _parse_beam_sky(
-        beam=args.beam, sky=args.sky, scenario=args.scenario
-    )
+    try:
+        beam_model, sky_model, beam_sky_src = _parse_beam_sky(
+            beam=args.beam, sky=args.sky, scenario=args.scenario
+        )
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
 
     pm = get_default_path_manager()
     runtime = pm.runtime_paths
@@ -615,23 +619,27 @@ def main(argv: list[str] | None = None) -> int:
     # ---- fwhm fracs precedence ----
     fracs: list[float] | None = None
 
-    if args.fwhm_fracs is not None:
-        fracs = _parse_fracs(list(args.fwhm_fracs))
-        fracs_src = "CLI(--fwhm-fracs)"
-    elif args.fwhm_fracs_file is not None:
-        fracs = _parse_fracs_file(Path(args.fwhm_fracs_file))
-        fracs_src = "CLI(--fwhm-fracs-file)"
-    else:
-        cfg_fracs = _get_nested(runtime, "bayeseor", "sweep", "fwhm_fracs")
-        if isinstance(cfg_fracs, list) and cfg_fracs:
-            try:
-                fracs = [float(x) for x in cfg_fracs]
-                fracs_src = "runtime_paths.yaml(bayeseor.sweep.fwhm_fracs)"
-            except Exception:
-                fracs = None
-                fracs_src = "default"
+    try:
+        if args.fwhm_fracs is not None:
+            fracs = _parse_fracs(list(args.fwhm_fracs))
+            fracs_src = "CLI(--fwhm-fracs)"
+        elif args.fwhm_fracs_file is not None:
+            fracs = _parse_fracs_file(Path(args.fwhm_fracs_file))
+            fracs_src = "CLI(--fwhm-fracs-file)"
         else:
-            fracs_src = "default"
+            cfg_fracs = _get_nested(runtime, "bayeseor", "sweep", "fwhm_fracs")
+            if isinstance(cfg_fracs, list) and cfg_fracs:
+                try:
+                    fracs = [float(x) for x in cfg_fracs]
+                    fracs_src = "runtime_paths.yaml(bayeseor.sweep.fwhm_fracs)"
+                except Exception:
+                    fracs = None
+                    fracs_src = "default"
+            else:
+                fracs_src = "default"
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
 
     # submission defaults
     sbatch_exe = args.sbatch_exe
@@ -646,7 +654,11 @@ def main(argv: list[str] | None = None) -> int:
     slurm_cpu = _slurm_defaults(runtime, "cpu")
     slurm_gpu = _slurm_defaults(runtime, "gpu")
 
-    overrides_dict = _parse_overrides(args.override)
+    try:
+        overrides_dict = _parse_overrides(args.override)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
 
     if args.dry_run:
         sd = sweep_root(results_root, beam_model, sky_model, args.run_id)

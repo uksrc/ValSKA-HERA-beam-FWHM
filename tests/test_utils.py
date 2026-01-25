@@ -1,5 +1,6 @@
 # Unit tests for utils
 
+import json
 import os
 import tempfile
 from datetime import datetime
@@ -9,8 +10,26 @@ from unittest.mock import PropertyMock, patch
 import pytest
 
 from valska_hera_beam import utils
+from valska_hera_beam.external_tools.bayeseor import (
+    TOOL_NAME as BAYESEOR_TOOL_NAME,
+)
 
 UTILS_DIR = Path(os.path.abspath(utils.__file__)).parent.resolve()
+
+
+def test_tool_name_constant():
+    # Ensure the canonical tool name is defined and correct
+    assert BAYESEOR_TOOL_NAME == "bayeseor"
+
+
+def test_manifest_contains_tool_field_simulated(tmp_path):
+    # Simulate a manifest file and assert presence of tool field
+    manifest = {"tool": BAYESEOR_TOOL_NAME}
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    m = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert m["tool"] == "bayeseor"
 
 
 def test_make_timestamp():

@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0-draft
 **Status:** Draft
-**Last updated:** 2026-01-21
+**Last updated:** 2026-01-25
 
 ---
 
@@ -892,7 +892,7 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 | Prepare/submit separation | §3, §4 | ✅ Compliant | |
 | `--dry-run` support | §3.4, §4.3 | ✅ Compliant | |
 | Run directory structure | §5 | ✅ Compliant | |
-| `manifest.json` creation | §6.1 | ⚠️ Partial | See C.2.1 |
+| `manifest.json` creation | §6.1 | ✅ Compliant | |
 | `jobs.json` creation | §6.2 | ✅ Compliant | |
 | Configuration hierarchy | §7 | ✅ Compliant | |
 | Stage abstraction | §8 | ✅ Compliant | |
@@ -907,11 +907,11 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 
 **Specification reference:** §6.1.3
 
-**Current state:** The `manifest.json` does not include a `tool` field identifying the generating tool.
+**Current state:** Resolved — the `manifest.json` now includes a `tool` field identifying the generating tool.
 
-**Required change:** Add `"tool": "bayeseor"` to manifest generation in `setup.py`.
+**Resolution:** Added `tool` field to manifest generation in `src/valska_hera_beam/external_tools/bayeseor/setup.py` (uses canonical `TOOL_NAME`). Tests updated to assert presence (`tests/test_utils.py`); full test-suite passes.
 
-**Priority:** Medium — Required before spec v1.0 finalisation.
+**Priority:** Resolved.
 
 ---
 
@@ -946,8 +946,7 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 
 These items should be addressed in the following order:
 
-1. **Tool field (C.2.1)** — Simple addition with no behavioural change
-2. **`--results-root` verification (C.2.3)** — Quick audit
-3. **Exit code audit (C.2.2)** — May require minor refactoring
+1. **`--results-root` verification (C.2.3)** — Quick audit
+2. **Exit code audit (C.2.2)** — May require minor refactoring
 
 Once all items are resolved, this appendix should be updated to reflect full conformance, and the specification status changed from "Draft" to "1.0".

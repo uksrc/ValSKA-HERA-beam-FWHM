@@ -20,14 +20,34 @@ ValSKA-HERA-beam-FWHM includes:
 
 ## Installation
 
-*TBD: Instructions for installation.*
+First, clone the repo.
 
- - Clone the repo.
- - All dependencies can be installed with `conda` using the included `valska_env.yaml` file via (but see below first):
-```
+The `valska_env.yaml` file provides a complete conda environment specification:
+
+```bash
+# Create environment
 conda env create -f valska_env.yaml
+
+# Activate environment
+conda activate valska
 ```
- - valska_env.yaml is setup for Galahad. To install the dependencies on Azimuth, in valska_env.yaml, comment out cudatoolkit and uncomment cuda.
+
+**Platform-specific notes:**
+- **Galahad**: Use `cudatoolkit` (uncommented in `valska_env.yaml`)
+- **Azimuth**: Use `cuda` (comment out `cudatoolkit`, uncomment `cuda`)
+
+The conda environment includes:
+- All runtime dependencies (astropy, numpy, scipy, etc.)
+- MPI support (mpi4py >= 3.0.0)
+- GPU support (CUDA, PyCUDA, magma)
+- Editable install with dev dependencies via pip
+
+Development and other specific dependencies are specified separately in `pyproject.toml`, and are automatically installed into the conda environment using pip. This is carried out in the last section of `valska_env.yaml` - i.e.:
+
+```bash
+  - pip:
+      - -e .[dev] # editable-installs valska and all deps from pyproject.toml
+```
 
 
 ## Usage

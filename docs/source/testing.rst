@@ -7,6 +7,7 @@ Quick Start
 -----------
 
 .. code-block:: bash
+
    # Clone the repository
    git clone https://github.com/uksrc/ValSKA-HERA-beam-FWHM.git
    cd ValSKA-HERA-beam-FWHM
@@ -31,6 +32,7 @@ Development Dependencies
 The project uses ``pyproject.toml`` to manage the devlopment dependencies. These include testing tools, linters, and notebook validation utilities.
 
 **Core development dependencies** (defined in the ``[project.optional-dependencies]`` in ``pyproject.toml``):
+
 - ``pytest`` - Testing framework
 - ``pytest-cov`` - Coverage reporting
 - ``pytest-mock`` - Mocking support
@@ -56,9 +58,11 @@ We use Makefiles to give convenience methods for running the tests, linting and 
 To run pytest with options set to write coverage reports:
 
 .. code-block:: bash
+
    make python-test
 
 **What this does:**
+
 - Executes pytest against all test files in ``tests/``
 - Generates coverage reports for ``src/`` directory
 - Creates HTML coverage report in ``build/reports/code-coverage/``
@@ -72,9 +76,11 @@ Notebook Tests
 Jupyter notebooks can be tested (end-to-end) using ``nbmake``. This is set up in Make targets so that it can be called with:
 
 .. code-block:: bash
+
    make notebook-test
 
 **What this does:**
+
 - Uses ``pytest --nbmake`` to execute notebooks
 - Tests notebooks in the project root by default (configurable via ``PYTHON_TEST_FOLDER_NBMAKE``)
 - Excludes ``.py`` files automatically
@@ -83,6 +89,7 @@ Jupyter notebooks can be tested (end-to-end) using ``nbmake``. This is set up in
 It won't work where user input is required, or paths need to be set up - for example, the cells which actually make the plots and read the data will not be tested. These cells can be excluded from the test by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to add the "skip-execution" tag:
 
 .. code-block:: json
+
    {
    "cell_type": "code",
    "execution_count": 4,
@@ -103,6 +110,7 @@ Linting and Formatting
 Auto-format code to meet style guidelines:
 
 .. code-block:: bash
+
    # Format Python code
    make python-format
 
@@ -113,6 +121,7 @@ Auto-format code to meet style guidelines:
 To run linting
 
 .. code-block:: bash
+
    # Lint Python code
    make python-lint
 
@@ -121,6 +130,7 @@ To run linting
 
 
 **Linting includes:**
+
 - ``isort`` - Import sorting verification
 - ``black`` - Code formatting verification
 - ``flake8`` - Style guide enforcement
@@ -135,6 +145,7 @@ Make Targets Reference
 All of the testing targets are defined in ``python.mk``. Below is a summary of commonly used targets that were described above:
 
 .. list-table:: Make targets.
+   :widths: 5 5 5
    :header-rows: 1
 
    * - Target
@@ -142,10 +153,12 @@ All of the testing targets are defined in ``python.mk``. Below is a summary of c
      - Key Variables
    * - ``python-test``
      - Run pytest with coverage
-     - ``PYTHON_TEST_FILE`` (default: ``tests/``) ``PYTHON_VARS_AFTER_PYTEST`` (pytest flags)
+     - ``PYTHON_TEST_FILE`` (default: ``tests/``) 
+       ``PYTHON_VARS_AFTER_PYTEST`` (pytest flags)
    * - ``notebook-test``
      - Execute notebooks with nbmake
-     - ``PYTHON_TEST_FOLDER_NBMAKE`` (default: ``.``) ``NOTEBOOK_IGNORE_FILES`` (files to skip)
+     - ``PYTHON_TEST_FOLDER_NBMAKE`` (default: ``.``) 
+       ``NOTEBOOK_IGNORE_FILES`` (files to skip)
    * - ``python-lint``
      - Lint Python code
      - ``PYTHON_LINT_TARGET`` (default: ``src/ tests/``)
@@ -165,6 +178,7 @@ Customizing Make Variables
 You can override Make variables on the command line:
 
 .. code-block:: bash
+
    # Run tests for a specific file
    make python-test PYTHON_TEST_FILE=tests/test_utils.py
 
@@ -184,6 +198,7 @@ CI/CD Integration
 The project uses GitHub Actions for continuous integration. The workflow is defined in ``.github/workflows/python-app.yml``.
 
 **CI Pipeline:**
+
 1. Checkout code
 2. Set up Python 3.12
 3. Install dependencies via ``pip install -r requirements.txt``
@@ -207,6 +222,7 @@ Run a Single Test File
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
+
    # Using Make
    make python-test PYTHON_TEST_FILE=tests/test_utils.py
 
@@ -218,6 +234,7 @@ Run a Single Test Function
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
+
    pytest tests/test_utils.py::test_specific_function
 
 
@@ -225,6 +242,7 @@ Run Tests Matching a Pattern
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
+
    pytest -k "test_pattern"
 
 
@@ -232,6 +250,7 @@ Run Tests with Verbose Output
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
+
    make python-test PYTHON_VARS_AFTER_PYTEST="-v"
 
    # Or directly
@@ -242,6 +261,7 @@ Run Tests and Stop at First Failure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
+
    pytest -x tests/
 
 
@@ -251,6 +271,7 @@ Test Reports and Coverage
 After running tests, reports are generated in the ``build/`` directory:
 
 .. code-block::
+
    build/
    ├── reports/
    │   ├── code-coverage/          # HTML coverage report (open index.html)
@@ -264,6 +285,7 @@ After running tests, reports are generated in the ``build/`` directory:
 In order to view the coverage reports, either view in html format from ``build/reports/code-coverage/index.html``, or check on the terminal,
 
 .. code-block:: bash
+
    pytest --cov=src --cov-report=term-missing tests/
 
 

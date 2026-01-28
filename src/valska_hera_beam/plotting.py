@@ -1,3 +1,5 @@
+"""Plotting helpers for ValSKA-HERA-beam-FWHM analysis outputs."""
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 

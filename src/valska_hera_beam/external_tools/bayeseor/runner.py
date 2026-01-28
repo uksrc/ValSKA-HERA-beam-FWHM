@@ -33,6 +33,7 @@ class CondaRunner:
     env_name: str  # e.g. "bayeseor"
 
     def bash_prefix(self) -> str:
+        """Return shell lines to activate the conda environment."""
         return f"{self.conda_activate}\nconda activate {self.env_name}\n"
 
 

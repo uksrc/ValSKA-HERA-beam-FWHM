@@ -203,7 +203,7 @@ class ChainPair:
 
     perturbation: str
     fgeor_root: Path  # directory that directly contains data-*
-    fgonly_root: Path
+    fgonly_root: Path  # directory that directly contains data-*
 
 
 ChainPairMap = Dict[str, ChainPair]

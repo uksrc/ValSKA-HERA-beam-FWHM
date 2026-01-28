@@ -63,6 +63,7 @@ def _load_runtime_paths_yaml() -> dict[str, Any]:
 
 
 def _runtime_submit_defaults() -> dict[str, Any]:
+    """Extract submit defaults from runtime_paths.yaml if available."""
     data = _load_runtime_paths_yaml()
     bayeseor = data.get("bayeseor", {}) if isinstance(data, dict) else {}
     submit = bayeseor.get("submit", {}) if isinstance(bayeseor, dict) else {}
@@ -83,6 +84,7 @@ def _runtime_submit_defaults() -> dict[str, Any]:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser for valska-bayeseor-submit."""
     p = argparse.ArgumentParser(
         prog="valska-bayeseor-submit",
         description=(
@@ -180,6 +182,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _archive_jobs_json(run_dir: Path) -> Path | None:
+    """Archive jobs.json with a UTC timestamp suffix."""
     jobs_path = run_dir / "jobs.json"
     if not jobs_path.exists():
         return None
@@ -202,6 +205,7 @@ def _load_jobs_json(path: Path) -> dict[str, Any] | None:
 
 
 def _has_cpu_job(existing: dict[str, Any] | None) -> bool:
+    """Return True if jobs.json already records a CPU precompute job."""
     if not isinstance(existing, dict):
         return False
     jobs = existing.get("jobs")
@@ -212,6 +216,7 @@ def _has_cpu_job(existing: dict[str, Any] | None) -> bool:
 
 
 def _has_gpu_jobs(existing: dict[str, Any] | None) -> bool:
+    """Return True if jobs.json already records any GPU job."""
     if not isinstance(existing, dict):
         return False
     jobs = existing.get("jobs")
@@ -228,6 +233,7 @@ def _has_gpu_jobs(existing: dict[str, Any] | None) -> bool:
 
 
 def _print_human(result: dict[str, Any]) -> None:
+    """Print a human-readable submission summary."""
     run_dir = result.get("run_dir", "")
     dry_run = bool(result.get("dry_run", False))
 
@@ -282,6 +288,7 @@ def _print_human(result: dict[str, Any]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint for valska-bayeseor-submit."""
     parser = _build_parser()
     args = parser.parse_args(argv)
 

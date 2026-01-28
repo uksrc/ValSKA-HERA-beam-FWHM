@@ -15,6 +15,7 @@ from .slurm import render_submit_script
 
 
 def _utc_stamp() -> str:
+    """Return a UTC timestamp suitable for directory naming."""
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
@@ -29,6 +30,7 @@ _YAML.width = 4096  # avoid wrapping compact priors blocks
 
 
 def _load_yaml(path: Path) -> CommentedMap:
+    """Load a YAML file preserving comments and formatting."""
     with path.open("r", encoding="utf-8") as f:
         data = _YAML.load(f)
     if not isinstance(data, CommentedMap):
@@ -37,6 +39,7 @@ def _load_yaml(path: Path) -> CommentedMap:
 
 
 def _dump_yaml(data: Mapping[str, Any], path: Path) -> None:
+    """Write YAML using ruamel round-trip formatting."""
     if isinstance(data, CommentedMap):
         out = data
     else:
@@ -195,6 +198,7 @@ def _materialise_hypothesis_config(
 
 
 def _runner_manifest(runner: CondaRunner | ContainerRunner) -> dict[str, Any]:
+    """Return a serializable runner description for the manifest."""
     if isinstance(runner, CondaRunner):
         return {
             "type": "conda",
@@ -253,6 +257,11 @@ def prepare_bayeseor_run(
     CPU precompute sharing:
       We generate one shared CPU precompute script and point it at whichever
       hypothesis config exists first (signal_fit preferred if both).
+
+    Returns
+    -------
+    dict
+        Paths to created artefacts (configs, submit scripts, manifest), plus run_dir.
     """
     overrides = dict(overrides or {})
     results_root = Path(results_root).expanduser().resolve()

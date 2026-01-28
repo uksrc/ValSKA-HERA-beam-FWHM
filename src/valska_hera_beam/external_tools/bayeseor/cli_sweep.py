@@ -221,6 +221,7 @@ def _print_submit_results(submit_results: Any) -> None:
 
 
 def _parse_fracs(vals: list[str]) -> list[float]:
+    """Parse a list of strings into float FWHM perturbation values."""
     out: list[float] = []
     for v in vals:
         try:
@@ -262,6 +263,7 @@ def _parse_fracs_file(path: Path) -> list[float]:
 
 
 def _parse_overrides(kvs: list[str]) -> dict[str, str]:
+    """Parse KEY=VALUE override arguments into a dict."""
     out: dict[str, str] = {}
     for kv in kvs:
         if "=" not in kv:
@@ -278,6 +280,7 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
 
 
 def _derive_variant_from_template_path(template_yaml: Path) -> str:
+    """Derive a variant key from a template filename."""
     stem = template_yaml.stem
     if "_template" in stem:
         stem = stem.replace("_template", "", 1)
@@ -327,6 +330,7 @@ def _parse_beam_sky(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser for valska-bayeseor-sweep."""
     p = argparse.ArgumentParser(
         prog="valska-bayeseor-sweep",
         description=(
@@ -515,6 +519,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint for valska-bayeseor-sweep."""
     args = build_parser().parse_args(argv)
 
     try:

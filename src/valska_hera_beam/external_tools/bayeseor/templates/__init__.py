@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def list_templates() -> list[str]:
-    """List shipped BayesEoR validation templates."""
+    """List shipped BayesEoR validation templates bundled with the package."""
     pkg = __package__  # valska_hera_beam.external_tools.bayeseor.templates
     return sorted(
         [
@@ -20,7 +20,8 @@ def get_template_path(name: str) -> Path:
     """
     Return a filesystem Path to a shipped template.
 
-    Uses importlib.resources so this works both from a source checkout and from an installed wheel.
+    Uses importlib.resources so this works both from a source checkout and from
+    an installed wheel.
     """
     pkg = __package__
     candidate = resources.files(pkg) / name

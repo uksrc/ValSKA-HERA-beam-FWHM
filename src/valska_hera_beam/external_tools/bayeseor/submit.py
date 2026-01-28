@@ -34,6 +34,8 @@ class SbatchError(SubmissionError):
 
 @dataclass(frozen=True)
 class SubmitPlan:
+    """Resolved paths needed to submit a prepared BayesEoR run."""
+
     run_dir: Path
     manifest_path: Path
     cpu_script: Path
@@ -47,6 +49,19 @@ def _utc_now_iso() -> str:
 
 
 def load_manifest(run_dir: Path) -> dict[str, Any]:
+    """
+    Load and parse manifest.json from a prepared run directory.
+
+    Parameters
+    ----------
+    run_dir
+        Prepared run directory containing manifest.json.
+
+    Returns
+    -------
+    dict
+        Parsed manifest content.
+    """
     manifest_path = run_dir / "manifest.json"
     if not manifest_path.exists():
         raise MissingDependencyError(
@@ -311,6 +326,30 @@ def submit_bayeseor_run(
 ) -> dict[str, Any]:
     """
     Submit BayesEoR prepared scripts for a run_dir.
+
+    Parameters
+    ----------
+    run_dir
+        Prepared run directory.
+    stage
+        Which stage(s) to submit: "cpu", "gpu", or "all".
+    hypothesis
+        Which GPU hypothesis to run: "signal_fit", "no_signal", or "both".
+    depend_afterok
+        Optional sbatch job id to depend on for GPU submissions.
+    sbatch_exe
+        sbatch executable to invoke.
+    dry_run
+        If True, do not submit jobs; return the commands that would run.
+    force
+        If True, allow resubmission even if jobs.json indicates prior submissions.
+    record
+        Where to record submission metadata. Currently only "jobs.json" is supported.
+
+    Returns
+    -------
+    dict
+        A jobs.json-style record of the submission (merged if not dry_run).
 
     Notes on jobs.json recording
     ----------------------------

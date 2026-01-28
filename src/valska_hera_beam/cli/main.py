@@ -12,6 +12,7 @@ console = Console()
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser for valska-beam-validate."""
     parser = argparse.ArgumentParser(
         prog="valska-beam-validate",
         description=(
@@ -45,6 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entrypoint for valska-beam-validate."""
     parser = build_parser()
     args = parser.parse_args(argv)
 

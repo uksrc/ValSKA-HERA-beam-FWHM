@@ -92,6 +92,8 @@ def archive_jobs_json(run_dir: Path) -> Path | None:
 
 @dataclass(frozen=True)
 class SweepPoint:
+    """Metadata for a single sweep point."""
+
     fwhm_perturb_frac: float
     run_label: str
     run_dir: Path
@@ -100,6 +102,8 @@ class SweepPoint:
 
 @dataclass(frozen=True)
 class SweepResult:
+    """Summary of a completed sweep run (prepare + optional submit)."""
+
     results_root: Path
     beam_model: str
     sky_model: str
@@ -127,6 +131,29 @@ def write_sweep_manifest(
     points: list[SweepPoint],
     submit_results: list[dict[str, Any]] | None = None,
 ) -> Path:
+    """
+    Write sweep_manifest.json under the sweep directory.
+
+    Parameters
+    ----------
+    results_root, beam_model, sky_model, variant, run_id
+        Identify the sweep location and taxonomy.
+    data_path
+        Data path used for the sweep.
+    template_yaml
+        Template used for the sweep points.
+    sweep_dir
+        Target sweep directory.
+    points
+        Prepared sweep points.
+    submit_results
+        Optional submission results to include.
+
+    Returns
+    -------
+    Path
+        Path to the written sweep_manifest.json.
+    """
     sweep_dir.mkdir(parents=True, exist_ok=True)
     out_path = sweep_dir / "sweep_manifest.json"
 
@@ -192,6 +219,52 @@ def run_fwhm_sweep(
 ) -> SweepResult:
     """
     Orchestrate a sweep over multiple fwhm_perturb_frac values.
+
+    Parameters
+    ----------
+    template_yaml
+        BayesEoR template YAML to render.
+    install
+        BayesEoR installation metadata.
+    runner
+        Runner configuration (conda or container).
+    results_root
+        Root directory for results.
+    beam_model, sky_model, variant, run_id
+        Taxonomy fields and sweep identifier.
+    data_path
+        Input data path.
+    slurm_cpu, slurm_gpu
+        SLURM settings for CPU and GPU stages.
+    overrides
+        Template overrides applied to each run.
+    fwhm_fracs
+        Iterable of FWHM perturbation fractions.
+    unique
+        If True, append a UTC timestamp to each run directory.
+    submit
+        Stage(s) to submit after prepare ("none", "cpu", "gpu", "all").
+    hypothesis
+        Which GPU hypothesis to submit ("signal_fit", "no_signal", "both").
+    depend_afterok
+        Optional sbatch job id to depend on for GPU submissions.
+    sbatch_exe
+        sbatch executable to invoke.
+    submit_dry_run
+        If True, do not submit; return the commands that would run.
+    force
+        If True, allow resubmission even if jobs.json indicates prior submissions.
+    resubmit
+        If True, archive jobs.json before submitting.
+    record
+        Where to record submission metadata. Currently only "jobs.json" is supported.
+    dry_run
+        If True, do not prepare or submit; only compute intended run paths.
+
+    Returns
+    -------
+    SweepResult
+        Summary of the sweep, including prepared points and submit results.
 
     Sweep directory layout
     ----------------------

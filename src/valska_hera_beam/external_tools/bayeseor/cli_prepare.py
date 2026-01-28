@@ -97,10 +97,12 @@ from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
 
 
 def _utc_stamp() -> str:
+    """Return a UTC timestamp suitable for directory naming."""
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _format_run_label_from_fwhm_frac(frac: float) -> str:
+    """Format a run label from a fractional FWHM perturbation."""
     s = f"{frac:+.1e}"
     if s.startswith("+"):
         s = s[1:]
@@ -156,6 +158,7 @@ def _compute_run_dir(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser for valska-bayeseor-prepare."""
     parser = argparse.ArgumentParser(
         prog="valska-bayeseor-prepare",
         description=(
@@ -377,6 +380,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _get_nested(d: dict[str, Any], *keys: str) -> Any:
+    """Safely access nested dict keys; returns None if any level is missing."""
     cur: Any = d
     for k in keys:
         if not isinstance(cur, dict):
@@ -481,6 +485,7 @@ def _parse_beam_sky(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint for valska-bayeseor-prepare."""
     parser = build_parser()
     args = parser.parse_args(argv)
 

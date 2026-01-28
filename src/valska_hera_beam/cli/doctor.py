@@ -14,6 +14,7 @@ console = Console()
 
 
 def _check_import(module: str) -> tuple[bool, str]:
+    """Return (ok, message) for a simple import check."""
     try:
         importlib.import_module(module)
         return True, "OK"
@@ -22,6 +23,7 @@ def _check_import(module: str) -> tuple[bool, str]:
 
 
 def _check_pymultinest() -> tuple[bool, str]:
+    """Return (ok, message) for pymultinest import, handling common OSError."""
     try:
         import pymultinest  # noqa: F401
 
@@ -34,6 +36,7 @@ def _check_pymultinest() -> tuple[bool, str]:
 
 
 def run_doctor() -> int:
+    """Run environment checks and return an exit code."""
     console.print("[bold]ValSKA-HERA-beam-FWHM environment check[/bold]\n")
 
     table = Table(show_header=True, header_style="bold")

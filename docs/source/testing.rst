@@ -3,29 +3,6 @@ Testing Guide for Developers
 
 This document provides comprehensive instructions for running tests in the ValSKA-HERA-beam-FWHM project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
 
-Quick Start
------------
-
-.. code-block:: bash
-
-   # Clone the repository
-   git clone https://github.com/uksrc/ValSKA-HERA-beam-FWHM.git
-   cd ValSKA-HERA-beam-FWHM
-
-   # Install dependencies (choose one method below)
-
-   # Option 1: Using conda (recommended)
-   conda env create -f valska_env.yaml
-   conda activate valska
-
-   # Option 2: Using pip
-   pip install -r requirements.txt
-
-   # Run all tests
-   make python-test      # Run unit tests
-   make notebook-test    # Run notebook validation tests
-
-
 Development Dependencies
 ------------------------
 
@@ -88,7 +65,7 @@ Jupyter notebooks can be tested (end-to-end) using ``nbmake``. This is set up in
 
 It won't work where user input is required, or paths need to be set up - for example, the cells which actually make the plots and read the data will not be tested. These cells can be excluded from the test by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to add the "skip-execution" tag:
 
-.. code-block:: json
+.. code-block:: bash
 
    {
    "cell_type": "code",
@@ -145,7 +122,6 @@ Make Targets Reference
 All of the testing targets are defined in ``python.mk``. Below is a summary of commonly used targets that were described above:
 
 .. list-table:: Make targets.
-   :widths: 5 5 5
    :header-rows: 1
 
    * - Target
@@ -200,17 +176,18 @@ The project uses GitHub Actions for continuous integration. The workflow is defi
 **CI Pipeline:**
 
 1. Checkout code
-2. Set up Python 3.12
-3. Install dependencies via ``pip install -r requirements.txt``
-4. Run ``make python-test`` (unit tests)
-5. Run ``make notebook-test`` (notebook validation)
+2. Install dependencies using conda
+3. Run ``make python-test`` (unit tests)
+4. Run ``make notebook-test`` (notebook validation)
 
 The CI pipeline runs on every push to validate that:
+
 - All unit tests pass
 - All notebooks execute without errors
 - Code coverage is maintained
 
 **Viewing CI Results:**
+
 - Go to the `Actions tab <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_ on GitHub
 - Click on a workflow run to see detailed logs
 - Download test artifacts (coverage reports, etc.) from completed runs
@@ -235,7 +212,9 @@ Run a Single Test Function
 
 .. code-block:: bash
 
-   pytest tests/test_utils.py::test_specific_function
+   # Using pytest directly for the test
+   # "test_build_pp_groups_from_paths_default"
+   pytest tests/test_utils.py::test_build_pp_groups_from_paths_default
 
 
 Run Tests Matching a Pattern
@@ -243,7 +222,11 @@ Run Tests Matching a Pattern
 
 .. code-block:: bash
 
-   pytest -k "test_pattern"
+   # Using Make
+   make python-test PYTHON_VARS_AFTER_PYTEST="-k build_pp_groups"
+
+   # Using pytest directly
+   pytest -k build_pp_groups
 
 
 Run Tests with Verbose Output
@@ -251,9 +234,10 @@ Run Tests with Verbose Output
 
 .. code-block:: bash
 
+   # Using Make
    make python-test PYTHON_VARS_AFTER_PYTEST="-v"
 
-   # Or directly
+   # Using pytest directly
    pytest -v tests/
 
 
@@ -262,6 +246,10 @@ Run Tests and Stop at First Failure
 
 .. code-block:: bash
 
+   # Using Make
+   make python-test PYTHON_VARS_AFTER_PYTEST="-x"
+
+   # Using pytest directly
    pytest -x tests/
 
 
@@ -282,11 +270,11 @@ After running tests, reports are generated in the ``build/`` directory:
    └── code_analysis.stdout        # Detailed linting output
 
 
-In order to view the coverage reports, either view in html format from ``build/reports/code-coverage/index.html``, or check on the terminal,
+In order to view the last run coverage report without re-running the tests, either view in html format from ``build/reports/code-coverage/index.html``, or check on the terminal,
 
 .. code-block:: bash
 
-   pytest --cov=src --cov-report=term-missing tests/
+   coverage report -m
 
 
 Interpreting Test Failures

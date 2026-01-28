@@ -70,7 +70,9 @@ dev = [
 ]
 docs = [
   "mkdocs",
-  "mkdocs-material"
+  "mkdocs-material",
+  "myst-parser",
+  "sphinx-rtd-theme"
 ]
 
 [project.urls]

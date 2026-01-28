@@ -41,7 +41,10 @@ autodoc_mock_imports = ['bayeseor',
 			'matplotlib',
 			'yaml',
 			'tqdm',
-			'numpy']
+			'numpy',
+			'ruamel',
+			'ruamel.yaml',
+			'rich']
 
 templates_path = ['_templates']
 exclude_patterns = []

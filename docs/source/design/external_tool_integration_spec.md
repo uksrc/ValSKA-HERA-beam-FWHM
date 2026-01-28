@@ -286,31 +286,27 @@ Records the complete specification of a prepared run, capturing everything neede
 
 ```json
 {
-  "tool": "<tool_identifier>",
-  "created_utc": "<ISO 8601 timestamp>",
-  "valska_version": "<version string>",
-
-  "run_id": "<user-provided identifier>",
-  "run_dir": "<absolute path to run directory>",
-  "results_root": "<absolute path to results root>",
-
-  "template_yaml": "<absolute path to template used>",
-  "template_name": "<template filename>",
-
-  "data_path": "<absolute path to input data>",
-
+  "tool": "bayeseor",
+  "created_utc": "2025-01-15T12:34:56Z",
+  "valska_version": "0.1.0",
+  "run_id": "fwhm_sweep_001",
+  "run_dir": "/abs/path/to/run_dir",
+  "results_root": "/abs/path/to/results_root",
+  "template_yaml": "/abs/path/to/template.yaml",
+  "template_name": "validation_v1d0_template.yaml",
+  "data_path": "/abs/path/to/data.uvh5",
   "overrides": {
-    "<key>": "<value>"
+    "fwhm_perturb_frac": 0.01
   },
-
   "slurm": {
-    "<stage>": {
-      "<directive>": "<value>"
+    "cpu": {
+      "time": "04:00:00",
+      "nodes": 1
     }
   },
-
-  "<tool>": {
-    // Tool-specific configuration
+  "bayeseor": {
+    "cpu_precompute_driver_hypothesis": "signal_fit",
+    "fwhm_perturb_frac": 0.01
   }
 }
 ```
@@ -370,24 +366,21 @@ Records what was actually submitted to SLURM, enabling job tracking and safe res
 
 ```json
 {
-  "run_dir": "<absolute path>",
-  "manifest": "<absolute path to manifest.json>",
-
-  "sbatch": "<sbatch executable used>",
+  "run_dir": "/abs/path/to/run_dir",
+  "manifest": "/abs/path/to/run_dir/manifest.json",
+  "sbatch": "sbatch",
   "dry_run": false,
-  "submitted_utc": "<ISO 8601 timestamp>",
-
-  "stage": "<stage(s) submitted>",
-
+  "submitted_utc": "2025-01-15T12:34:56Z",
+  "stage": "cpu,gpu",
   "jobs": {
-    "<stage_name>": {
-      "job_id": "<SLURM job ID>",
-      "script": "<path to submit script>",
-      "dependency": "<dependency specification or null>"
+    "cpu": {
+      "job_id": "123456",
+      "script": "/abs/path/to/run_dir/submit_cpu.sh",
+      "dependency": null
     }
   },
-
   "commands": [
+    "sbatch /abs/path/to/run_dir/submit_cpu.sh"
     "<exact sbatch command executed>"
   ],
 
@@ -682,21 +675,19 @@ Records sweep-level metadata:
 
 ```json
 {
-  "tool": "<tool_identifier>",
-  "created_utc": "<ISO 8601 timestamp>",
-  "sweep_id": "<identifier>",
-  "sweep_dir": "<absolute path>",
-
-  "parameter": "<swept parameter name>",
-  "values": [<list of values>],
-
+  "tool": "bayeseor",
+  "created_utc": "2025-01-15T12:34:56Z",
+  "sweep_id": "fwhm_sweep_001",
+  "sweep_dir": "/abs/path/to/results/bayeseor/_sweeps/fwhm_sweep_001",
+  "parameter": "fwhm_perturb_frac",
+  "values": [0.0, 0.01, 0.02],
   "points": [
     {
-      "label": "<point_label>",
-      "value": <parameter value>,
-      "run_dir": "<absolute path>",
-      "manifest": "<path to manifest.json>",
-      "jobs_json": "<path to jobs.json>"
+      "label": "fwhm_0p00",
+      "value": 0.0,
+      "run_dir": "/abs/path/to/results/bayeseor/fwhm_0p00",
+      "manifest": "/abs/path/to/results/bayeseor/fwhm_0p00/manifest.json",
+      "jobs_json": "/abs/path/to/results/bayeseor/fwhm_0p00/jobs.json"
     }
   ]
 }

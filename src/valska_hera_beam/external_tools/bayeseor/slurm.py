@@ -19,12 +19,13 @@ def render_submit_script(
     Render a SLURM submit script for a BayesEoR run.
 
     This function aims to be HPC-friendly and debugging-friendly:
-      - emits clear "what am I running" information
-      - prints SLURM_* environment variables (helpful when diagnosing scheduling issues)
-      - uses `srun --mpi=<mpi> -n "$SLURM_NTASKS"` by default to match common site setups
-      - uses BayesEoR's CLI flags:
-          * CPU stage:  --cpu
-          * GPU stage:  --gpu --run
+
+    - emits clear "what am I running" information
+    - prints SLURM_* environment variables (helpful when diagnosing scheduling issues)
+    - uses ``srun --mpi=<mpi> -n "$SLURM_NTASKS"`` by default to match common site setups
+    - uses BayesEoR's CLI flags:
+      - CPU stage: ``--cpu``
+      - GPU stage: ``--gpu --run``
 
     Parameters
     ----------
@@ -39,69 +40,71 @@ def render_submit_script(
     slurm
         SLURM settings map. Usually derived from runtime_paths.yaml defaults plus CLI overrides.
 
-        **Any key set to `None` (or not present) will be omitted from the generated script.**
-        This allows cluster-specific suppression of directives that are not supported or not needed.
+        **Any key set to ``None`` (or not present) will be omitted from the
+        generated script.** This allows cluster-specific suppression of
+        directives that are not supported or not needed.
 
-        Supported keys (all optional):
+        Supported keys (all optional)::
 
-        Job identification:
-          - job_name: str              Full job name (overrides prefix-based naming)
-          - job_name_prefix: str       Prefix for auto-generated job name (default: "bayeseor")
-
-        Resource selection:
-          - partition: str | None      Partition/queue name (omit for constraint-based scheduling)
-          - constraint: str | None     Node feature constraint (e.g., "A100", "skylake")
-          - qos: str | None            Quality of service
-          - account: str | None        Account/project to charge
-          - reservation: str | None    Reservation name
-
-        Time and memory:
-          - time: str | None           Wall time limit (default: "12:00:00")
-          - mem: str | None            Memory per node (default: "8G")
-          - mem_per_cpu: str | None    Memory per CPU (mutually exclusive with mem)
-          - mem_per_gpu: str | None    Memory per GPU
-
-        CPU/task configuration:
-          - nodes: int | None          Number of nodes (default: 1)
-          - ntasks: int | None         Total number of tasks (default: 1)
-          - ntasks_per_node: int | None  Tasks per node (default: 1)
-          - cpus_per_task: int | None  CPUs per task (default: 4)
-
-        GPU configuration:
-          - gpus: int | str | None     Total GPUs (e.g., 2 or "a100:2")
-          - gpus_per_node: int | str | None  GPUs per node
-          - gpus_per_task: int | None  GPUs per task (common for single-GPU jobs)
-          - gres: str | None           Generic resources (e.g., "gpu:1", "gpu:a100:2")
-
-        Execution control:
-          - mpi: str                   MPI type for srun (default: "pmi2")
-          - exclusive: bool | None     Request exclusive node access (True emits --exclusive)
-
-        Output:
-          - output: str | Path         Stdout log path (default: run_dir/slurm-{mode}-%j.out)
-          - error: str | Path | None   Stderr log path (if separate from stdout)
-
-        Extensibility:
-          - extra_sbatch: list[str]    Additional #SBATCH lines (without "#SBATCH " prefix)
+            Job identification:
+              - ``job_name``: Full job name (overrides prefix-based naming)
+              - ``job_name_prefix``: Prefix for auto-generated job name
+                (default: "bayeseor")
+            Resource selection:
+              - ``partition``: Partition/queue name (omit for constraint-based scheduling)
+              - ``constraint``: Node feature constraint (e.g., "A100", "skylake")
+              - ``qos``: Quality of service
+              - ``account``: Account/project to charge
+              - ``reservation``: Reservation name
+            Time and memory:
+              - ``time``: Wall time limit (default: "12:00:00")
+              - ``mem``: Memory per node (default: "8G")
+              - ``mem_per_cpu``: Memory per CPU (mutually exclusive with ``mem``)
+              - ``mem_per_gpu``: Memory per GPU
+            CPU/task configuration:
+              - ``nodes``: Number of nodes (default: 1)
+              - ``ntasks``: Total number of tasks (default: 1)
+              - ``ntasks_per_node``: Tasks per node (default: 1)
+              - ``cpus_per_task``: CPUs per task (default: 4)
+            GPU configuration:
+              - ``gpus``: Total GPUs (e.g., ``2`` or ``"a100:2"``)
+              - ``gpus_per_node``: GPUs per node
+              - ``gpus_per_task``: GPUs per task (common for single-GPU jobs)
+              - ``gres``: Generic resources (e.g., ``"gpu:1"``, ``"gpu:a100:2"``)
+            Execution control:
+              - ``mpi``: MPI type for srun (default: "pmi2")
+              - ``exclusive``: Request exclusive node access (True emits ``--exclusive``)
+            Output:
+              - ``output``: Stdout log path (default: ``run_dir/slurm-{mode}-%j.out``)
+              - ``error``: Stderr log path (if separate from stdout)
+            Extensibility:
+              - ``extra_sbatch``: Additional ``#SBATCH`` lines
+                (without the ``"#SBATCH "`` prefix)
 
     mode
         Execution mode:
-          - "cpu"     : precompute instrument transfer matrices (BayesEoR --cpu)
-          - "gpu_run" : run sampling assuming precompute exists (BayesEoR --gpu --run)
+
+        - ``"cpu"``: precompute instrument transfer matrices (BayesEoR ``--cpu``)
+        - ``"gpu_run"``: run sampling assuming precompute exists
+          (BayesEoR ``--gpu --run``)
 
     Notes on timing
     ---------------
-    We intentionally do NOT rely on `/usr/bin/time` or shell `time`, since some
-    compute-node images do not provide them. Timing is implemented using only:
-      - date (UTC timestamps + epoch seconds)
+    We intentionally do NOT rely on ``/usr/bin/time`` or shell ``time``, since
+    some compute-node images do not provide them. Timing is implemented using
+    only:
+
+    - ``date`` (UTC timestamps + epoch seconds)
+
     This should work essentially everywhere.
 
     Notes on cluster portability
     ----------------------------
     Different HPC sites have different scheduling policies:
-      - Some use --partition, others use --constraint
-      - Some require --account, others don't
-      - GPU syntax varies: --gpus-per-task vs --gres=gpu:N
+
+    - Some use ``--partition``, others use ``--constraint``
+    - Some require ``--account``, others don't
+    - GPU syntax varies: ``--gpus-per-task`` vs ``--gres=gpu:N``
 
     Set unsupported/unwanted directives to None in your runtime_paths.yaml
     to omit them from generated scripts.

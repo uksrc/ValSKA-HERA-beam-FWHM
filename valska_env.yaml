@@ -36,6 +36,8 @@ dependencies:
   - setuptools
   - setuptools_scm
   - sphinx
+  - sphinx-rtd-theme
+  - myst-parser
   - threadpoolctl
   - pandas
 

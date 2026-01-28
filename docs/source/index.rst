@@ -18,3 +18,5 @@ Contents
    readme
    validation
    api
+   workflows
+   design

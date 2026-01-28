@@ -75,9 +75,11 @@ The recommended user interface for this workflow is the `valska-bayeseor-sweep` 
 
 ## Documentation
 
+Documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/).
+
 Detailed command-line examples and workflow patterns are provided in:
 
-    docs/workflows/bayeseor_cli_examples.md
+- [BayesEoR CLI examples](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_cli_examples.html)
 
 That document is the primary reference for:
 - Preparing validation sweeps
@@ -85,12 +87,6 @@ That document is the primary reference for:
 - Partial submission and recovery
 - Resubmission after walltime
 - Inspecting manifests and job records
-
----
-
-## Documentation
-
-The documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/).
 
 ## Contributing
 

@@ -2,10 +2,12 @@
 """
 Prepare a BayesEoR validation run "kit" under the ValSKA results directory.
 
-This module is the importable CLI entrypoint used by the console script:
+This module is the importable CLI entrypoint used by the console script::
+
   valska-bayeseor-prepare
 
-It preserves the behaviour of the development driver script:
+It preserves the behaviour of the development driver script::
+
   scripts/prepare_bayeseor_run.py
 
 What this does
@@ -14,48 +16,55 @@ This generates reproducible run artefacts for a BayesEoR analysis, without
 actually running BayesEoR itself.
 
 Specifically, it:
-  - resolves runtime paths (results_root, data root expansion, default template)
-  - instantiates the BayesEoR runner (currently conda)
-  - prepares a run directory containing:
-      * hypothesis-specific config YAMLs (signal_fit / no_signal)
-      * submit scripts for CPU precompute and GPU run stages
-      * a manifest.json recording provenance & resolved paths
+
+- resolves runtime paths (results_root, data root expansion, default template)
+- instantiates the BayesEoR runner (currently conda)
+- prepares a run directory containing:
+  - hypothesis-specific config YAMLs (signal_fit / no_signal)
+  - submit scripts for CPU precompute and GPU run stages
+  - a manifest.json recording provenance & resolved paths
 
 Design principles
 -----------------
-- setup.prepare_bayeseor_run() is the single source of truth for canonical run_dir construction.
-  This CLI only duplicates run_dir logic for --dry-run display.
+- setup.prepare_bayeseor_run() is the single source of truth for canonical
+  run_dir construction. This CLI only duplicates run_dir logic for --dry-run
+  display.
 
 Variant concept
 ---------------
-We include a <variant> directory level to separate template-level differences that should never
-collide (e.g. validation_v1d0 vs validation_v1d0_achromatic). By default it is derived from the
-template filename stem by removing the first occurrence of '_template'.
+We include a <variant> directory level to separate template-level differences
+that should never collide (e.g. validation_v1d0 vs
+validation_v1d0_achromatic). By default it is derived from the template
+filename stem by removing the first occurrence of "_template".
 
 Beam/sky taxonomy
 -----------------
-The results tree is organised by (beam_model, sky_model), replacing the earlier overloaded
-'scenario' label.
+The results tree is organised by (beam_model, sky_model), replacing the earlier
+overloaded "scenario" label.
 
-Canonical non-sweep run directory:
+Canonical non-sweep run directory::
+
   <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
 
-Backwards compatibility:
+Backwards compatibility
+-----------------------
 - --scenario is deprecated. If used, it must be unambiguous:
-    --scenario <beam>/<sky>   or   --scenario <beam>__<sky>
-  Any other form (e.g. 'GLEAM_beam') is rejected to prevent silent misrouting.
+  - --scenario <beam>/<sky>
+  - --scenario <beam>__<sky>
+- Any other form (e.g. "GLEAM_beam") is rejected to prevent silent misrouting.
 
 Data path resolution
 --------------------
-If you pass --data as a relative path, it is resolved using runtime_paths.yaml:data.root if set.
+If you pass --data as a relative path, it is resolved using
+runtime_paths.yaml:data.root if set.
 
-Example runtime_paths.yaml:
+Example runtime_paths.yaml::
 
   results_root: /share/nas-0-3/psims/validation_results/UKSRC
   data:
     root: /path/to/datasets
 
-then ValSKA will resolve:
+Then ValSKA will resolve::
 
   --data foo/bar.uvh5  ->  /path/to/datasets/foo/bar.uvh5
 
@@ -64,9 +73,9 @@ manifest.
 
 Future container support
 ------------------------
-Today this assumes a conda-based runner. In the future we will support Apptainer/Singularity
-containers by swapping the "runner" configuration; the produced run directory, config YAML,
-and scripts are designed to remain stable.
+Today this assumes a conda-based runner. In the future we will support
+Apptainer/Singularity containers by swapping the "runner" configuration; the
+produced run directory, config YAML, and scripts are designed to remain stable.
 """
 
 from __future__ import annotations

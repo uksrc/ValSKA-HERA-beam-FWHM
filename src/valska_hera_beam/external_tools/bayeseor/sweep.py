@@ -1,3 +1,5 @@
+"""Sweep orchestration for BayesEoR FWHM perturbation studies."""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,5 @@
+"""SLURM submit-script rendering for BayesEoR runs."""
+
 from __future__ import annotations
 
 from pathlib import Path

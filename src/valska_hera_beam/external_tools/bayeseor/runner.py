@@ -1,3 +1,5 @@
+"""Runner abstractions for executing BayesEoR via conda or containers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

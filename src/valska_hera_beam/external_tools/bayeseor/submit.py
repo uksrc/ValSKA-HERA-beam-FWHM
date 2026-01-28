@@ -1,3 +1,5 @@
+"""Submission helpers for BayesEoR prepared run directories."""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,5 @@
+"""Prepare BayesEoR run directories, configs, and submit scripts."""
+
 from __future__ import annotations
 
 import json

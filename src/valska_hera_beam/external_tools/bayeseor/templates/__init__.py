@@ -1,3 +1,5 @@
+"""Access to bundled BayesEoR validation templates."""
+
 from __future__ import annotations
 
 from importlib import resources

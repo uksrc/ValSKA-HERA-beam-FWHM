@@ -1,3 +1,5 @@
+"""CLI entrypoint for preparing and optionally submitting BayesEoR sweeps."""
+
 from __future__ import annotations
 
 import argparse

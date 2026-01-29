@@ -3,19 +3,78 @@ Evidence evaluation module for ValSKA-HERA-beam-FWHM project.
 
 This module provides functions to calculate and interpret Bayes factors
 between models in the BayesEoR analysis of HERA beam perturbations.
+
+Typical usage examples
+----------------------
+>>> from pathlib import Path
+>>> from valska_hera_beam.evidence import (
+...     calculate_bayes_factor,
+...     find_chain_pairs,
+...     analyze_chain_pair,
+...     run_complete_bayeseor_analysis,
+... )
+...
+>>> base = Path("/path/to/BayesEoR/chains")
+>>> v7_base = base / "v7d0"
+>>> pairs = find_chain_pairs(v7_base)
+>>> cp = pairs["1.0e00pp"]
+>>> bf_result = calculate_bayes_factor(
+...     cp.fgeor_root / "data-",
+...     cp.fgonly_root / "data-",
+... )
+>>> bf_result["log_bayes_factor"]
+-3.2
+
+>>> summary = run_complete_bayeseor_analysis(
+...     chain_pairs=pairs,
+...     create_plots=False,
+...     verbose=False,
+... )
+>>> summary["summary"]["pass"]
+5
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from pathlib import Path
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import matplotlib.pyplot as plt
-
-# import numpy as np
+import tqdm  # noqa: F401
 from anesthetic import read_chains
 from bayeseor.analyze.analyze import DataContainer
 
+PathLike = Union[str, Path]
+BayesFactorResult = Dict[str, Any]
+PerturbationResult = Dict[str, Any]
+SummaryDict = Dict[str, int]
 
-def interpret_bayes_factor(log_bf):
-    """Interpret the strength of evidence from log Bayes factor"""
+
+def interpret_bayes_factor(log_bf: float) -> str:
+    """
+    Interpret the strength of evidence given a log Bayes factor.
+
+    Parameters
+    ----------
+    log_bf :
+        Natural logarithm of the Bayes factor, ln(Z1 / Z2).
+
+    Returns
+    -------
+    str
+        Human-readable description of evidence strength, based on
+        commonly used (Jeffreys-like) thresholds.
+    """
     if log_bf > 5:
         return "Very strong evidence for model 1"
     elif log_bf > 3:
@@ -33,42 +92,48 @@ def interpret_bayes_factor(log_bf):
 
 
 def calculate_bayes_factor(
-    chain_path_1,
-    chain_path_2,
-    model_name_1="Model 1",
-    model_name_2="Model 2",
-    verbose=True,
-):
+    chain_path_1: PathLike,
+    chain_path_2: PathLike,
+    model_name_1: str = "Model 1",
+    model_name_2: str = "Model 2",
+    verbose: bool = True,
+) -> BayesFactorResult:
     """
-    Calculate Bayes factor between two models given their chain directories.
+    Calculate Bayes factor between two models given their nested-sampling chains.
 
-    Parameters:
-    -----------
-    chain_path_1 : str or Path
-        Path to the first model's chain directory (numerator in Bayes factor)
-    chain_path_2 : str or Path
-        Path to the second model's chain directory (denominator in Bayes factor)
-    model_name_1 : str
-        Name of the first model for display purposes
-    model_name_2 : str
-        Name of the second model for display purposes
-    verbose : bool
-        Whether to print detailed output (default: True)
+    The function assumes that the directories at ``chain_path_1`` and
+    ``chain_path_2`` are readable by :func:`anesthetic.read_chains` and that
+    the returned objects implement a ``logZ()`` method (as in anesthetic).
 
-    Returns:
-    --------
-    dict : Dictionary containing results with keys:
-           - 'model_1': str (model name)
-           - 'model_2': str (model name)
-           - 'log_evidence_1': float or None
-           - 'log_evidence_2': float or None
-           - 'log_bayes_factor': float or None (ln(Z1/Z2))
-           - 'interpretation': str
-           - 'success': bool
-           - 'error': str or None
+    Parameters
+    ----------
+    chain_path_1 :
+        Path to the first model's chain directory (numerator in Bayes factor).
+    chain_path_2 :
+        Path to the second model's chain directory (denominator in Bayes factor).
+    model_name_1 :
+        Name of the first model for display and reporting.
+    model_name_2 :
+        Name of the second model for display and reporting.
+    verbose :
+        If ``True``, print intermediate information (loaded evidences
+        and resulting Bayes factor) to stdout.
+
+    Returns
+    -------
+    dict
+        Dictionary containing results with keys:
+
+        - ``'model_1'``: str, the name of model 1.
+        - ``'model_2'``: str, the name of model 2.
+        - ``'log_evidence_1'``: float or ``None``, log-evidence of model 1.
+        - ``'log_evidence_2'``: float or ``None``, log-evidence of model 2.
+        - ``'log_bayes_factor'``: float or ``None``, ln(Z1/Z2).
+        - ``'interpretation'``: str, human-readable interpretation.
+        - ``'success'``: bool, True if computation succeeded.
+        - ``'error'``: str or ``None``, error message if failed.
     """
-
-    result = {
+    result: BayesFactorResult = {
         "model_1": model_name_1,
         "model_2": model_name_2,
         "log_evidence_1": None,
@@ -84,7 +149,7 @@ def calculate_bayes_factor(
         if verbose:
             print(f"Loading {model_name_1} chain from: {chain_path_1}")
         chain_1 = read_chains(chain_path_1)
-        evidence_1 = chain_1.logZ()
+        evidence_1: float = float(chain_1.logZ())
         result["log_evidence_1"] = evidence_1
         if verbose:
             print(f"{model_name_1} log evidence: {evidence_1:.6f}")
@@ -93,13 +158,13 @@ def calculate_bayes_factor(
         if verbose:
             print(f"Loading {model_name_2} chain from: {chain_path_2}")
         chain_2 = read_chains(chain_path_2)
-        evidence_2 = chain_2.logZ()
+        evidence_2: float = float(chain_2.logZ())
         result["log_evidence_2"] = evidence_2
         if verbose:
             print(f"{model_name_2} log evidence: {evidence_2:.6f}")
 
         # Calculate Bayes factor (ln(Z1/Z2))
-        log_bayes_factor = evidence_1 - evidence_2
+        log_bayes_factor: float = evidence_1 - evidence_2
         result["log_bayes_factor"] = log_bayes_factor
         result["interpretation"] = interpret_bayes_factor(log_bayes_factor)
         result["success"] = True
@@ -111,7 +176,15 @@ def calculate_bayes_factor(
             print(f"Interpretation: {result['interpretation']}")
 
     except Exception as e:
-        error_msg = f"Error calculating Bayes factor: {e}"
+        import traceback
+
+        error_msg = (
+            "Error calculating Bayes factor:\n"
+            f"  model_1 path: {chain_path_1}\n"
+            f"  model_2 path: {chain_path_2}\n"
+            f"  exception: {e}\n"
+            f"{traceback.format_exc()}"
+        )
         result["error"] = error_msg
         if verbose:
             print(error_msg)
@@ -119,68 +192,256 @@ def calculate_bayes_factor(
     return result
 
 
-def analyze_bayeseor_perturbation(
-    pert_level,
-    dir_prefix,
-    expected_ps=214777.66068216303,
-    create_plots=True,
-    verbose=True,
-):
-    """
-    Analyze a specific BayesEoR perturbation level, including plots and BaNTER validation.
+# =============================================================================
+# PAIR-BASED API
+# =============================================================================
 
-    Parameters:
-    -----------
-    pert_level : str
-        Perturbation level (e.g., '-1e-3pp', '+1e0pp')
-    dir_prefix : Path
-        Base directory containing the chains
-    expected_ps : float
-        Expected power spectrum value (default: 214777.66068216303)
-    create_plots : bool
-        Whether to create posterior plots (default: True)
-    verbose : bool
-        Whether to print detailed output (default: True)
 
-    Returns:
-    --------
-    dict : Dictionary containing results with keys:
-           - 'perturbation': str
-           - 'plot_success': bool
-           - 'bayes_factor_result': dict (from calculate_bayes_factor)
-           - 'validation': str ('PASS', 'FAIL', or 'ERROR')
+@dataclass
+class ChainPair:
+    """Container for a matched FgEoR / FgOnly chain pair."""
+
+    perturbation: str
+    fgeor_root: Path  # directory that directly contains data-*
+    fgonly_root: Path
+
+
+ChainPairMap = Dict[str, ChainPair]
+
+
+def _find_single_mn_subdir(root: Path) -> Path:
     """
+    Find the MN-* (or similar) subdirectory under a given root.
+
+    Assumes there is exactly one subdirectory; raises if 0 or >1.
+    This keeps the logic explicit and surfaces layout issues early.
+    """
+    subdirs = [p for p in root.iterdir() if p.is_dir()]
+    if len(subdirs) == 0:
+        raise RuntimeError(f"No subdirectories found under {root}")
+    if len(subdirs) > 1:
+        raise RuntimeError(
+            f"Multiple subdirectories under {root}: {[p.name for p in subdirs]}"
+        )
+    return subdirs[0]
+
+
+def _normalize_perturbation_key(raw_suffix: str) -> str:
+    """
+    Normalize a perturbation suffix into a stable key.
+
+    For now this is just a passthrough, but by putting it in one place
+    you can later convert between formats (e.g. '+1e0pp' vs '1.0e00pp')
+    if needed.
+    """
+    return raw_suffix
+
+
+def find_chain_pairs(
+    base_dir: Path,
+    fgeor_prefix: str = "GL_FgEoR_",
+    fgonly_prefix: str = "GL_FgOnly_",
+    debug: bool = False,
+) -> ChainPairMap:
+    """
+    Discover matched FgEoR / FgOnly chain pairs under a base directory.
+
+    This is meant to work with layouts like:
+
+        base_dir / "GL_FgEoR_1.0e00pp"/MN-23-23-38-2-ffm-.../data-
+        base_dir / "GL_FgOnly_1.0e00pp"/MN-23-23-38-2-ffm-.../data-
+
+    or v5-style directories such as:
+
+        base_dir / "GSM_FgEoR_-5e0pp"/MN-23-23-38-2-.../data-
+        base_dir / "GSM_FgOnly_-5e0pp"/MN-23-23-38-2-.../data-
+
+    by adjusting ``fgeor_prefix`` and ``fgonly_prefix``.
+
+    Parameters
+    ----------
+    base_dir :
+        Directory containing GL_FgEoR_* and GL_FgOnly_* subdirectories
+        (e.g. ``paths.chains_dir / 'v7d0'``), or GSM_*_* for v5-style.
+    fgeor_prefix :
+        Prefix for Fg+EoR directories.
+    fgonly_prefix :
+        Prefix for FgOnly directories.
+    debug :
+        If ``True``, print information about discovered entries and matches.
+
+    Returns
+    -------
+    dict
+        Mapping from a normalized perturbation key to a :class:`ChainPair`.
+        The ``fgeor_root`` and ``fgonly_root`` paths are the MN-* level
+        directories that directly contain the ``data-`` files.
+    """
+    if not base_dir.is_dir():
+        raise FileNotFoundError(f"Base directory does not exist: {base_dir}")
+
+    if debug:
+        print(f"[find_chain_pairs] Scanning base_dir: {base_dir}")
+        children = sorted(p.name for p in base_dir.iterdir())
+        print(f"[find_chain_pairs] Entries under base_dir ({len(children)}):")
+        for name in children:
+            print(f"  - {name}")
+
+        print(
+            f"[find_chain_pairs] Using prefixes: "
+            f"fgeor_prefix='{fgeor_prefix}', fgonly_prefix='{fgonly_prefix}'"
+        )
+
+    # Collect top-level FgEoR and FgOnly directories
+    fgeor_dirs: Dict[str, Path] = {}
+    fgonly_dirs: Dict[str, Path] = {}
+
+    for entry in base_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        name = entry.name
+
+        if name.startswith(fgeor_prefix):
+            # Take the part *after* the last underscore as the perturbation
+            # e.g. "GSM_FgEoR_-5e0pp" -> suffix = "-5e0pp"
+            suffix = name.rsplit("_", 1)[-1]
+            key = _normalize_perturbation_key(suffix)
+            fgeor_dirs[key] = entry
+            if debug:
+                print(
+                    f"[find_chain_pairs] FgEoR match: name='{name}', "
+                    f"suffix='{suffix}', key='{key}'"
+                )
+
+        elif name.startswith(fgonly_prefix):
+            suffix = name.rsplit("_", 1)[-1]  # e.g. "-5e0pp"
+            key = _normalize_perturbation_key(suffix)
+            fgonly_dirs[key] = entry
+            if debug:
+                print(
+                    f"[find_chain_pairs] FgOnly match: name='{name}', "
+                    f"suffix='{suffix}', key='{key}'"
+                )
+
+    if debug:
+        print(
+            f"[find_chain_pairs] Collected FgEoR keys: {sorted(fgeor_dirs.keys())}"
+        )
+        print(
+            f"[find_chain_pairs] Collected FgOnly keys: {sorted(fgonly_dirs.keys())}"
+        )
+
+    # Determine all perturbation keys where we have both sides
+    common_keys = sorted(set(fgeor_dirs.keys()) & set(fgonly_dirs.keys()))
+    pairs: ChainPairMap = {}
+
+    if debug:
+        print(f"[find_chain_pairs] Common perturbation keys: {common_keys}")
+
+    for key in common_keys:
+        fgeor_top = fgeor_dirs[key]
+        fgonly_top = fgonly_dirs[key]
+
+        if debug:
+            print(
+                f"[find_chain_pairs] Building pair for key='{key}':\n"
+                f"    FgEoR top:  {fgeor_top}\n"
+                f"    FgOnly top: {fgonly_top}"
+            )
+
+        # Find the MN-* (or equivalent) subdirectory on each side
+        fgeor_root = _find_single_mn_subdir(fgeor_top)
+        fgonly_root = _find_single_mn_subdir(fgonly_top)
+
+        if debug:
+            print(
+                f"[find_chain_pairs]   -> FgEoR root:  {fgeor_root}\n"
+                f"[find_chain_pairs]   -> FgOnly root: {fgonly_root}"
+            )
+
+        pairs[key] = ChainPair(
+            perturbation=key,
+            fgeor_root=fgeor_root,
+            fgonly_root=fgonly_root,
+        )
+
+    if debug:
+        print(f"[find_chain_pairs] Total pairs found: {len(pairs)}")
+
+    return pairs
+
+
+def analyze_chain_pair(
+    pair: ChainPair,
+    dir_prefix: Optional[Path] = None,
+    expected_ps: float = 214777.66068216303,
+    create_plots: bool = True,
+    verbose: bool = True,
+) -> PerturbationResult:
+    """
+    Analyze a single FgEoR/FgOnly chain pair using BaNTER-style validation.
+
+    Parameters
+    ----------
+    pair :
+        :class:`ChainPair` describing the perturbation and root directories.
+    dir_prefix :
+        Optional prefix to strip off when handing paths to :class:`DataContainer`.
+        If ``None``, the common ancestor of both roots is used.
+    expected_ps :
+        Expected power spectrum value passed through to :class:`DataContainer`.
+    create_plots :
+        If ``True``, generate and show posterior / power spectrum plots.
+    verbose :
+        If ``True``, print detailed log output to stdout.
+
+    Returns
+    -------
+    dict
+        Result dictionary with keys:
+
+        - ``'perturbation'``
+        - ``'plot_success'``
+        - ``'bayes_factor_result'``
+        - ``'validation'`` (``'PASS'``, ``'FAIL'`` or ``'ERROR'``)
+    """
+    pert_label = pair.perturbation
 
     if verbose:
-        print(f"\n--- Processing BayesEoR Perturbation: {pert_level} ---")
+        print(f"\n--- Processing chain pair: {pert_label} ---")
 
-    result = {
-        "perturbation": pert_level,
+    result: PerturbationResult = {
+        "perturbation": pert_label,
         "plot_success": False,
         "bayes_factor_result": None,
         "validation": "ERROR",
     }
 
-    # Define directory names for this perturbation level
-    GSM_FgEoR_dirname = f"v5d0/GSM_FgEoR_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/"
-    # GSM_FgOnly_dirname = (
-    #     f"v5d0/GSM_FgOnly_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/"
-    # )
+    # Determine dir_prefix for DataContainer if not provided
+    if dir_prefix is None:
+        # Use the true common ancestor of both roots (may be several levels up)
+        from os.path import commonpath
+
+        common_str = commonpath([str(pair.fgeor_root), str(pair.fgonly_root)])
+        dir_prefix = Path(common_str)
+
+    # Relative directory name for DataContainer (FgEoR side)
+    fgeor_rel = pair.fgeor_root.relative_to(dir_prefix)
 
     # Create posterior plot if requested
     if create_plots:
         if verbose:
-            print(f"Creating posterior plot for GSM_FgEoR_{pert_level}")
+            print(f"Creating posterior plot for {fgeor_rel}")
         try:
             data = DataContainer(
-                [GSM_FgEoR_dirname],
+                [str(fgeor_rel)],
                 dir_prefix=dir_prefix,
                 expected_ps=expected_ps,
-                labels=[f"GSM_FgEoR_{pert_level}"],
+                labels=[f"FgEoR_{pert_label}"],
             )
 
             fig = data.plot_power_spectra_and_posteriors(
-                suptitle=f"GSM FgEoR Analysis - {pert_level}",
+                suptitle=f"FgEoR Analysis - {pert_label}",
                 plot_fracdiff=True,
                 plot_priors=True,
             )
@@ -192,30 +453,23 @@ def analyze_bayeseor_perturbation(
 
         except Exception as e:
             if verbose:
-                print(f"Error creating plot for GSM_FgEoR_{pert_level}: {e}")
+                print(f"Error creating plot for {pert_label}: {e}")
             return result
     else:
         result["plot_success"] = True
 
-    # Calculate Bayes factor using generalized function
+    # Calculate Bayes factor
     if verbose:
-        print(f"--- Bayes Factor Calculation for {pert_level} ---")
+        print(f"--- Bayes Factor Calculation for {pert_label} ---")
 
-    # Construct full paths
-    fgeor_path = (
-        dir_prefix
-        / f"v5d0/GSM_FgEoR_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/data-"
-    )
-    fgonly_path = (
-        dir_prefix
-        / f"v5d0/GSM_FgOnly_{pert_level}/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/data-"
-    )
+    fgeor_path: Path = pair.fgeor_root / "data-"
+    fgonly_path: Path = pair.fgonly_root / "data-"
 
-    bf_result = calculate_bayes_factor(
+    bf_result: BayesFactorResult = calculate_bayes_factor(
         chain_path_1=fgeor_path,
         chain_path_2=fgonly_path,
-        model_name_1=f"GSM_FgEoR_{pert_level}",
-        model_name_2=f"GSM_FgOnly_{pert_level}",
+        model_name_1=f"FgEoR_{pert_label}",
+        model_name_2=f"FgOnly_{pert_label}",
         verbose=verbose,
     )
 
@@ -223,8 +477,6 @@ def analyze_bayeseor_perturbation(
 
     if bf_result["success"]:
         log_bayes_factor = bf_result["log_bayes_factor"]
-
-        # BaNTER validation result
         result["validation"] = "PASS" if log_bayes_factor < 0 else "FAIL"
         if verbose:
             if log_bayes_factor < 0:
@@ -239,219 +491,117 @@ def analyze_bayeseor_perturbation(
     return result
 
 
-def get_available_perturbations(paths_dict=None):
-    """
-    Extract all available perturbation levels from paths dictionary.
-
-    Parameters:
-    -----------
-    paths_dict : dict, optional
-        Dictionary of paths from utils.load_paths(). If None, loads paths automatically.
-
-    Returns:
-    --------
-    tuple : (all_perturbations, negative_perturbations, positive_perturbations)
-        Lists of perturbation level strings
-    """
-    from .utils import load_paths
-
-    # Load paths if not provided
-    if paths_dict is None:
-        paths_dict = load_paths()
-
-    # Extract perturbation levels from GSM_FgEoR keys
-    perturbations = []
-    for key in paths_dict.keys():
-        if key.startswith("GSM_FgEoR_"):
-            # Extract the perturbation part (e.g., "-1e-3pp")
-            perturbation = key.replace("GSM_FgEoR_", "")
-
-            # Only add if corresponding FgOnly path exists
-            if f"GSM_FgOnly_{perturbation}" in paths_dict:
-                perturbations.append(perturbation)
-
-    # Sort and separate negative and positive perturbations
-    negative_perts = [p for p in perturbations if p.startswith("-")]
-    positive_perts = [p for p in perturbations if p.startswith("+")]
-
-    # Sort by magnitude
-    def sort_by_magnitude(pert_list):
-        def get_magnitude(p):
-            # Extract the numerical part between the sign and "pp"
-            num_part = p[1:-2]  # Remove sign and "pp"
-            try:
-                if "e" in num_part:
-                    base, exp = num_part.split("e")
-                    return float(base) * (10 ** float(exp))
-                else:
-                    return float(num_part)
-            except ValueError:
-                return 0
-
-        return sorted(pert_list, key=lambda p: get_magnitude(p))
-
-    negative_perts = sort_by_magnitude(negative_perts)
-    positive_perts = sort_by_magnitude(positive_perts)
-
-    # Combine all perturbations in a sensible order (negative then positive)
-    all_perts = negative_perts + positive_perts
-
-    return all_perts, negative_perts, positive_perts
-
-
 def run_complete_bayeseor_analysis(
-    perturbation_levels=None,
-    dir_prefix=None,
-    paths_dict=None,
-    expected_ps=214777.66068216303,
-    create_plots=False,
-    show_detailed_results=False,
-    verbose=True,
-    show_progress=True,
-    only_negative=False,
-    only_positive=False,
-):
+    chain_pairs: ChainPairMap,
+    perturbation_levels: Optional[Iterable[str]] = None,
+    dir_prefix: Optional[Path] = None,
+    expected_ps: float = 214777.66068216303,
+    create_plots: bool = False,
+    show_detailed_results: bool = False,
+    verbose: bool = True,
+    show_progress: bool = True,
+) -> Dict[str, Any]:
     """
-    Run complete BayesEoR perturbation analysis with customizable output.
+    Run a complete BayesEoR perturbation analysis over multiple chain pairs.
 
-    Parameters:
-    -----------
-    perturbation_levels : list, optional
-        List of perturbation levels to analyze. If None, uses default set.
-    dir_prefix : Path, optional
-        Base directory containing the chains. If None, uses default path.
-    paths_dict : dict, optional
-        Dictionary of paths from utils.load_paths(). If None, loads paths automatically.
-     expected_ps : float
-        Expected power spectrum value (default: 214777.66068216303)
-    create_plots : bool
-        Whether to create posterior plots for each perturbation (default: False)
-    show_detailed_results : bool
-        Whether to show detailed results section (default: False)
-    verbose : bool
-        Whether to print detailed output during processing (default: True)
-    show_progress : bool
-        Whether to show a progress bar during analysis (default: True)
-    only_negative : bool, optional
-        If True, only analyzes negative perturbations (default: False)
-    only_positive : bool, optional
-        If True, only analyzes positive perturbations (default: False)
+    Parameters
+    ----------
+    chain_pairs :
+        Mapping of perturbation keys to :class:`ChainPair` objects, typically
+        created by :func:`find_chain_pairs`.
+    perturbation_levels :
+        Optional iterable of perturbation keys to analyze. If ``None``,
+        all keys in ``chain_pairs`` are used.
+    dir_prefix :
+        Optional directory prefix for :func:`analyze_chain_pair`. If ``None``,
+        the common ancestor of each pair is used individually.
+    expected_ps :
+        Expected power spectrum value passed on to :func:`analyze_chain_pair`.
+    create_plots :
+        If ``True``, generate plots for each perturbation level.
+    show_detailed_results :
+        If ``True``, print detailed numerical results per successful
+        perturbation.
+    verbose :
+        If ``True``, print human-readable progress and summary messages.
+    show_progress :
+        If ``True`` and multiple perturbation levels are analyzed, display
+        a ``tqdm`` progress bar (if available).
 
-    Returns:
-    --------
-    dict : Dictionary containing:
-           - 'results': list of individual analysis results
-           - 'summary': dict with pass/fail/error counts
-           - 'successful_results': list of successfully analyzed perturbations
+    Returns
+    -------
+    dict
+        Contains ``'results'``, ``'summary'``, and ``'successful_results'``.
     """
+    # Select and order perturbations
+    pair_items = list(chain_pairs.items())
 
-    # # Set default perturbation levels if not provided
-    # if perturbation_levels is None:
-    #     perturbation_levels = [
-    #         "-1e-3pp",
-    #         "-1e-2pp",
-    #         "-1e-1pp",
-    #         "-1e0pp",
-    #         "-1e1pp",  # Negative perturbations
-    #         "-2e0pp",
-    #         "-5e0pp",  # More negative perturbations
-    #         "+1e-3pp",
-    #         "+1e-2pp",
-    #         "+1e-1pp",
-    #         "+1e0pp",
-    #         "+1e1pp",  # Positive perturbations
-    #     ]
+    if perturbation_levels is not None:
+        requested = set(perturbation_levels)
+        pair_items = [(k, v) for k, v in pair_items if k in requested]
 
-    # Set perturbation levels if not provided
-    if perturbation_levels is None:
-        all_perts, negative_perts, positive_perts = (
-            get_available_perturbations(paths_dict)
-        )
-
-        # Select perturbations based on flags
-        if only_negative:
-            perturbation_levels = negative_perts
-        elif only_positive:
-            perturbation_levels = positive_perts
-        else:
-            perturbation_levels = all_perts
-
-    # Set default directory if not provided
-    if dir_prefix is None:
-        cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
-        dir_prefix = cwd / Path("../chains/")
+    pair_items.sort(key=lambda kv: kv[0])
+    labels: List[str] = [k for k, _ in pair_items]
+    total_cases = len(labels)
 
     if verbose:
-        print("=== Complete BayesEoR Analysis ===")
-        print(f"Analyzing {len(perturbation_levels)} perturbation levels...")
-        print("Perturbation levels:", perturbation_levels)
+        print("=== Complete BayesEoR Analysis (pair-based) ===")
+        print(f"Analyzing {total_cases} perturbation levels...")
+        print("Perturbation levels:", labels)
         if create_plots:
             print("Note: Plots will be generated for each perturbation")
 
-        # Analyze all perturbations
-        all_results = []
+    all_results: List[PerturbationResult] = []
 
-        # Set up progress tracking
-        if show_progress and verbose and len(perturbation_levels) > 1:
-            try:
-                from tqdm import tqdm
-
-                # Create a progress bar with descriptive format
-                perturbation_iterator = tqdm(
-                    perturbation_levels,
-                    desc="Analyzing perturbations",
-                    unit="case",
-                    ncols=80,  # Width of the progress bar
-                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
-                )
-            except ImportError:
-                # Fallback if tqdm is not installed
-                print("Note: Install 'tqdm' for progress bar display")
-                perturbation_iterator = perturbation_levels
-        else:
-            # No progress bar
-            perturbation_iterator = perturbation_levels
-
-        # Process each perturbation with progress tracking
-        for i, pert_level in enumerate(perturbation_iterator, 1):
-            if verbose and not show_progress:
-                # Only show this if we're not using a progress bar
-                print(
-                    f"\n--- Processing {i}/{len(perturbation_levels)}: {pert_level} ---"
-                )
-
-            result = analyze_bayeseor_perturbation(
-                pert_level=pert_level,
-                dir_prefix=dir_prefix,
-                expected_ps=expected_ps,
-                create_plots=create_plots,
-                verbose=(
-                    False if show_progress else verbose
-                ),  # Reduce verbosity when using progress bar
+    # Progress bar
+    if verbose and show_progress and total_cases > 1:
+        try:
+            perturbation_iterator: Iterable[str] = tqdm.tqdm(
+                labels,
+                desc="Analyzing perturbations",
+                unit="case",
+                ncols=80,
+                bar_format=(
+                    "{l_bar}{bar}| {n_fmt}/{total_fmt} "
+                    "[{elapsed}<{remaining}, {rate_fmt}]"
+                ),
             )
-            all_results.append(result)
+        except ImportError:
+            print("Note: Install 'tqdm' for progress bar display")
+            perturbation_iterator = labels
+    else:
+        perturbation_iterator = labels
 
-            # Update progress bar description with current perturbation level
-            if show_progress and hasattr(
-                perturbation_iterator, "set_description"
-            ):
-                perturbation_iterator.set_description(
-                    f"Analyzing: {pert_level}"
-                )
+    for i, pert_label in enumerate(perturbation_iterator, 1):
+        if verbose and not show_progress:
+            print(f"\n--- Processing {i}/{total_cases}: {pert_label} ---")
 
-    # Generate summary table (always shown)
+        pair = chain_pairs[pert_label]
+        result = analyze_chain_pair(
+            pair=pair,
+            dir_prefix=dir_prefix,
+            expected_ps=expected_ps,
+            create_plots=create_plots,
+            verbose=(False if show_progress else verbose),
+        )
+        all_results.append(result)
+
+        if show_progress and hasattr(perturbation_iterator, "set_description"):
+            perturbation_iterator.set_description(f"Analyzing: {pert_label}")
+
+    # Summary table
     print("\n" + "=" * 80)
     print("COMPLETE BAYESEOR PERTURBATION ANALYSIS SUMMARY")
     print("=" * 80)
     print(
-        f"{'Perturbation':<12} {'Log BF':<10} {'Validation':<12} {'Interpretation'}"
+        f"{'Perturbation':<20} {'Log BF':<10} "
+        f"{'Validation':<12} {'Interpretation'}"
     )
     print("-" * 80)
-    # print("-" * 85)  # Slightly longer line for wider validation column
 
-    pass_count = 0
-    fail_count = 0
-    error_count = 0
+    pass_count: int = 0
+    fail_count: int = 0
+    error_count: int = 0
 
     for result in all_results:
         pert = result["perturbation"]
@@ -459,7 +609,7 @@ def run_complete_bayeseor_analysis(
 
         if validation == "ERROR":
             print(
-                f"{pert:<12} {'ERROR':<10} {'❌ ERROR':<15} {'Analysis failed'}"
+                f"{pert:<20} {'ERROR':<10} {'❌ ERROR':<15} {'Analysis failed'}"
             )
             error_count += 1
         else:
@@ -468,26 +618,28 @@ def run_complete_bayeseor_analysis(
                 log_bf = bf_result["log_bayes_factor"]
                 interpretation = bf_result["interpretation"]
 
-                # Add tick or cross based on validation result
                 if validation == "PASS":
                     validation_display = "✅ PASS"
                     pass_count += 1
-                else:  # FAIL
+                else:
                     validation_display = "❌ FAIL"
                     fail_count += 1
 
                 print(
-                    f"{pert:<12} {log_bf:<10.3f} {validation_display:<15} {interpretation}"
+                    f"{pert:<20} {log_bf:<10.3f} "
+                    f"{validation_display:<15} {interpretation}"
                 )
             else:
                 print(
-                    f"{pert:<12} {'N/A':<10} {'❌ ERROR':<15} {'Calculation failed'}"
+                    f"{pert:<20} {'N/A':<10} "
+                    f"{'❌ ERROR':<15} {'Calculation failed'}"
                 )
                 error_count += 1
 
     print("-" * 80)
     print(
-        f"TOTAL: {len(all_results)} cases | PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}"
+        f"TOTAL: {len(all_results)} cases | PASS: {pass_count} | "
+        f"FAIL: {fail_count} | ERROR: {error_count}"
     )
 
     if pass_count == len(all_results) - error_count:
@@ -496,18 +648,19 @@ def run_complete_bayeseor_analysis(
         print("⚠️  SOME CASES FAILED BaNTER VALIDATION - Investigation needed")
 
     print(
-        f"\nBaNTER Validation Complete - Processed {len(perturbation_levels)} perturbation levels"
+        f"\nBaNTER Validation Complete - Processed {len(all_results)} "
+        f"perturbation levels"
     )
 
-    # Prepare successful results for detailed output and return
-    successful_results = []
+    # Collect successful results
+    successful_results: List[Dict[str, Any]] = []
     for result in all_results:
         if (
             result["validation"] != "ERROR"
             and result["bayes_factor_result"]["success"]
         ):
             bf_data = result["bayes_factor_result"]
-            detailed_result = {
+            detailed_result: Dict[str, Any] = {
                 "perturbation": result["perturbation"],
                 "log_evidence_fgeor": bf_data["log_evidence_1"],
                 "log_evidence_fgonly": bf_data["log_evidence_2"],
@@ -517,7 +670,6 @@ def run_complete_bayeseor_analysis(
             }
             successful_results.append(detailed_result)
 
-    # Show detailed results if requested
     if show_detailed_results:
         print("\n" + "=" * 60)
         print("DETAILED RESULTS FOR FURTHER ANALYSIS")
@@ -529,7 +681,8 @@ def run_complete_bayeseor_analysis(
                 f"  FgEoR Evidence: {detailed_result['log_evidence_fgeor']:.6f}"
             )
             print(
-                f"  FgOnly Evidence: {detailed_result['log_evidence_fgonly']:.6f}"
+                f"  FgOnly Evidence: "
+                f"{detailed_result['log_evidence_fgonly']:.6f}"
             )
             print(
                 f"  Log Bayes Factor: {detailed_result['log_bayes_factor']:.6f}"
@@ -539,106 +692,41 @@ def run_complete_bayeseor_analysis(
             print()
 
         print(
-            f"Successfully analyzed {len(successful_results)} out of {len(perturbation_levels)} perturbations"
+            f"Successfully analyzed {len(successful_results)} "
+            f"out of {len(all_results)} perturbations"
         )
 
-    # Return structured results
+    summary: SummaryDict = {
+        "total": len(all_results),
+        "pass": pass_count,
+        "fail": fail_count,
+        "error": error_count,
+    }
     return {
         "results": all_results,
-        "summary": {
-            "total": len(all_results),
-            "pass": pass_count,
-            "fail": fail_count,
-            "error": error_count,
-        },
+        "summary": summary,
         "successful_results": successful_results,
     }
 
 
 # =============================================================================
-# EXAMPLES
+# EXAMPLES (MANUAL)
 # =============================================================================
 
-run_run_examples = False
+run_run_examples: bool = False
 
 if run_run_examples:
-    # Example 1: Calculate single Bayes factor between two directories
-    print("=== Example 1: Single Bayes Factor Calculation ===")
-
-    # Setup paths
     cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
-    dir_prefix = cwd / Path("../chains/")
+    chains_dir = cwd / Path("../chains/")
+    v7_base = chains_dir / "v7d0"
 
-    # Define two chain directories
-    chain_1 = (
-        dir_prefix
-        / "v5d0/GSM_FgEoR_-1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/data-"
-    )
-    chain_2 = (
-        dir_prefix
-        / "v5d0/GSM_FgOnly_-1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/data-"
-    )
+    print("=== Discovering v7d0 chain pairs ===")
+    pairs = find_chain_pairs(v7_base)
+    print(f"Found {len(pairs)} pairs:", list(pairs.keys()))
 
-    bf_result = calculate_bayes_factor(
-        chain_path_1=chain_1,
-        chain_path_2=chain_2,
-        model_name_1="GSM_FgEoR_-1e-3pp",
-        model_name_2="GSM_FgOnly_-1e-3pp",
+    print("=== Example: Complete analysis over all discovered pairs ===")
+    results = run_complete_bayeseor_analysis(
+        chain_pairs=pairs,
+        create_plots=False,
         verbose=True,
     )
-
-    print("\nResults:")
-    print(f"Success: {bf_result['success']}")
-    if bf_result["success"]:
-        print(f"Log Bayes Factor: {bf_result['log_bayes_factor']:.6f}")
-        print(f"Interpretation: {bf_result['interpretation']}")
-    else:
-        print(f"Error: {bf_result['error']}")
-
-    print("\n" + "=" * 80 + "\n")
-
-    # Example 2: Quick summary analysis (default)
-    print("=== Example 2: Quick Summary Analysis ===")
-    results = run_complete_bayeseor_analysis()
-
-    print("\n" + "=" * 80 + "\n")
-
-    # Example 3: Analysis with plots (uncomment to run)
-    print("=== Example 3: Analysis with Plots ===")
-    results_with_plots = run_complete_bayeseor_analysis(create_plots=True)
-
-    # Example 4: Analysis with detailed results
-    print("=== Example 4: Analysis with Detailed Results ===")
-    results_detailed = run_complete_bayeseor_analysis(
-        show_detailed_results=True
-    )
-
-    print("\n" + "=" * 80 + "\n")
-
-    # Example 5: Custom perturbation subset
-    print("=== Example 5: Custom Perturbation Subset ===")
-    custom_perturbations = ["-1e-3pp", "-1e-2pp", "+1e-3pp"]
-    results_custom = run_complete_bayeseor_analysis(
-        perturbation_levels=custom_perturbations, show_detailed_results=True
-    )
-
-    print("\n" + "=" * 80 + "\n")
-
-    # Example 6: Programmatic access to results
-    print("=== Example 6: Programmatic Access to Results ===")
-    print(f"Total PASS cases: {results['summary']['pass']}")
-    print(f"Total FAIL cases: {results['summary']['fail']}")
-    print(f"Total ERROR cases: {results['summary']['error']}")
-
-    # Find any failed cases
-    failed_cases = [
-        r for r in results["successful_results"] if r["validation"] == "FAIL"
-    ]
-    if failed_cases:
-        print(f"\nFailed cases ({len(failed_cases)}):")
-        for case in failed_cases:
-            print(
-                f"  {case['perturbation']}: BF = {case['log_bayes_factor']:.3f}"
-            )
-    else:
-        print("\nNo failed cases found!")

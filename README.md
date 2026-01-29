@@ -47,15 +47,10 @@ When creating a pull request, please use the provided pull request template whic
 - Local tests pass (`make python-test` and `make notebook-test`)
 - Relevant documentation is updated
 
-### Branch Protection (Maintainers)
+In order to enforce CI checks on pull requests, branch protection rules are in place on the `main` branch to:
 
-To enforce CI checks on pull requests, repository maintainers should configure [branch protection rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/using-branch-protection-rules) on the `main` branch:
-
-1. Go to **Settings** > **Branches** > **Add branch protection rule**
-2. Set **Branch name pattern** to `main`
-3. Enable **Require status checks to pass before merging**
-4. Select the required status checks (e.g., the `build` job from the CI workflow)
-5. Optionally enable **Require pull request reviews before merging**
+- Require status checks to pass before merging
+- Require pull request reviews before merging
 
 For any additional questions or comments, please contact one of the UKSRC science validation tooling team:
  - Peter Sims (PO) - ps550 [at] cam.ac.uk

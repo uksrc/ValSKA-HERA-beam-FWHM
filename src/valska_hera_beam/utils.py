@@ -50,16 +50,9 @@ class PathManager:
 
         # Set up chains directory
         if chains_dir is None:
-            # Try standard location relative to base_dir
-            candidate_chains_dir = self.base_dir / "chains"
-            if candidate_chains_dir.exists():
-                self.chains_dir = candidate_chains_dir
-            else:
-                # Fall back to BayesEoR default location
-                bayeseor_notebooks = Path(
-                    "/home/psims/share/test/BayesEoR/notebooks/"
-                )
-                self.chains_dir = bayeseor_notebooks / "../chains/"
+            self.chains_dir = self.base_dir / "chains"
+            # Create if it doesn't exist
+            self.chains_dir.mkdir(exist_ok=True, parents=True)
         else:
             self.chains_dir = Path(chains_dir).resolve()
 
@@ -239,6 +232,107 @@ def load_paths(
         paths = yaml.safe_load(f)
 
     return paths
+
+
+def _pp_key_to_percent_label(
+    key: str,
+    prefix: str,
+    label_prefix: str | None = None,
+) -> Optional[str]:
+    """Convert '<prefix><pp>' key into a '<label_prefix> ±X%' label.
+
+    Parameters
+    ----------
+    key : str
+        Full analysis key (e.g. 'GSM_FgEoR_-1e0pp', 'GL_FgEoR_1.0e-01pp').
+    prefix : str
+        The prefix to strip before the numeric part (e.g. 'GSM_FgEoR_', 'GL_FgEoR_').
+    label_prefix : str, optional
+        Text to put in front of the percentage (default: derived from prefix).
+
+    Returns
+    -------
+    str or None
+        Human-readable label (e.g. 'GSM -1%', 'GL +0.1%') or None if not matched.
+    """
+    if not key.startswith(prefix):
+        return None
+
+    middle = key[len(prefix) :]  # e.g. '-1e0pp' or '1.0e-01pp'
+    if not middle.endswith("pp"):
+        return None
+
+    mag_str = middle[:-2]
+    try:
+        mag_float = float(mag_str)
+    except ValueError:
+        return None
+
+    # In this project the 'pp' part is already percentage points
+    percent = 1.0 * mag_float
+    label_mag = f"{percent:.3g}%"
+    sign = "+" if percent > 0 else ""
+
+    if label_prefix is None:
+        # Derive something short from the prefix, e.g. 'GSM' or 'GL'
+        # 'GSM_FgEoR_' -> 'GSM', 'GL_FgEoR_' -> 'GL'
+        label_prefix = prefix.split("_", 1)[0]
+
+    return f"{label_prefix} {sign}{label_mag}"
+
+
+def build_pp_groups_from_paths(
+    prefixes: list[str],
+    custom_paths_file: Optional[Union[str, Path]] = None,
+    label_prefixes: Optional[Dict[str, str]] = None,
+) -> Dict[str, list[str]]:
+    """
+    Build groups for perturbation runs from paths.yaml for one or more prefixes.
+
+    Examples
+    --------
+    prefixes=['GSM_FgEoR_']                              -> GSM v5d0 EoR+Fg
+    prefixes=['GL_FgEoR_']                               -> GSM+GLEAM v7d0 EoR+Fg
+    prefixes=['GSM_FgEoR_', 'GL_FgEoR_']                 -> combined
+    label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}
+        -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
+    """
+    paths = load_paths(custom_paths_file)
+    raw_groups: Dict[str, list[str]] = {}
+
+    for key in paths.keys():
+        for prefix in prefixes:
+            if not key.startswith(prefix):
+                continue
+
+            lp = None
+            if label_prefixes is not None:
+                lp = label_prefixes.get(prefix)
+
+            label = _pp_key_to_percent_label(
+                key, prefix=prefix, label_prefix=lp
+            )
+            if label is None:
+                continue
+
+            raw_groups.setdefault(label, []).append(key)
+
+    def label_to_val(lbl: str) -> float:
+        try:
+            return float(lbl.split()[-1].strip("%"))
+        except Exception:
+            return 0.0
+
+    groups: Dict[str, list[str]] = {}
+    for label in sorted(raw_groups.keys(), key=label_to_val):
+        groups[label] = sorted(raw_groups[label])
+
+    return groups
+
+
+def build_group_labels(groups: Dict[str, list[str]]) -> Dict[str, str]:
+    """Simple label -> label mapping."""
+    return {label: label for label in groups.keys()}
 
 
 if __name__ == "__main__":

@@ -14,38 +14,74 @@ EoRFg: v4d0/EoRFg/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 # EoR-only
 EoR: v4d0/EoR/MN-23-23-38-0-2.63-2.82-6.2E-03-lp-dPS-v1/
 
-# GSM with negative perturbations
-GSM_FgEoR_-5e0pp: v5d0/GSM_FgEoR_-5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_-5e0pp: v5d0/GSM_FgOnly_-5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_-1e0pp: v5d0/GSM_FgEoR_-1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_-1e0pp: v5d0/GSM_FgOnly_-1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_-1e-1pp: v5d0/GSM_FgEoR_-1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_-1e-1pp: v5d0/GSM_FgOnly_-1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_-1e-2pp: v5d0/GSM_FgEoR_-1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_-1e-2pp: v5d0/GSM_FgOnly_-1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+# -----------------------------------------------------------------------------
+# GSM v5d0 paths (EoR+Foregrounds) - negative perturbations
+# -----------------------------------------------------------------------------
 GSM_FgEoR_-1e-3pp: v5d0/GSM_FgEoR_-1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e-2pp: v5d0/GSM_FgEoR_-1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e-1pp: v5d0/GSM_FgEoR_-1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e0pp:  v5d0/GSM_FgEoR_-1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-2e0pp:  v5d0/GSM_FgEoR_-2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-5e0pp:  v5d0/GSM_FgEoR_-5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_-1e1pp:  v5d0/GSM_FgEoR_-1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM v5d0 paths (Foregrounds only) - negative perturbations
 GSM_FgOnly_-1e-3pp: v5d0/GSM_FgOnly_-1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_-2e0pp: v5d0/GSM_FgEoR_-2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_-2e0pp: v5d0/GSM_FgOnly_-2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_-1e1pp: v5d0/GSM_FgEoR_-1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_-1e1pp: v5d0/GSM_FgOnly_-1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e-2pp: v5d0/GSM_FgOnly_-1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e-1pp: v5d0/GSM_FgOnly_-1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e0pp:  v5d0/GSM_FgOnly_-1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-2e0pp:  v5d0/GSM_FgOnly_-2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-5e0pp:  v5d0/GSM_FgOnly_-5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_-1e1pp:  v5d0/GSM_FgOnly_-1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 
-# GSM with positive perturbations
-GSM_FgEoR_+5e0pp: v5d0/GSM_FgEoR_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+5e0pp: v5d0/GSM_FgOnly_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_+1e0pp: v5d0/GSM_FgEoR_+1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+1e0pp: v5d0/GSM_FgOnly_+1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_+1e-1pp: v5d0/GSM_FgEoR_+1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+1e-1pp: v5d0/GSM_FgOnly_+1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_+1e-2pp: v5d0/GSM_FgEoR_+1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+1e-2pp: v5d0/GSM_FgOnly_+1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+# -----------------------------------------------------------------------------
+# GSM v5d0 paths (EoR+Foregrounds) - positive perturbations
+# -----------------------------------------------------------------------------
 GSM_FgEoR_+1e-3pp: v5d0/GSM_FgEoR_+1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+1e-3pp: v5d0/GSM_FgOnly_+1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_+2e0pp: v5d0/GSM_FgEoR_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+2e0pp: v5d0/GSM_FgOnly_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgEoR_+1e1pp: v5d0/GSM_FgEoR_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-GSM_FgOnly_+1e1pp: v5d0/GSM_FgOnly_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e-2pp: v5d0/GSM_FgEoR_+1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e-1pp: v5d0/GSM_FgEoR_+1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e0pp:  v5d0/GSM_FgEoR_+1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+2e0pp:  v5d0/GSM_FgEoR_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+5e0pp:  v5d0/GSM_FgEoR_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgEoR_+1e1pp:  v5d0/GSM_FgEoR_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 
-## GLEAM paths
-# GLEAM_FgEoR: v6d0/GL_FgEoR/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
-# GLEAM_FgOnly: v6d0/GL_FgOnly/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+# GSM v5d0 paths (Foregrounds only) - positive perturbations
+GSM_FgOnly_+1e-3pp: v5d0/GSM_FgOnly_+1e-3pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e-2pp: v5d0/GSM_FgOnly_+1e-2pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e-1pp: v5d0/GSM_FgOnly_+1e-1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e0pp:  v5d0/GSM_FgOnly_+1e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+2e0pp:  v5d0/GSM_FgOnly_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+5e0pp:  v5d0/GSM_FgOnly_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_FgOnly_+1e1pp:  v5d0/GSM_FgOnly_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+## GLEAM paths (older single-run config)
+GLEAM_FgEoR: v6d0/GL_FgEoR/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+GLEAM_FgOnly: v6d0/GL_FgOnly/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# -----------------------------------------------------------------------------
+# GSM + GLEAM v7d0 paths (EoR+Foregrounds) - negative perturbations
+# -----------------------------------------------------------------------------
+GL_FgEoR_-1.0e-01pp: v7d0/GL_FgEoR_-1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgEoR_-1.0e00pp:  v7d0/GL_FgEoR_-1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgEoR_-1.0e01pp:  v7d0/GL_FgEoR_-1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgEoR_-5.0e00pp:  v7d0/GL_FgEoR_-5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM + GLEAM v7d0 paths (EoR+Foregrounds) - positive perturbations
+GL_FgEoR_1.0e-01pp:  v7d0/GL_FgEoR_1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgEoR_1.0e00pp:   v7d0/GL_FgEoR_1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgEoR_1.0e01pp:   v7d0/GL_FgEoR_1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgEoR_5.0e00pp:   v7d0/GL_FgEoR_5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# -----------------------------------------------------------------------------
+# GSM + GLEAM v7d0 paths (Foregrounds only) - negative perturbations
+# -----------------------------------------------------------------------------
+GL_FgOnly_-1.0e-01pp: v7d0/GL_FgOnly_-1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgOnly_-1.0e00pp:  v7d0/GL_FgOnly_-1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgOnly_-1.0e01pp:  v7d0/GL_FgOnly_-1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgOnly_-5.0e00pp:  v7d0/GL_FgOnly_-5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM + GLEAM v7d0 paths (Foregrounds only) - positive perturbations
+GL_FgOnly_1.0e-01pp:  v7d0/GL_FgOnly_1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgOnly_1.0e00pp:   v7d0/GL_FgOnly_1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgOnly_1.0e01pp:   v7d0/GL_FgOnly_1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GL_FgOnly_5.0e00pp:   v7d0/GL_FgOnly_5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/

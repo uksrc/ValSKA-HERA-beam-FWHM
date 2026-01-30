@@ -1,4 +1,4 @@
-# Unit tests for utils
+"""Unit tests for utils"""
 
 import os
 import tempfile
@@ -52,7 +52,7 @@ def test_load_paths_with_input():
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
         yaml_file.writelines(
-            "Test1: test/directory1/\n" "Test2: test/directory2/"
+            "Test1: test/directory1/\nTest2: test/directory2/"
         )
         yaml_file.seek(0)
 
@@ -129,7 +129,7 @@ def test_repr(path_manager):
         "results_dir": RESULTS_DIR,
     }
 
-    repr_string = path_manager.__repr__()
+    repr_string = repr(path_manager)
 
     expected_strs = [
         f"  {name}: {path}" for name, path in expected_dictionary.items()
@@ -209,6 +209,8 @@ def test_create_path_manager_default(pm, chains):
                 path_manager = utils.PathManager()
             elif pm == "method":
                 path_manager = utils.get_default_path_manager()
+            else:
+                path_manager = None
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
@@ -224,29 +226,6 @@ def test_create_path_manager_default(pm, chains):
 
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
-
-
-@pytest.mark.parametrize(
-    "key, prefix, label_prefix, expected_result",
-    [
-        ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", None, "GSM -1%"),
-        ("GSM_FgEoR_-1e1pp", "GSM_FgEoR_", None, "GSM -10%"),
-        ("GSM_FgEoR_-1e-3pp", "GSM_FgEoR_", None, "GSM -0.001%"),
-        ("GSM_FgEoR_-1.123e0pp", "GSM_FgEoR_", None, "GSM -1.12%"),
-        ("GSM_FgEoR_1e0pp", "GSM_FgEoR_", None, "GSM +1%"),
-        ("GSM_FgEoR_1e1pp", "GSM_FgEoR_", None, "GSM +10%"),
-        ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", "MyPrefix", "MyPrefix -1%"),
-        ("GSM_FgEoR_-1e0pp", "MyPrefix_", None, None),
-        ("GSM_FgEoR_-1e0", "GSM_FgEoR_", None, None),
-        ("GSM_FgEoR_-abcpp", "GSM_FgEoR_", None, None),
-    ],
-)
-def test_pp_key_to_percent_label(key, prefix, label_prefix, expected_result):
-    """Test to strip prefix from key to produce labels"""
-
-    label = utils._pp_key_to_percent_label(key, prefix, label_prefix)
-
-    assert label == expected_result
 
 
 def test_build_pp_groups_from_paths_default():

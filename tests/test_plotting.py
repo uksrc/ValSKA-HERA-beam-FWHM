@@ -1,5 +1,4 @@
-# Unit tests for plotting
-
+"""Unit tests for plotting"""
 
 import tempfile
 from pathlib import Path
@@ -22,7 +21,7 @@ def test_create_beam_plotter_with_paths_file():
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
         yaml_file.writelines(
-            "Test1: test/directory1/\n" "Test2: test/directory2/"
+            "Test1: test/directory1/\nTest2: test/directory2/"
         )
         yaml_file.seek(0)
 

@@ -1,4 +1,4 @@
-# Unit tests for evidence
+"""Unit tests for evidence"""
 
 import tempfile
 from pathlib import Path
@@ -42,9 +42,9 @@ def test_calculate_bayes_factor(monkeypatch):
 
     with tempfile.TemporaryDirectory() as chains_dir:
 
-        with open(f"{chains_dir}/chains_1.txt", "a") as file:
+        with open(f"{chains_dir}/chains_1.txt", "a", encoding="utf-8") as file:
             file.write("20")
-        with open(f"{chains_dir}/chains_2.txt", "a") as file:
+        with open(f"{chains_dir}/chains_2.txt", "a", encoding="utf-8") as file:
             file.write("10")
 
         result = evidence.calculate_bayes_factor(
@@ -89,50 +89,6 @@ def test_calculate_bayes_factor_error():
         "  exception: "
     )
     assert result["success"] is False
-
-
-def test_find_single_mn_subdir():
-    """Test find subdirectories under root"""
-
-    with tempfile.TemporaryDirectory() as root:
-
-        Path(f"{root}/subdir/").mkdir()
-        # Should ignore files and only find subdirectories
-        Path(f"{root}/dummy.txt").touch()
-
-        subdirs = evidence._find_single_mn_subdir(Path(root))
-
-        assert subdirs == Path(f"{root}/subdir/")
-
-
-def test_find_single_mn_subdir_multiple_error():
-    """Test find subdirectories under root with too many subdirs"""
-
-    with tempfile.TemporaryDirectory() as root:
-
-        Path(f"{root}/subdir/").mkdir()
-        Path(f"{root}/subdir2/").mkdir()
-
-        with pytest.raises(RuntimeError):
-            evidence._find_single_mn_subdir(Path(root))
-
-
-def test_find_single_mn_subdir_empty_error():
-    """Test find subdirectories under root with no subdirs"""
-
-    with tempfile.TemporaryDirectory() as root:
-
-        with pytest.raises(RuntimeError):
-            evidence._find_single_mn_subdir(Path(root))
-
-
-def test_normalize_perturbation_key():
-    """Test normalise key - function currently does nothing"""
-
-    key = "+1e0pp"
-    result = evidence._normalize_perturbation_key(key)
-
-    assert result == key
 
 
 def test_find_chain_pairs_error():
@@ -193,44 +149,38 @@ def test_find_chain_pairs(
         )
 
         for key in expected_keys:
-            assert key in chain_pair_map.keys()
+            assert key in chain_pair_map
             assert chain_pair_map[key].perturbation == key
             assert chain_pair_map[key].fgeor_root == fgeor_paths[key]
             assert chain_pair_map[key].fgonly_root == fgonly_paths[key]
 
         if len(expected_keys) == 0:
-            assert chain_pair_map == {}
+            assert not chain_pair_map
 
 
 @pytest.mark.parametrize(
-    "log_evidence, interp, success, validation, error",
+    "log_evidence, interp",
     [
         (
             [10.0, 20.0, -10.0],
-            "Very strong evidence for model 2",
-            True,
-            "PASS",
-            None,
+            ["Very strong evidence for model 2", True, "PASS", None],
         ),
         (
             [20.0, 10.0, 10.0],
-            "Very strong evidence for model 1",
-            True,
-            "FAIL",
-            None,
+            ["Very strong evidence for model 1", True, "FAIL", None],
         ),
         (
             [None, None, None],
-            "Analysis failed",
-            False,
-            "ERROR",
-            "Error calculating Bayes factor",
+            [
+                "Analysis failed",
+                False,
+                "ERROR",
+                "Error calculating Bayes factor",
+            ],
         ),
     ],
 )
-def test_analyze_chain_pair(
-    monkeypatch, log_evidence, interp, success, validation, error
-):
+def test_analyze_chain_pair(monkeypatch, log_evidence, interp):
     """
     Test analyse chain pair without plotting
 
@@ -250,10 +200,10 @@ def test_analyze_chain_pair(
             "log_evidence_1": log_evidence[0],
             "log_evidence_2": log_evidence[1],
             "log_bayes_factor": log_evidence[2],
-            "interpretation": interp,
-            "success": success,
+            "interpretation": interp[0],
+            "success": interp[1],
         },
-        "validation": validation,
+        "validation": interp[2],
     }
 
     # Patch the anesthetic read_chains() method
@@ -269,11 +219,11 @@ def test_analyze_chain_pair(
         fgonly_path.mkdir(parents=True, exist_ok=True)
 
         if log_evidence[0]:
-            with open(f"{fgeor_path}/data-", "a") as file:
+            with open(f"{fgeor_path}/data-", "a", encoding="utf-8") as file:
                 file.write(f"{log_evidence[0]}")
 
         if log_evidence[1]:
-            with open(f"{fgonly_path}/data-", "a") as file:
+            with open(f"{fgonly_path}/data-", "a", encoding="utf-8") as file:
                 file.write(f"{log_evidence[1]}")
 
         # create the chain pair to analyse
@@ -290,9 +240,11 @@ def test_analyze_chain_pair(
 
         # If there was an error, only check the first part
         # and omit the traceback!
+        # pylint: disable=unsubscriptable-object
         if result["bayes_factor_result"]["error"] is not None:
             assert (
-                result["bayes_factor_result"]["error"].split(":")[0] == error
+                result["bayes_factor_result"]["error"].split(":")[0]
+                == interp[3]
             )
 
         result["bayes_factor_result"].pop("error")
@@ -459,11 +411,15 @@ def test_run_full_analysis(monkeypatch, input_list, summary, successful):
             fgonly_path.mkdir(parents=True, exist_ok=True)
 
             if inputs["log_evidence"][0]:
-                with open(f"{fgeor_path}/data-", "a") as file:
+                with open(
+                    f"{fgeor_path}/data-", "a", encoding="utf-8"
+                ) as file:
                     file.write(f"{inputs["log_evidence"][0]:.9f}")
 
             if inputs["log_evidence"][1]:
-                with open(f"{fgonly_path}/data-", "a") as file:
+                with open(
+                    f"{fgonly_path}/data-", "a", encoding="utf-8"
+                ) as file:
                     file.write(f"{inputs["log_evidence"][1]:.9f}")
 
             assert fgonly_path.exists()

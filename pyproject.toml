@@ -66,7 +66,10 @@ dev = [
   "nbstripout",
   "build",
   "twine",
-  "nbmake"
+  "nbmake",
+  "sphinx",
+  "sphinx_rtd_theme",
+  "myst_parser"
 ]
 docs = [
   "mkdocs",

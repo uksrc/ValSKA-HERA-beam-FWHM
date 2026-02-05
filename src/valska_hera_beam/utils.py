@@ -21,20 +21,24 @@ class PathManager:
     ):
         """Initialize the PathManager with configurable directories.
 
-        If directories are not specified, they will be automatically determined
-        relative to the package location.
+        If directories are not specified, they will be automatically
+        determined relative to the package location.
 
         Parameters
         ----------
         base_dir : str or Path, optional
-            Base directory of the project. If None, it's determined automatically.
+            Base directory of the project. If None, it's determined
+            automatically.
         chains_dir : str or Path, optional
-            Directory containing chain files. If None, defaults to {base_dir}/chains
+            Directory containing chain files. If None, defaults to
+            {base_dir}/chains
             or falls back to BayesEoR default location.
         data_dir : str or Path, optional
-            Directory containing data files. If None, defaults to {base_dir}/data.
+            Directory containing data files. If None, defaults to
+            {base_dir}/data.
         results_dir : str or Path, optional
-            Directory for storing results. If None, defaults to {base_dir}/results.
+            Directory for storing results. If None, defaults to
+            {base_dir}/results.
         """
         # Get the directory of this file
         self.utils_dir = Path(inspect.getfile(self.__class__)).parent.resolve()
@@ -246,19 +250,22 @@ def _pp_key_to_percent_label(
     key : str
         Full analysis key (e.g. 'GSM_FgEoR_-1e0pp', 'GL_FgEoR_1.0e-01pp').
     prefix : str
-        The prefix to strip before the numeric part (e.g. 'GSM_FgEoR_', 'GL_FgEoR_').
+        The prefix to strip before the numeric part
+        (e.g. 'GSM_FgEoR_', 'GL_FgEoR_').
     label_prefix : str, optional
         Text to put in front of the percentage (default: derived from prefix).
 
     Returns
     -------
     str or None
-        Human-readable label (e.g. 'GSM -1%', 'GL +0.1%') or None if not matched.
+        Human-readable label (e.g. 'GSM -1%', 'GL +0.1%') or None if
+        not matched.
     """
     if not key.startswith(prefix):
         return None
 
-    middle = key[len(prefix) :]  # e.g. '-1e0pp' or '1.0e-01pp'
+    #  # e.g. '-1e0pp' or '1.0e-01pp'
+    middle = key[len(prefix) :]  # noqa: E203
     if not middle.endswith("pp"):
         return None
 
@@ -287,13 +294,14 @@ def build_pp_groups_from_paths(
     label_prefixes: Optional[Dict[str, str]] = None,
 ) -> Dict[str, list[str]]:
     """
-    Build groups for perturbation runs from paths.yaml for one or more prefixes.
+    Build groups for perturbation runs from paths.yaml for one or more
+    prefixes.
 
     Examples
     --------
-    prefixes=['GSM_FgEoR_']                              -> GSM v5d0 EoR+Fg
-    prefixes=['GL_FgEoR_']                               -> GSM+GLEAM v7d0 EoR+Fg
-    prefixes=['GSM_FgEoR_', 'GL_FgEoR_']                 -> combined
+    prefixes=['GSM_FgEoR_']                      -> GSM v5d0 EoR+Fg
+    prefixes=['GL_FgEoR_']                       -> GSM+GLEAM v7d0 EoR+Fg
+    prefixes=['GSM_FgEoR_', 'GL_FgEoR_']         -> combined
     label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}
         -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
@@ -342,5 +350,7 @@ if __name__ == "__main__":
 
     # # Create a timestamped results directory
     # timestamp = make_timestamp()
-    # results_subdir = path_manager.create_subdir("results_dir", f"run_{timestamp}")
+    # results_subdir = path_manager.create_subdir(
+    #    "results_dir", f"run_{timestamp}"
+    # )
     # print(f"\nCreated results directory: {results_subdir}")

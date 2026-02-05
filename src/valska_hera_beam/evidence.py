@@ -43,9 +43,7 @@ from typing import (
     Dict,
     Iterable,
     List,
-    Mapping,
     Optional,
-    Tuple,
     Union,
 )
 
@@ -99,18 +97,22 @@ def calculate_bayes_factor(
     verbose: bool = True,
 ) -> BayesFactorResult:
     """
-    Calculate Bayes factor between two models given their nested-sampling chains.
+    Calculate Bayes factor between two models given their nested-sampling
+    chains.
 
     The function assumes that the directories at ``chain_path_1`` and
-    ``chain_path_2`` are readable by :func:`anesthetic.read_chains` and that
-    the returned objects implement a ``logZ()`` method (as in anesthetic).
+    ``chain_path_2`` are readable by :func:`anesthetic.read_chains` and
+    that the returned objects implement a ``logZ()`` method (as in
+    anesthetic).
 
     Parameters
     ----------
     chain_path_1 :
-        Path to the first model's chain directory (numerator in Bayes factor).
+        Path to the first model's chain directory (numerator in Bayes
+        factor).
     chain_path_2 :
-        Path to the second model's chain directory (denominator in Bayes factor).
+        Path to the second model's chain directory (denominator in Bayes
+        factor).
     model_name_1 :
         Name of the first model for display and reporting.
     model_name_2 :
@@ -126,8 +128,8 @@ def calculate_bayes_factor(
 
         - ``'model_1'``: str, the name of model 1.
         - ``'model_2'``: str, the name of model 2.
-        - ``'log_evidence_1'``: float or ``None``, log-evidence of model 1.
-        - ``'log_evidence_2'``: float or ``None``, log-evidence of model 2.
+        - ``'log_evidence_1'``: float or ``None``, log-evidence of model 1
+        - ``'log_evidence_2'``: float or ``None``, log-evidence of model 2
         - ``'log_bayes_factor'``: float or ``None``, ln(Z1/Z2).
         - ``'interpretation'``: str, human-readable interpretation.
         - ``'success'``: bool, True if computation succeeded.
@@ -171,7 +173,8 @@ def calculate_bayes_factor(
 
         if verbose:
             print(
-                f"Log Bayes Factor (ln({model_name_1}/{model_name_2})): {log_bayes_factor:.6f}"
+                f"Log Bayes Factor (ln({model_name_1}/{model_name_2})):"
+                f" {log_bayes_factor:.6f}"
             )
             print(f"Interpretation: {result['interpretation']}")
 
@@ -192,9 +195,9 @@ def calculate_bayes_factor(
     return result
 
 
-# =============================================================================
+# ==========================================================================
 # PAIR-BASED API
-# =============================================================================
+# ==========================================================================
 
 
 @dataclass
@@ -221,7 +224,8 @@ def _find_single_mn_subdir(root: Path) -> Path:
         raise RuntimeError(f"No subdirectories found under {root}")
     if len(subdirs) > 1:
         raise RuntimeError(
-            f"Multiple subdirectories under {root}: {[p.name for p in subdirs]}"
+            f"Multiple subdirectories under {root}: "
+            f"{[p.name for p in subdirs]}"
         )
     return subdirs[0]
 
@@ -325,10 +329,12 @@ def find_chain_pairs(
 
     if debug:
         print(
-            f"[find_chain_pairs] Collected FgEoR keys: {sorted(fgeor_dirs.keys())}"
+            "[find_chain_pairs] Collected FgEoR keys: "
+            f"{sorted(fgeor_dirs.keys())}"
         )
         print(
-            f"[find_chain_pairs] Collected FgOnly keys: {sorted(fgonly_dirs.keys())}"
+            "[find_chain_pairs] Collected FgOnly keys:"
+            f" {sorted(fgonly_dirs.keys())}"
         )
 
     # Determine all perturbation keys where we have both sides
@@ -386,8 +392,9 @@ def analyze_chain_pair(
     pair :
         :class:`ChainPair` describing the perturbation and root directories.
     dir_prefix :
-        Optional prefix to strip off when handing paths to :class:`DataContainer`.
-        If ``None``, the common ancestor of both roots is used.
+        Optional prefix to strip off when handing paths to
+        :class:`DataContainer`. If ``None``, the common ancestor of both
+        roots is used.
     expected_ps :
         Expected power spectrum value passed through to :class:`DataContainer`.
     create_plots :
@@ -419,7 +426,8 @@ def analyze_chain_pair(
 
     # Determine dir_prefix for DataContainer if not provided
     if dir_prefix is None:
-        # Use the true common ancestor of both roots (may be several levels up)
+        # Use the true common ancestor of both roots
+        # (may be several levels up)
         from os.path import commonpath
 
         common_str = commonpath([str(pair.fgeor_root), str(pair.fgonly_root)])
@@ -483,7 +491,8 @@ def analyze_chain_pair(
                 print("✅ PASS: BaNTER correctly favors foreground-only model")
             else:
                 print(
-                    "❌ FAIL: BaNTER incorrectly detects EoR signal in foreground-only data"
+                    "❌ FAIL: BaNTER incorrectly detects EoR signal in "
+                    "foreground-only data"
                 )
     else:
         result["validation"] = "ERROR"
@@ -609,7 +618,8 @@ def run_complete_bayeseor_analysis(
 
         if validation == "ERROR":
             print(
-                f"{pert:<20} {'ERROR':<10} {'❌ ERROR':<15} {'Analysis failed'}"
+                f"{pert:<20} {'ERROR':<10} {'❌ ERROR':<15} "
+                f"{'Analysis failed'}"
             )
             error_count += 1
         else:
@@ -678,14 +688,16 @@ def run_complete_bayeseor_analysis(
         for detailed_result in successful_results:
             print(f"Perturbation: {detailed_result['perturbation']}")
             print(
-                f"  FgEoR Evidence: {detailed_result['log_evidence_fgeor']:.6f}"
+                "  FgEoR Evidence: "
+                f"{detailed_result['log_evidence_fgeor']:.6f}"
             )
             print(
                 f"  FgOnly Evidence: "
                 f"{detailed_result['log_evidence_fgonly']:.6f}"
             )
             print(
-                f"  Log Bayes Factor: {detailed_result['log_bayes_factor']:.6f}"
+                "  Log Bayes Factor: "
+                f"{detailed_result['log_bayes_factor']:.6f}"
             )
             print(f"  Validation: {detailed_result['validation']}")
             print(f"  Interpretation: {detailed_result['interpretation']}")

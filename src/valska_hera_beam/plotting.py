@@ -12,7 +12,9 @@ from .utils import load_paths
 
 
 class BeamAnalysisPlotter:
-    """Class for plotting beam analysis results for HERA FWHM validation studies."""
+    """
+    Class for plotting beam analysis results for HERA FWHM validation studies.
+    """
 
     def __init__(
         self,
@@ -28,17 +30,22 @@ class BeamAnalysisPlotter:
         Parameters
         ----------
         base_chains_dir : str or Path, optional
-            Base directory for chains. If None, uses the default BayesEoR path.
+            Base directory for chains. If None, uses the default BayesEoR path
         paths_file : str or Path, optional
-            YAML file containing analysis paths. If None, uses the default paths file.
+            YAML file containing analysis paths. If None, uses the default
+            paths file.
         paths : Dict[str, str], optional
-            Dictionary of analysis paths relative to base_chains_dir. If None, uses default paths.
+            Dictionary of analysis paths relative to base_chains_dir. If None,
+            uses default paths.
         eor_ps : float, optional
-            EoR power spectrum value in mK^2 Mpc^3. Default is 214777.66068216303.
+            EoR power spectrum value in mK^2 Mpc^3.
+            Default is 214777.66068216303.
         noise_ratio : float, optional
-            Ratio of noise PS to EoR PS. Default is 0.5 (noise_ps = eor_ps / 2).
+            Ratio of noise PS to EoR PS. Default is 0.5
+            (noise_ps = eor_ps / 2).
         default_expected_ps : float, optional
-            Default expected power spectrum to use in plots. If None, uses noise_ps.
+            Default expected power spectrum to use in plots.
+            If None, uses noise_ps.
         """
         if base_chains_dir is None:
             self.cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
@@ -91,7 +98,8 @@ class BeamAnalysisPlotter:
         labels : list of str, optional
             Labels for each analysis. If None, uses analysis_keys
         expected_ps : float, optional
-            Expected power spectrum value. If None, uses self.default_expected_ps
+            Expected power spectrum value.
+            If None, uses self.default_expected_ps
         **kwargs : dict
             Additional arguments to pass to DataContainer
 
@@ -144,14 +152,17 @@ class BeamAnalysisPlotter:
         suptitle : str, optional
             Super title for the plot
         expected_ps : float, optional
-            Expected power spectrum value. If None, uses self.default_expected_ps
+            Expected power spectrum value. If None, uses
+            self.default_expected_ps
         labels : str, optional
             Label for the expected PS line
         upper_limit_indices : list of int, optional
-            Indices of k-modes to treat as upper limits for ALL analyses. If None, assume no upper limits.
+            Indices of k-modes to treat as upper limits for ALL analyses.
+            If None, assume no upper limits.
         detection_indices : dict, optional
-            Dictionary mapping analysis keys to lists of k-mode indices that should be treated as detections
-            rather than upper limits. This overrides upper_limit_indices for specific analyses.
+            Dictionary mapping analysis keys to lists of k-mode indices that
+            should be treated as detections rather than upper limits. This
+            overrides upper_limit_indices for specific analyses.
         ignore_uplims : bool, optional
             Whether to ignore upper limits entirely
         plot_fracdiff : bool, optional
@@ -204,7 +215,8 @@ class BeamAnalysisPlotter:
                     if 0 <= idx < nDim:
                         uplim_ind[idx] = True
 
-                # Override with detection indices if specified for this analysis
+                # Override with detection indices if specified for this
+                # analysis
                 if detection_indices is not None and key in detection_indices:
                     for idx in detection_indices[key]:
                         if 0 <= idx < nDim:
@@ -269,13 +281,15 @@ class BeamAnalysisPlotter:
                 if n_items <= 3:
                     ncol = n_items
                 else:
-                    # Calculate a reasonable number of columns (sqrt of n_items, rounded)
+                    # Calculate a reasonable number of columns
+                    # (sqrt of n_items, rounded)
                     # This creates a roughly square legend
                     ncol = min(
                         int(np.sqrt(n_items) + 0.5), 4
                     )  # Cap at 4 columns max
 
-                # Create a new legend with the updated texts and multiple columns
+                # Create a new legend with the updated texts and multiple
+                # columns
                 ax.legend(
                     handles=handles,
                     labels=[text.get_text() for text in texts],
@@ -288,7 +302,8 @@ class BeamAnalysisPlotter:
 
         return fig
 
-    # Update create_comparison_plot to pass through the detection_indices parameter
+    # Update create_comparison_plot to pass through the detection_indices
+    # parameter
     def create_comparison_plot(
         self,
         groups: Dict[str, List[str]],
@@ -362,7 +377,8 @@ def plot_gleam_analysis(
         analysis_keys=["GLEAM_FgEoR"],
         labels=["GLEAM"],
         suptitle=(
-            "UKSRC validation: Burba et al. 2023, Case 1. \n12.9 deg. GLEAM Analysis."
+            "UKSRC validation: Burba et al. 2023, Case 1. \n"
+            "12.9 deg. GLEAM Analysis."
         ),
     )
     return fig

@@ -244,9 +244,9 @@ def _pp_key_to_percent_label(
     Parameters
     ----------
     key : str
-        Full analysis key (e.g. 'GSM_FgEoR_-1e0pp', 'GL_FgEoR_1.0e-01pp').
+        Full analysis key (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
     prefix : str
-        The prefix to strip before the numeric part (e.g. 'GSM_FgEoR_', 'GL_FgEoR_').
+        The prefix to strip before the numeric part (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
     label_prefix : str, optional
         Text to put in front of the percentage (default: derived from prefix).
 
@@ -291,11 +291,14 @@ def build_pp_groups_from_paths(
 
     Examples
     --------
-    prefixes=['GSM_FgEoR_']                              -> GSM v5d0 EoR+Fg
-    prefixes=['GL_FgEoR_']                               -> GSM+GLEAM v7d0 EoR+Fg
-    prefixes=['GSM_FgEoR_', 'GL_FgEoR_']                 -> combined
-    label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}
-        -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
+    ``prefixes=['GSM_FgEoR_']`` -> GSM v5d0 EoR+Fg
+
+    ``prefixes=['GL_FgEoR_']`` -> GSM+GLEAM v7d0 EoR+Fg
+
+    ``prefixes=['GSM_FgEoR_', 'GL_FgEoR_']`` -> combined
+
+    ``label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}``
+    -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
     paths = load_paths(custom_paths_file)
     raw_groups: Dict[str, list[str]] = {}

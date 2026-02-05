@@ -45,7 +45,19 @@ For comprehensive testing instructions, see the [Testing Guide](https://valska-h
 
 ## Contributing
 
-ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request. For any additional questions or comments, please contact one of the UKSRC science validation tooling team:
+ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request.
+
+When creating a pull request, please use the provided pull request template which includes a checklist to ensure:
+- Self-review of code
+- Local tests pass (`make python-test` and `make notebook-test`)
+- Relevant documentation is updated
+
+In order to enforce CI checks on pull requests, branch protection rules are in place on the `main` branch to:
+
+- Require status checks to pass before merging
+- Require pull request reviews before merging
+
+For any additional questions or comments, please contact one of the UKSRC science validation tooling team:
  - Peter Sims (PO) - ps550 [at] cam.ac.uk
  - Tianyue Chen (SM) - tianyue.chen [at] manchester.ac.uk
  - Quentin Gueuning - qdg20 [at] cam.ac.uk

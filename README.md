@@ -38,9 +38,24 @@ conda env create -f valska_env.yaml
 
 The documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/).
 
+## Testing
+
+For comprehensive testing instructions, see the [Testing Guide](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html).
+
+
 ## Contributing
 
 ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request.
+
+When creating a pull request, please use the provided pull request template which includes a checklist to ensure:
+- Self-review of code
+- Local tests pass (`make python-test` and `make notebook-test`)
+- Relevant documentation is updated
+
+In order to enforce CI checks on pull requests, branch protection rules are in place on the `main` branch to:
+
+- Require status checks to pass before merging
+- Require pull request reviews before merging
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your development environment and using pre-commit hooks.
 

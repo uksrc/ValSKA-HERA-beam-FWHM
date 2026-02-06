@@ -100,7 +100,7 @@ class BeamAnalysisPlotter:
         expected_ps : float, optional
             Expected power spectrum value.
             If None, uses self.default_expected_ps
-        **kwargs : dict
+        ``**kwargs`` : dict
             Additional arguments to pass to DataContainer
 
         Returns
@@ -322,7 +322,7 @@ class BeamAnalysisPlotter:
             Dictionary mapping group names to display labels
         suptitle : str, optional
             Super title for the plot
-        **kwargs : dict
+        ``**kwargs`` : dict
             Additional arguments to pass to plot_analysis_results
 
         Returns

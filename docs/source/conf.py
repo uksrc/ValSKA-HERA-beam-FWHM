@@ -38,6 +38,10 @@ autodoc_default_options = {
     "private-members": True,
 }
 
+# This uses both the class docstring and the
+# __init__ docstring for class documentation
+autoclass_content = "both"
+
 autodoc_mock_imports = [
     "bayeseor",
     "anesthetic",
@@ -50,9 +54,12 @@ autodoc_mock_imports = [
 templates_path = ["_templates"]
 exclude_patterns = []
 
+myst_heading_anchors = 5  # to avoid uneeded warnings, cf. 
+# https://github.com/executablebooks/MyST-Parser/issues/885
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
+# This would be the location for custom CSS or static assets
+html_static_path = []

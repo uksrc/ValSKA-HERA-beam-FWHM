@@ -32,3 +32,6 @@ jobs:
     - name: Check notebook linting
       run: |
         make notebook-lint
+    - name: Build docs
+      run: |
+        sphinx-build -W -b html docs/source/ docs/_build/html

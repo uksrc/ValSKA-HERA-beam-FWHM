@@ -17,4 +17,5 @@ Contents
 
    readme
    validation
+   testing
    api

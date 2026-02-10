@@ -723,9 +723,9 @@ def run_complete_bayeseor_analysis(
 # EXAMPLES (MANUAL)
 # =============================================================================
 
-run_run_examples: bool = False
+RUN_RUN_EXAMPLES: bool = False
 
-if run_run_examples:
+if RUN_RUN_EXAMPLES:
     cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
     chains_dir = cwd / Path("../chains/")
     v7_base = chains_dir / "v7d0"

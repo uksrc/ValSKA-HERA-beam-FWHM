@@ -7,12 +7,7 @@ from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
 import pytest
-from constants import (
-    BASE_DIR,
-    CHAINS_DIR,
-    DATA_DIR,
-    RESULTS_DIR,
-)
+from constants import BASE_DIR, CHAINS_DIR, DATA_DIR, RESULTS_DIR
 
 from valska_hera_beam import utils
 

@@ -1,6 +1,7 @@
 """Utility functions for the ValSKA-HERA-beam-FWHM package."""
 
 import inspect
+from datetime import datetime
 
 # import os
 from pathlib import Path
@@ -202,7 +203,6 @@ def make_timestamp() -> str:
     str
         Current timestamp in format YYYY-MM-DD_HHMMSS
     """
-    from datetime import datetime
 
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
@@ -232,7 +232,7 @@ def load_paths(
     if not paths_file.exists():
         raise FileNotFoundError(f"Paths file not found: {paths_file}")
 
-    with open(paths_file, "r") as f:
+    with open(paths_file, "r", encoding="utf-8") as f:
         paths = yaml.safe_load(f)
 
     return paths
@@ -248,7 +248,8 @@ def _pp_key_to_percent_label(
     Parameters
     ----------
     key : str
-        Full analysis key (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
+        Full analysis key
+        (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
     prefix : str
         The prefix to strip before the numeric part
         (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
@@ -331,7 +332,7 @@ def build_pp_groups_from_paths(
     def label_to_val(lbl: str) -> float:
         try:
             return float(lbl.split()[-1].strip("%"))
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return 0.0
 
     groups: Dict[str, list[str]] = {}

@@ -36,16 +36,11 @@ Typical usage examples
 
 from __future__ import annotations
 
+import traceback
 from dataclasses import dataclass
+from os.path import commonpath
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import tqdm  # noqa: F401
@@ -58,6 +53,7 @@ PerturbationResult = Dict[str, Any]
 SummaryDict = Dict[str, int]
 
 
+# pylint: disable=too-many-return-statements
 def interpret_bayes_factor(log_bf: float) -> str:
     """
     Interpret the strength of evidence given a log Bayes factor.
@@ -75,18 +71,18 @@ def interpret_bayes_factor(log_bf: float) -> str:
     """
     if log_bf > 5:
         return "Very strong evidence for model 1"
-    elif log_bf > 3:
+    if log_bf > 3:
         return "Strong evidence for model 1"
-    elif log_bf > 1:
+    if log_bf > 1:
         return "Moderate evidence for model 1"
-    elif log_bf > -1:
+    if log_bf > -1:
         return "Weak/inconclusive evidence"
-    elif log_bf > -3:
+    if log_bf > -3:
         return "Moderate evidence for model 2"
-    elif log_bf > -5:
+    if log_bf > -5:
         return "Strong evidence for model 2"
-    else:
-        return "Very strong evidence for model 2"
+
+    return "Very strong evidence for model 2"
 
 
 def calculate_bayes_factor(
@@ -178,8 +174,7 @@ def calculate_bayes_factor(
             )
             print(f"Interpretation: {result['interpretation']}")
 
-    except Exception as e:
-        import traceback
+    except Exception as e:  # pylint: disable=broad-exception-caught
 
         error_msg = (
             "Error calculating Bayes factor:\n"
@@ -241,6 +236,7 @@ def _normalize_perturbation_key(raw_suffix: str) -> str:
     return raw_suffix
 
 
+# pylint: disable=too-many-locals, too-many-branches
 def find_chain_pairs(
     base_dir: Path,
     fgeor_prefix: str = "GL_FgEoR_",
@@ -377,6 +373,7 @@ def find_chain_pairs(
     return pairs
 
 
+# pylint: disable=too-many-locals
 def analyze_chain_pair(
     pair: ChainPair,
     dir_prefix: Optional[Path] = None,
@@ -428,7 +425,6 @@ def analyze_chain_pair(
     if dir_prefix is None:
         # Use the true common ancestor of both roots
         # (may be several levels up)
-        from os.path import commonpath
 
         common_str = commonpath([str(pair.fgeor_root), str(pair.fgonly_root)])
         dir_prefix = Path(common_str)
@@ -459,7 +455,7 @@ def analyze_chain_pair(
             plt.show()
             result["plot_success"] = True
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             if verbose:
                 print(f"Error creating plot for {pert_label}: {e}")
             return result
@@ -500,6 +496,8 @@ def analyze_chain_pair(
     return result
 
 
+# pylint: disable=too-many-arguments, too-many-positional-arguments
+# pylint: disable=too-many-statements
 def run_complete_bayeseor_analysis(
     chain_pairs: ChainPairMap,
     perturbation_levels: Optional[Iterable[str]] = None,
@@ -733,12 +731,12 @@ if run_run_examples:
     v7_base = chains_dir / "v7d0"
 
     print("=== Discovering v7d0 chain pairs ===")
-    pairs = find_chain_pairs(v7_base)
-    print(f"Found {len(pairs)} pairs:", list(pairs.keys()))
+    found_pairs = find_chain_pairs(v7_base)
+    print(f"Found {len(found_pairs)} pairs:", list(found_pairs.keys()))
 
     print("=== Example: Complete analysis over all discovered pairs ===")
     results = run_complete_bayeseor_analysis(
-        chain_pairs=pairs,
+        chain_pairs=found_pairs,
         create_plots=False,
         verbose=True,
     )

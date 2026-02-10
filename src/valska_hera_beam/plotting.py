@@ -1,3 +1,5 @@
+"""Plotting functions"""
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -16,6 +18,7 @@ class BeamAnalysisPlotter:
     Class for plotting beam analysis results for HERA FWHM validation studies.
     """
 
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
         self,
         base_chains_dir: Optional[Union[str, Path]] = None,
@@ -123,6 +126,8 @@ class BeamAnalysisPlotter:
             **kwargs,
         )
 
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
+    # pylint: disable=too-many-locals, too-many-branches
     def plot_analysis_results(
         self,
         analysis_keys: List[str],
@@ -198,7 +203,7 @@ class BeamAnalysisPlotter:
         # Set up upper limits
         uplim_inds = None
         if not ignore_uplims:
-            nDim = len(data.k_vals[0])
+            n_dim = len(data.k_vals[0])
             # Default to first k-mode only if not specified
             indices_to_use = (
                 upper_limit_indices if upper_limit_indices is not None else [0]
@@ -208,18 +213,18 @@ class BeamAnalysisPlotter:
             uplim_inds = []
             for i, key in enumerate(analysis_keys):
                 # Start with all False
-                uplim_ind = np.zeros(nDim, dtype=bool)
+                uplim_ind = np.zeros(n_dim, dtype=bool)
 
                 # Set True for specified indices
                 for idx in indices_to_use:
-                    if 0 <= idx < nDim:
+                    if 0 <= idx < n_dim:
                         uplim_ind[idx] = True
 
                 # Override with detection indices if specified for this
                 # analysis
                 if detection_indices is not None and key in detection_indices:
                     for idx in detection_indices[key]:
-                        if 0 <= idx < nDim:
+                        if 0 <= idx < n_dim:
                             uplim_ind[idx] = False
 
                 uplim_inds.append(uplim_ind)
@@ -293,8 +298,8 @@ class BeamAnalysisPlotter:
                 ax.legend(
                     handles=handles,
                     labels=[text.get_text() for text in texts],
-                    loc=legend._loc,
-                    fontsize=legend._fontsize,
+                    loc=legend._loc,  # pylint: disable=protected-access
+                    fontsize=legend.prop.get_size_in_points(),
                     ncol=ncol,  # Use multiple columns
                     frameon=True,  # Add a frame around the legend
                     framealpha=0.8,  # Make the frame slightly transparent
@@ -415,5 +420,5 @@ def plot_gsm_comparison(
 
 if __name__ == "__main__":
     # This code runs when the script is executed directly
-    fig = plot_gleam_analysis()
+    figure = plot_gleam_analysis()
     plt.show()

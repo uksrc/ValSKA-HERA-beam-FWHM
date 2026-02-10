@@ -6,12 +6,7 @@ from unittest.mock import patch
 
 import numpy
 import pytest
-from constants import (
-    CHAINS_DIR,
-    EOR_PS,
-    NOISE_RATIO,
-    MockDataContainer,
-)
+from constants import CHAINS_DIR, EOR_PS, NOISE_RATIO, MockDataContainer
 
 from valska_hera_beam import plotting
 

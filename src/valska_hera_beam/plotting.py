@@ -295,11 +295,12 @@ class BeamAnalysisPlotter:
 
                 # Create a new legend with the updated texts and multiple
                 # columns
+                # pylint: disable=protected-access
                 ax.legend(
                     handles=handles,
                     labels=[text.get_text() for text in texts],
-                    loc=legend._loc,  # pylint: disable=protected-access
-                    fontsize=legend.prop.get_size_in_points(),
+                    loc=legend._loc,
+                    fontsize=legend._fontsize,
                     ncol=ncol,  # Use multiple columns
                     frameon=True,  # Add a frame around the legend
                     framealpha=0.8,  # Make the frame slightly transparent

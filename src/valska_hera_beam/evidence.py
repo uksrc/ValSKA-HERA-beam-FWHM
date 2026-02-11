@@ -36,11 +36,11 @@ Typical usage examples
 
 from __future__ import annotations
 
+import traceback
 from dataclasses import dataclass
 from os.path import commonpath
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
-import traceback
 
 import matplotlib.pyplot as plt
 import tqdm  # noqa: F401

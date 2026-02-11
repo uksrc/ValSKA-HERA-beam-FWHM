@@ -2,57 +2,33 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 
-exclude: ^docs/
-
 repos:
   - repo: local
     hooks:
-      - id: isort
-        name: isort
-        entry: isort
+      - id: python-format
+        name: python format (make target)
+        entry: make python-format
         language: system
-        types: [python]
-        exclude: \.ipynb$
+        pass_filenames: false
+        verbose: true
 
-      - id: black
-        name: black
-        entry: black
+      - id: python-lint
+        name: python lint (make target)
+        entry: make python-lint
         language: system
-        types: [python]
-        exclude: \.ipynb$
+        pass_filenames: false
+        verbose: true
 
-      - id: flake8
-        name: flake8
-        entry: flake8
+      - id: notebook-format
+        name: notebook format (make target)
+        entry: make notebook-format
         language: system
-        types: [python]
+        pass_filenames: false
+        verbose: true
 
-      - id: pylint
-        name: pylint
-        entry: pylint
+      - id: notebook-lint
+        name: notebook lint (make target)
+        entry: make notebook-lint
         language: system
-        types: [python]
-
-      - id: nbqa-isort
-        name: nbqa-isort
-        entry: nbqa isort
-        language: system
-        files: \.ipynb$
-
-      - id: nbqa-black
-        name: nbqa-black
-        entry: nbqa black
-        language: system
-        files: \.ipynb$
-
-      - id: nbqa-flake8
-        name: nbqa-flake8
-        entry: nbqa flake8
-        language: system
-        files: \.ipynb$
-
-      - id: nbqa-pylint
-        name: nbqa-pylint
-        entry: nbqa pylint
-        language: system
-        files: \.ipynb$
+        pass_filenames: false
+        verbose: true

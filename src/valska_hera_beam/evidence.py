@@ -37,7 +37,6 @@ Typical usage examples
 from __future__ import annotations
 
 import traceback
-from dataclasses import dataclass
 from os.path import commonpath
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
@@ -46,6 +45,7 @@ import matplotlib.pyplot as plt
 import tqdm  # noqa: F401
 from anesthetic import read_chains
 from bayeseor.analyze.analyze import DataContainer
+from dataclasses import dataclass
 
 PathLike = Union[str, Path]
 BayesFactorResult = Dict[str, Any]

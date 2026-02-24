@@ -13,10 +13,6 @@ EOR_PS = 214777.66068216303  # mK^2 Mpc^3
 NOISE_RATIO = 0.5
 
 
-# pylint: disable=invalid-name, too-few-public-methods
-# pylint: disable=too-many-positional-arguments, too-many-arguments
-
-
 class MockDataContainer:
     """
     Mock class for reading and analyzing files output by BayesEoR.
@@ -30,7 +26,6 @@ class MockDataContainer:
         labels=None,
         additional_args=None,
     ):
-
         self.Ndirs = len(dirnames)
         self.dirnames = dirnames
         self.dir_prefix = dir_prefix
@@ -69,7 +64,7 @@ class MockAx:
         """Get legend"""
         return self.leg
 
-    def legend(
+    def legend(  # noqa: PLR0913
         self,
         handles,
         labels,
@@ -149,7 +144,6 @@ class MockChain:
         return self.logZ_value
 
 
-# pylint: disable=unused-argument
 def mock_read_chains(*args, **kwargs):
     """
     Mock method to replace anesthetic read_chains()

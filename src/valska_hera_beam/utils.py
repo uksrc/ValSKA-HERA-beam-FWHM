@@ -5,7 +5,6 @@ from datetime import datetime
 
 # import os
 from pathlib import Path
-from typing import Dict, Optional, Union
 
 import yaml
 
@@ -15,10 +14,10 @@ class PathManager:
 
     def __init__(
         self,
-        base_dir: Optional[Union[str, Path]] = None,
-        chains_dir: Optional[Union[str, Path]] = None,
-        data_dir: Optional[Union[str, Path]] = None,
-        results_dir: Optional[Union[str, Path]] = None,
+        base_dir: str | Path | None = None,
+        chains_dir: str | Path | None = None,
+        data_dir: str | Path | None = None,
+        results_dir: str | Path | None = None,
     ):
         """Initialize the PathManager with configurable directories.
 
@@ -77,7 +76,7 @@ class PathManager:
         else:
             self.results_dir = Path(results_dir).resolve()
 
-    def get_paths(self) -> Dict[str, Path]:
+    def get_paths(self) -> dict[str, Path]:
         """Get a dictionary of all managed paths.
 
         Returns
@@ -146,7 +145,7 @@ class PathManager:
         return new_dir
 
     def find_file(
-        self, pattern: str, path_name: Optional[str] = None
+        self, pattern: str, path_name: str | None = None
     ) -> list[Path]:
         """Find files matching a pattern in a specified directory.
 
@@ -208,8 +207,8 @@ def make_timestamp() -> str:
 
 
 def load_paths(
-    custom_paths_file: Optional[Union[str, Path]] = None,
-) -> Dict[str, str]:
+    custom_paths_file: str | Path | None = None,
+) -> dict[str, str]:
     """Load analysis paths from a YAML configuration file.
 
     Parameters
@@ -232,7 +231,7 @@ def load_paths(
     if not paths_file.exists():
         raise FileNotFoundError(f"Paths file not found: {paths_file}")
 
-    with open(paths_file, "r", encoding="utf-8") as f:
+    with open(paths_file, encoding="utf-8") as f:
         paths = yaml.safe_load(f)
 
     return paths
@@ -242,7 +241,7 @@ def _pp_key_to_percent_label(
     key: str,
     prefix: str,
     label_prefix: str | None = None,
-) -> Optional[str]:
+) -> str | None:
     """Convert '<prefix><pp>' key into a '<label_prefix> ±X%' label.
 
     Parameters
@@ -291,9 +290,9 @@ def _pp_key_to_percent_label(
 
 def build_pp_groups_from_paths(
     prefixes: list[str],
-    custom_paths_file: Optional[Union[str, Path]] = None,
-    label_prefixes: Optional[Dict[str, str]] = None,
-) -> Dict[str, list[str]]:
+    custom_paths_file: str | Path | None = None,
+    label_prefixes: dict[str, str] | None = None,
+) -> dict[str, list[str]]:
     """
     Build groups for perturbation runs from paths.yaml for one or more
     prefixes.
@@ -310,7 +309,7 @@ def build_pp_groups_from_paths(
     -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
     paths = load_paths(custom_paths_file)
-    raw_groups: Dict[str, list[str]] = {}
+    raw_groups: dict[str, list[str]] = {}
 
     for key in paths.keys():
         for prefix in prefixes:
@@ -332,17 +331,17 @@ def build_pp_groups_from_paths(
     def label_to_val(lbl: str) -> float:
         try:
             return float(lbl.split()[-1].strip("%"))
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             return 0.0
 
-    groups: Dict[str, list[str]] = {}
+    groups: dict[str, list[str]] = {}
     for label in sorted(raw_groups.keys(), key=label_to_val):
         groups[label] = sorted(raw_groups[label])
 
     return groups
 
 
-def build_group_labels(groups: Dict[str, list[str]]) -> Dict[str, str]:
+def build_group_labels(groups: dict[str, list[str]]) -> dict[str, str]:
     """Simple label -> label mapping."""
     return {label: label for label in groups.keys()}
 

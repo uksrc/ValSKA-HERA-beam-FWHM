@@ -140,7 +140,6 @@ def test_path_manager_create_sub_dir(path_manager):
     new_dir = "new_directory"
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         # Update the chains dir
         path_manager.chains_dir = Path(base_dir)
 
@@ -154,7 +153,6 @@ def test_path_manager_find_file(path_manager):
     """Test find file with named directory"""
 
     with tempfile.NamedTemporaryFile(suffix=".dat") as test_file:
-
         path_manager.chains_dir = Path(test_file.name).parent
 
         result = path_manager.find_file("*.dat", path_name="chains_dir")
@@ -166,7 +164,6 @@ def test_path_manager_find_file_default(path_manager):
     """Test find file from default directory"""
 
     with tempfile.NamedTemporaryFile(suffix=".dat") as test_file:
-
         path_manager.base_dir = Path(test_file.name).parent
 
         result = path_manager.find_file("*.dat")
@@ -190,14 +187,12 @@ def test_create_path_manager_default(pm, chains):
     """
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         test_dir = Path(base_dir + "/one/two/three/")
 
         if chains:
             os.mkdir(base_dir + "/chains")
 
         with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
-
             getfile.return_value = str(test_dir)
 
             if pm == "class":

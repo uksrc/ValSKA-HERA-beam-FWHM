@@ -37,24 +37,24 @@ Typical usage examples
 from __future__ import annotations
 
 import traceback
+from collections.abc import Iterable
 from dataclasses import dataclass
 from os.path import commonpath
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any
 
 import matplotlib.pyplot as plt
 import tqdm  # noqa: F401
 from anesthetic import read_chains
 from bayeseor.analyze.analyze import DataContainer
 
-PathLike = Union[str, Path]
-BayesFactorResult = Dict[str, Any]
-PerturbationResult = Dict[str, Any]
-SummaryDict = Dict[str, int]
+PathLike = str | Path
+BayesFactorResult = dict[str, Any]
+PerturbationResult = dict[str, Any]
+SummaryDict = dict[str, int]
 
 
-# pylint: disable=too-many-return-statements
-def interpret_bayes_factor(log_bf: float) -> str:
+def interpret_bayes_factor(log_bf: float) -> str:  # noqa: PLR0911
     """
     Interpret the strength of evidence given a log Bayes factor.
 
@@ -69,17 +69,17 @@ def interpret_bayes_factor(log_bf: float) -> str:
         Human-readable description of evidence strength, based on
         commonly used (Jeffreys-like) thresholds.
     """
-    if log_bf > 5:
+    if log_bf > 5:  # noqa: PLR2004
         return "Very strong evidence for model 1"
-    if log_bf > 3:
+    if log_bf > 3:  # noqa: PLR2004
         return "Strong evidence for model 1"
-    if log_bf > 1:
+    if log_bf > 1:  # noqa: PLR2004
         return "Moderate evidence for model 1"
-    if log_bf > -1:
+    if log_bf > -1:  # noqa: PLR2004
         return "Weak/inconclusive evidence"
-    if log_bf > -3:
+    if log_bf > -3:  # noqa: PLR2004
         return "Moderate evidence for model 2"
-    if log_bf > -5:
+    if log_bf > -5:  # noqa: PLR2004
         return "Strong evidence for model 2"
 
     return "Very strong evidence for model 2"
@@ -174,8 +174,7 @@ def calculate_bayes_factor(
             )
             print(f"Interpretation: {result['interpretation']}")
 
-    except Exception as e:  # pylint: disable=broad-exception-caught
-
+    except Exception as e:
         error_msg = (
             "Error calculating Bayes factor:\n"
             f"  model_1 path: {chain_path_1}\n"
@@ -204,7 +203,7 @@ class ChainPair:
     fgonly_root: Path
 
 
-ChainPairMap = Dict[str, ChainPair]
+ChainPairMap = dict[str, ChainPair]
 
 
 def _find_single_mn_subdir(root: Path) -> Path:
@@ -236,8 +235,7 @@ def _normalize_perturbation_key(raw_suffix: str) -> str:
     return raw_suffix
 
 
-# pylint: disable=too-many-locals, too-many-branches
-def find_chain_pairs(
+def find_chain_pairs(  # noqa: PLR0912
     base_dir: Path,
     fgeor_prefix: str = "GL_FgEoR_",
     fgonly_prefix: str = "GL_FgOnly_",
@@ -293,8 +291,8 @@ def find_chain_pairs(
         )
 
     # Collect top-level FgEoR and FgOnly directories
-    fgeor_dirs: Dict[str, Path] = {}
-    fgonly_dirs: Dict[str, Path] = {}
+    fgeor_dirs: dict[str, Path] = {}
+    fgonly_dirs: dict[str, Path] = {}
 
     for entry in base_dir.iterdir():
         if not entry.is_dir():
@@ -373,10 +371,9 @@ def find_chain_pairs(
     return pairs
 
 
-# pylint: disable=too-many-locals
-def analyze_chain_pair(
+def analyze_chain_pair(  # noqa: PLR0912
     pair: ChainPair,
-    dir_prefix: Optional[Path] = None,
+    dir_prefix: Path | None = None,
     expected_ps: float = 214777.66068216303,
     create_plots: bool = True,
     verbose: bool = True,
@@ -455,7 +452,7 @@ def analyze_chain_pair(
             plt.show()
             result["plot_success"] = True
 
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             if verbose:
                 print(f"Error creating plot for {pert_label}: {e}")
             return result
@@ -496,18 +493,16 @@ def analyze_chain_pair(
     return result
 
 
-# pylint: disable=too-many-arguments, too-many-positional-arguments
-# pylint: disable=too-many-statements
-def run_complete_bayeseor_analysis(
+def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
     chain_pairs: ChainPairMap,
-    perturbation_levels: Optional[Iterable[str]] = None,
-    dir_prefix: Optional[Path] = None,
+    perturbation_levels: Iterable[str] | None = None,
+    dir_prefix: Path | None = None,
     expected_ps: float = 214777.66068216303,
     create_plots: bool = False,
     show_detailed_results: bool = False,
     verbose: bool = True,
     show_progress: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run a complete BayesEoR perturbation analysis over multiple chain pairs.
 
@@ -548,7 +543,7 @@ def run_complete_bayeseor_analysis(
         pair_items = [(k, v) for k, v in pair_items if k in requested]
 
     pair_items.sort(key=lambda kv: kv[0])
-    labels: List[str] = [k for k, _ in pair_items]
+    labels: list[str] = [k for k, _ in pair_items]
     total_cases = len(labels)
 
     if verbose:
@@ -558,7 +553,7 @@ def run_complete_bayeseor_analysis(
         if create_plots:
             print("Note: Plots will be generated for each perturbation")
 
-    all_results: List[PerturbationResult] = []
+    all_results: list[PerturbationResult] = []
 
     # Progress bar
     if verbose and show_progress and total_cases > 1:
@@ -661,14 +656,14 @@ def run_complete_bayeseor_analysis(
     )
 
     # Collect successful results
-    successful_results: List[Dict[str, Any]] = []
+    successful_results: list[dict[str, Any]] = []
     for result in all_results:
         if (
             result["validation"] != "ERROR"
             and result["bayes_factor_result"]["success"]
         ):
             bf_data = result["bayes_factor_result"]
-            detailed_result: Dict[str, Any] = {
+            detailed_result: dict[str, Any] = {
                 "perturbation": result["perturbation"],
                 "log_evidence_fgeor": bf_data["log_evidence_1"],
                 "log_evidence_fgonly": bf_data["log_evidence_2"],

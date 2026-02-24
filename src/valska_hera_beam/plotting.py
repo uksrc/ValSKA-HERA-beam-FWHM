@@ -1,7 +1,7 @@
 """Plotting functions"""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,15 +18,14 @@ class BeamAnalysisPlotter:
     Class for plotting beam analysis results for HERA FWHM validation studies.
     """
 
-    # pylint: disable=too-many-arguments, too-many-positional-arguments
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        base_chains_dir: Optional[Union[str, Path]] = None,
-        paths_file: Optional[Union[str, Path]] = None,
-        paths: Optional[Dict[str, str]] = None,
+        base_chains_dir: str | Path | None = None,
+        paths_file: str | Path | None = None,
+        paths: dict[str, str] | None = None,
         eor_ps: float = 214777.66068216303,  # mK^2 Mpc^3
         noise_ratio: float = 0.5,
-        default_expected_ps: Optional[float] = None,
+        default_expected_ps: float | None = None,
     ):
         """Initialize the plotter with a base directory for chains.
 
@@ -87,9 +86,9 @@ class BeamAnalysisPlotter:
 
     def get_data_container(
         self,
-        analysis_keys: List[str],
-        labels: Optional[List[str]] = None,
-        expected_ps: Optional[float] = None,
+        analysis_keys: list[str],
+        labels: list[str] | None = None,
+        expected_ps: float | None = None,
         **kwargs,
     ) -> DataContainer:
         """Create a DataContainer for the specified analyses.
@@ -126,24 +125,22 @@ class BeamAnalysisPlotter:
             **kwargs,
         )
 
-    # pylint: disable=too-many-arguments, too-many-positional-arguments
-    # pylint: disable=too-many-locals, too-many-branches
-    def plot_analysis_results(
+    def plot_analysis_results(  # noqa: PLR0912,PLR0913
         self,
-        analysis_keys: List[str],
-        labels: Optional[List[str]] = None,
+        analysis_keys: list[str],
+        labels: list[str] | None = None,
         suptitle: str = "UKSRC validation: Burba et al. 2023",
-        expected_ps: Optional[float] = None,
+        expected_ps: float | None = None,
         expected_label: str = "Noise level",
-        upper_limit_indices: Optional[List[int]] = None,
-        detection_indices: Optional[Dict[str, List[int]]] = None,
+        upper_limit_indices: list[int] | None = None,
+        detection_indices: dict[str, list[int]] | None = None,
         ignore_uplims: bool = False,
         plot_fracdiff: bool = True,
         plot_priors: bool = True,
         ls_expected: str = ":",
-        figsize: Optional[Tuple[float, float]] = None,
-        data_container_kwargs: Optional[Dict[str, Any]] = None,
-        plot_kwargs: Optional[Dict[str, Any]] = None,
+        figsize: tuple[float, float] | None = None,
+        data_container_kwargs: dict[str, Any] | None = None,
+        plot_kwargs: dict[str, Any] | None = None,
     ) -> Figure:
         """
         Plot power spectra and posteriors for selected analyses.
@@ -264,7 +261,8 @@ class BeamAnalysisPlotter:
                 # Create a mapping of single letter labels to full labels
                 letter_to_label = {}
                 for i, label in enumerate(original_labels):
-                    if i < 26:  # Maximum of 26 letters in alphabet
+                    # Maximum of 26 letters in alphabet
+                    if i < 26:  # noqa: PLR2004
                         letter = chr(ord("A") + i)
                         letter_to_label[letter] = label
 
@@ -283,7 +281,7 @@ class BeamAnalysisPlotter:
                 # For fewer than 4 items, keep them in one row
                 # Otherwise, aim for roughly square arrangement
                 n_items = len(handles)
-                if n_items <= 3:
+                if n_items <= 3:  # noqa: PLR2004
                     ncol = n_items
                 else:
                     # Calculate a reasonable number of columns
@@ -295,7 +293,6 @@ class BeamAnalysisPlotter:
 
                 # Create a new legend with the updated texts and multiple
                 # columns
-                # pylint: disable=protected-access
                 ax.legend(
                     handles=handles,
                     labels=[text.get_text() for text in texts],
@@ -312,8 +309,8 @@ class BeamAnalysisPlotter:
     # parameter
     def create_comparison_plot(
         self,
-        groups: Dict[str, List[str]],
-        group_labels: Optional[Dict[str, str]] = None,
+        groups: dict[str, list[str]],
+        group_labels: dict[str, str] | None = None,
         suptitle: str = "HERA FWHM Sensitivity Analysis",
         **kwargs,
     ) -> Figure:
@@ -364,7 +361,7 @@ class BeamAnalysisPlotter:
 
 # Example usage functions
 def plot_gleam_analysis(
-    base_chains_dir: Optional[Union[str, Path]] = None,
+    base_chains_dir: str | Path | None = None,
 ) -> Figure:
     """Example function that reproduces the GLEAM analysis plot.
 
@@ -391,7 +388,7 @@ def plot_gleam_analysis(
 
 
 def plot_gsm_comparison(
-    base_chains_dir: Optional[Union[str, Path]] = None,
+    base_chains_dir: str | Path | None = None,
 ) -> Figure:
     """Example function comparing different GSM perturbation levels.
 

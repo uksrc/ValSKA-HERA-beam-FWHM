@@ -41,7 +41,6 @@ def test_calculate_bayes_factor(monkeypatch):
     monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
 
     with tempfile.TemporaryDirectory() as chains_dir:
-
         with open(f"{chains_dir}/chains_1.txt", "a", encoding="utf-8") as file:
             file.write("20")
         with open(f"{chains_dir}/chains_2.txt", "a", encoding="utf-8") as file:
@@ -121,7 +120,6 @@ def test_find_chain_pairs(
     """
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         fgeor_paths = {}
         for suffix in fgeor_suffix:
             fgeor_paths[suffix] = Path(
@@ -211,7 +209,6 @@ def test_analyze_chain_pair(monkeypatch, log_evidence, interp):
     monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         fgeor_path = Path(f"{base_dir}/dummy_prefix1_{key}/subdir")
         fgeor_path.mkdir(parents=True, exist_ok=True)
 
@@ -240,7 +237,6 @@ def test_analyze_chain_pair(monkeypatch, log_evidence, interp):
 
         # If there was an error, only check the first part
         # and omit the traceback!
-        # pylint: disable=unsubscriptable-object
         if result["bayes_factor_result"]["error"] is not None:
             assert (
                 result["bayes_factor_result"]["error"].split(":")[0]
@@ -377,12 +373,10 @@ def test_run_full_analysis(monkeypatch, input_list, summary, successful):
     monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         chain_pair_map = {}
         expected_results = []
 
         for inputs in input_list:
-
             expected_results.append(
                 {
                     "perturbation": inputs["key"],

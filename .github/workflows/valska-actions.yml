@@ -23,6 +23,12 @@ jobs:
         pip install -r requirements.txt
     - name: Pre-commit
       run: pre-commit run --all-files
+    - name: Upload Lint Results
+      if: always() # Ensures reports upload even if linting fails
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-reports
+        path: build/reports/*.xml  
 
   test:
     runs-on: ubuntu-latest

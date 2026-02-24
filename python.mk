@@ -54,7 +54,11 @@ PYTHON_SWITCHES_FOR_ISORT ?=## Custom switches added to isort
 
 PYTHON_SWITCHES_FOR_PYLINT ?=## Custom switches added to pylint for all python code
 
-NOTEBOOK_SWITCHES_FOR_PYLINT ?=## Custom switches added to pylint for notebooks
+# Disable the following pylint checks for notebooks:
+# 	missing-module-docstring
+# 	invalid-name
+#	duplicate-code
+NOTEBOOK_SWITCHES_FOR_PYLINT = --disable=C0114,C0103,R0801
 
 PYTHON_SWITCHES_FOR_FLAKE8 ?=## Custom switches added to flake8 for all python code
 
@@ -68,7 +72,7 @@ NOTEBOOK_LINT_TARGET ?= .## Paths containing Jupyter notebooks to be formatted a
 .PHONY: python-format python-pre-format python-do-format python-post-format \
 	python-lint python-pre-lint python-do-lint python-post-lint \
 	python-test python-pre-test python-do-test python-post-test
-
+	
 
 python-pre-format:
 

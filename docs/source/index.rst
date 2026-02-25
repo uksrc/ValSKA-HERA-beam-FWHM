@@ -18,4 +18,5 @@ Contents
    readme
    validation
    testing
+   contributing
    api

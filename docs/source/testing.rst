@@ -176,12 +176,17 @@ The pipeline consists of 3 jobs, with each job checking out the code, installing
 and running the following steps:
 
 1. Linting and Formatting
+
    - Run ``pre-commit run --all-files``
    - Upload lint reports
+
 2. Testing
+
    - Run ``make python-test`` (unit tests)
    - Run ``make notebook-test`` (notebook validation)
+
 3. Documentation
+
    - Run ``sphinx-build -W -b html docs/source/ docs/_build/html``
 
 The CI pipeline runs on every push to validate that:
@@ -300,6 +305,7 @@ If you encounter issues not covered here:
 1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues>`_
 2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_
 3. Contact the UKSRC Science Validation team:
+
    - Peter Sims (PO) - ps550 [at] cam.ac.uk
    - Tianyue Chen (SM) - tianyue.chen [at] manchester.ac.uk
    - Quentin Gueuning - qdg20 [at] cam.ac.uk

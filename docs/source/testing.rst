@@ -136,7 +136,7 @@ All of the testing targets are defined in ``python.mk``. Below is a summary of c
        ``PYTHON_SWITCHES_FOR_RUFF`` (default: none)
    * - ``notebook-lint``
      - Lint notebooks
-     - ``NOTEBOOK_LINT_TARGET`` (default: ``.``),
+     - ``NOTEBOOK_LINT_TARGET`` (default: ``notebooks/``),
        ``NOTEBOOK_SWITCHES_FOR_RUFF`` (default: ``--ignore=D100,N802``)
    * - ``python-format``
      - Auto-format Python code

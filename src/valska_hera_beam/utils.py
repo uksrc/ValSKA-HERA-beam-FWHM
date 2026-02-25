@@ -330,7 +330,7 @@ def build_pp_groups_from_paths(
 
     def label_to_val(lbl: str) -> float:
         try:
-            return float(lbl.split()[-1].strip("%"))
+            return float(lbl.rsplit(maxsplit=1)[-1].strip("%"))
         except Exception:
             return 0.0
 

@@ -17,6 +17,6 @@ Contents
 
    readme
    validation
-   testing
    contributing
+   testing
    api

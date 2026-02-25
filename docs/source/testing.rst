@@ -106,12 +106,7 @@ To run linting
    make notebook-lint
 
 
-**Linting includes:**
-
-- ``isort`` - Import sorting verification
-- ``black`` - Code formatting verification
-- ``flake8`` - Style guide enforcement
-- ``pylint`` - Advanced code analysis
+Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_.
 
 Linting results are saved to ``build/reports/linting-python.xml`` and ``build/reports/linting-notebooks.xml``.
 
@@ -129,18 +124,20 @@ All of the testing targets are defined in ``python.mk``. Below is a summary of c
      - Key Variables
    * - ``python-test``
      - Run pytest with coverage
-     - ``PYTHON_TEST_FILE`` (default: ``tests/``) 
+     - ``PYTHON_TEST_FILE`` (default: ``tests/``), 
        ``PYTHON_VARS_AFTER_PYTEST`` (pytest flags)
    * - ``notebook-test``
      - Execute notebooks with nbmake
-     - ``PYTHON_TEST_FOLDER_NBMAKE`` (default: ``.``) 
+     - ``PYTHON_TEST_FOLDER_NBMAKE`` (default: ``.``), 
        ``NOTEBOOK_IGNORE_FILES`` (files to skip)
    * - ``python-lint``
      - Lint Python code
-     - ``PYTHON_LINT_TARGET`` (default: ``src/ tests/``)
+     - ``PYTHON_LINT_TARGET`` (default: ``src/ tests/``),
+       ``PYTHON_SWITCHES_FOR_RUFF`` (default: none)
    * - ``notebook-lint``
      - Lint notebooks
-     - ``NOTEBOOK_LINT_TARGET`` (default: ``.``)
+     - ``NOTEBOOK_LINT_TARGET`` (default: ``.``),
+       ``NOTEBOOK_SWITCHES_FOR_RUFF`` (default: ``--ignore=D100,N802``)
    * - ``python-format``
      - Auto-format Python code
      - ``PYTHON_LINE_LENGTH`` (default: 79)
@@ -171,20 +168,29 @@ You can override Make variables on the command line:
 CI/CD Integration
 -----------------
 
-The project uses GitHub Actions for continuous integration. The workflow is defined in ``.github/workflows/python-app.yml``.
+The project uses GitHub Actions for continuous integration. The workflow is defined in ``.github/workflows/valska-actions.yml``.
 
 **CI Pipeline:**
 
-1. Checkout code
-2. Install dependencies using conda
-3. Run ``make python-test`` (unit tests)
-4. Run ``make notebook-test`` (notebook validation)
+The pipeline consists of 3 jobs, with each job checking out the code, installing dependencies (cached between jobs) 
+and running the following steps:
+
+1. Linting and Formatting
+   - Run ``pre-commit run --all-files``
+   - Upload lint reports
+2. Testing
+   - Run ``make python-test`` (unit tests)
+   - Run ``make notebook-test`` (notebook validation)
+3. Documentation
+   - Run ``sphinx-build -W -b html docs/source/ docs/_build/html``
 
 The CI pipeline runs on every push to validate that:
 
+- Formatting and linting rules have been followed
 - All unit tests pass
 - All notebooks execute without errors
 - Code coverage is maintained
+- Documentation builds without errors or warnings
 
 **Viewing CI Results:**
 

@@ -1,5 +1,5 @@
-Contributing to ValSKA-HERA-beam-FWHM
-=====================================
+Guide to Contributing for Developers
+====================================
 
 Thank you for your interest in contributing to ValSKA-HERA-beam-FWHM! 
 
@@ -10,8 +10,11 @@ Installation
 ------------
 
 ``pre-commit`` is included in the development dependencies listed in ``pyproject.toml`` and so should have been 
-installed along with the other dependencies in your valska environment. In order to activate ``pre-commit``, it 
+installed_ along with the other dependencies in your valska environment. In order to activate ``pre-commit``, it 
 must also be started at the beginning of your session on the command line:
+
+.. _installed: readme.html#installation
+
 
 .. code-block:: bash
 
@@ -48,14 +51,15 @@ To run hooks manually on all files:
    pre-commit run --all-files
 
 
-What the Pre-commit Hooks Do
+What the Pre-commit Hooks do
 ----------------------------
 
 Our pre-commit configuration uses the formatting and linting make targets which are described here_.
 
-.. _here: testing.rst#Linting and Formatting
+.. _here: testing.html#linting-and-formatting
 
 Pre-commit hooks are applied to:
+
 - Python source code in ``src/`` and ``tests/``
 - Notebook files in ``notebooks/``
 
@@ -102,7 +106,7 @@ Pull Request Process
 Code Style
 ~~~~~~~~~~
 
-- Python code should follow PEP 8 guidelines (enforced by ruff)
+- Python code should follow `PEP 8 <https://peps.python.org/pep-0008/>`_ guidelines (enforced by `ruff <https://docs.astral.sh/ruff/>`_)
 - Line length is set to 79 characters
 - Use type hints where appropriate
 - Write clear docstrings for functions and classes

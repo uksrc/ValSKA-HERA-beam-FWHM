@@ -14,17 +14,17 @@ channels:
 dependencies:
   - astropy
   - astropy-healpix
-  - cudatoolkit # Uncomment only on Galahad
+  # - cudatoolkit # Uncomment only on Galahad
   # - cuda # Uncomment everywhere except Galahad
   - gcc_linux-64
   - h5py
   - jsonargparse
-  - magma
+  # - magma
   - matplotlib
   - mpi4py>=3.0.0
   - numpy
   - pip
-  - pycuda
+  # - pycuda
   - pymultinest
   - python
   - pyuvdata
@@ -36,7 +36,6 @@ dependencies:
   - threadpoolctl
   - pandas
   - pyyaml
-  - types-pyyaml
 
   - pip:
       # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt

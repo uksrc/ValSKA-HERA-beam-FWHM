@@ -15,16 +15,16 @@ dependencies:
   - astropy
   - astropy-healpix
   # - cudatoolkit # Uncomment only on Galahad
-  # - cuda # Uncomment everywhere except Galahad
+  - cuda # Uncomment everywhere except Galahad
   - gcc_linux-64
   - h5py
   - jsonargparse
-  # - magma
+  - magma
   - matplotlib
   - mpi4py>=3.0.0
   - numpy
   - pip
-  # - pycuda
+  - pycuda
   - pymultinest
   - python
   - pyuvdata

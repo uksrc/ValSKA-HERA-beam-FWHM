@@ -35,6 +35,8 @@ dependencies:
   - sphinx
   - threadpoolctl
   - pandas
+  - pyyaml
+  - types-pyyaml
 
   - pip:
       # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt

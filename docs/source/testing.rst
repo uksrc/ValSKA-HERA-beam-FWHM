@@ -14,9 +14,8 @@ The project uses ``pyproject.toml`` to manage the devlopment dependencies. These
 - ``pytest-cov`` - Coverage reporting
 - ``pytest-mock`` - Mocking support
 - ``nbmake`` - Notebook execution and validation
-- ``black``, ``isort`` - Code formatting
-- ``flake8``, ``pylint`` - Linting
-- ``ruff``, ``mypy`` - Additional code quality tools
+- ``ruff`` - Code formatting and linting
+- ``mypy`` - Type checking
 
 The recommended way to install the dependencies is via the conda environment specification in ``valska_env.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
 
@@ -106,7 +105,7 @@ To run linting
    make notebook-lint
 
 
-Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_.
+Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_ and `mypy <https://mypy-lang.org/>`_.
 
 Linting results are saved to ``build/reports/linting-python.xml`` and ``build/reports/linting-notebooks.xml``.
 

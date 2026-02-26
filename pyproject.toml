@@ -55,6 +55,7 @@ dev = [
   "pytest-cov",
   "pytest-mock",
   "ruff>=0.12.0",
+  "nbqa",
   "mypy",
   "pre-commit",
   "ipykernel",

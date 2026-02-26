@@ -207,7 +207,7 @@ class BeamAnalysisPlotter:
             )
 
             # Create boolean array for each analysis
-            uplim_inds = []
+            uplim_inds_list = []
             for i, key in enumerate(analysis_keys):
                 # Start with all False
                 uplim_ind = np.zeros(n_dim, dtype=bool)
@@ -224,9 +224,9 @@ class BeamAnalysisPlotter:
                         if 0 <= idx < n_dim:
                             uplim_ind[idx] = False
 
-                uplim_inds.append(uplim_ind)
+                uplim_inds_list.append(uplim_ind)
 
-            uplim_inds = np.array(uplim_inds)
+            uplim_inds = np.array(uplim_inds_list)
 
         # Create and return plot with optional kwargs
         plot_args = {

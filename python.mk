@@ -81,10 +81,8 @@ python-do-format:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       PYTHON_LINT_TARGET=<file or directory path to Python code> - default 'src/ tests/'
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
 ##
-##  Reformat project Python code in the given directories/files using black and isort.
+##  Reformat project Python code in the given directories/files using ruff.
 
 python-format: python-pre-format python-do-format python-post-format  ## format the Python code
 
@@ -106,6 +104,9 @@ python-do-lint:
 	## 3. Check Formatting
 	$(PYTHON_RUNNER) ruff format --check $(PYTHON_LINT_TARGET) \
 		--line-length=$(PYTHON_LINE_LENGTH)
+	## 4. Type checking
+	$(PYTHON_RUNNER) mypy $(PYTHON_LINT_TARGET) --ignore-missing-imports
+
 
 ## TARGET: python-lint
 ## SYNOPSIS: make python-lint
@@ -114,12 +115,9 @@ python-do-lint:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       PYTHON_LINT_TARGET=<file or directory path to Python code> - default 'src/ tests/'
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
-##       PYTHON_SWITCHES_FOR_FLAKE8=<additional switch to pass to flake8>
-##       PYTHON_SWITCHES_FOR_PYLINT=<additional switch to pass to pylint>
+##       PYTHON_SWITCHES_FOR_RUFF=<additional switches to pass to ruff>
 ##
-##  Lint check project Python code in the given directories/files using black, isort, flake8 and pylint.
+##  Lint check project Python code in the given directories/files using ruff.
 
 python-lint: python-pre-lint python-do-lint python-post-lint  ## lint the Python code
 
@@ -165,10 +163,8 @@ notebook-do-format:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       NOTEBOOK_LINT_TARGET=<file or directory path to Python code> - defaults to . (all notebooks in the repo)
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
 ##
-##  Reformat Jupyter notebooks in the given directories/files using nbQa, black and isort.
+##  Reformat Jupyter notebooks in the given directories/files using ruff.
 
 notebook-format: notebook-pre-format notebook-do-format notebook-do-format
 
@@ -193,6 +189,8 @@ notebook-do-lint:
 	## 3. Check Formatting
 	$(PYTHON_RUNNER) ruff format --check $(NOTEBOOK_LINT_TARGET) \
 		--line-length=$(PYTHON_LINE_LENGTH)
+	## 4. Type checking
+	$(PYTHON_RUNNER) nbqa mypy $(NOTEBOOK_LINT_TARGET) --ignore-missing-imports
 
 ## TARGET: notebook-lint
 ## SYNOPSIS: make notebook-lint
@@ -201,14 +199,9 @@ notebook-do-lint:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       NOTEBOOK_LINT_TARGET=<file or directory path to notebooks> - defaults to . (all notebooks in the repo)
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
-##       PYTHON_SWITCHES_FOR_FLAKE8=<additional switch to pass to flake8 for all python code>
-##       PYTHON_SWITCHES_FOR_PYLINT=<additional switch to pass to pylint for all python code>
-##       NOTEBOOK_SWITCHES_FOR_FLAKE8=<additional switch to pass to flake8 for notebooks>
-##       NOTEBOOK_SWITCHES_FOR_PYLINT=<additional switch to pass to pylint for notebooks>
+##       NOTEBOOK_SWITCHES_FOR_RUFF=<additional switches to pass to ruff>
 ##
-##  Lint check Jupyter notebooks in the given directories/files using nbQa, black, isort, flake8 and pylint.
+##  Lint check Jupyter notebooks in the given directories/files using ruff.
 
 notebook-lint: notebook-pre-lint notebook-do-lint notebook-post-lint ## Lint Jupyter notebooks
 

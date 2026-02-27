@@ -94,6 +94,7 @@ valska-bayeseor-sweep-status = "valska_hera_beam.external_tools.bayeseor.cli_swe
 valska-bayeseor-validate-sweep = "valska_hera_beam.external_tools.bayeseor.cli_validate_sweep:main"
 valska-bayeseor-sweep-audit = "valska_hera_beam.external_tools.bayeseor.cli_sweep_audit:main"
 valska-bayeseor-resume = "valska_hera_beam.external_tools.bayeseor.cli_resume:main"
+valska-bayeseor-report-all = "valska_hera_beam.external_tools.bayeseor.cli_report_all:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

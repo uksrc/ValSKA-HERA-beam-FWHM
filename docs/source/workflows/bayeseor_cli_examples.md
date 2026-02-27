@@ -67,6 +67,20 @@ For operational commands (resume, batch report, comparison, cleanup), see:
 | `valska-bayeseor-compare-sweeps` | Compare metrics between two sweep summaries | [bayeseor_operations](./bayeseor_operations.md) |
 | `valska-bayeseor-cleanup` | Safe cleanup workflow (dry-run by default) | [bayeseor_operations](./bayeseor_operations.md) |
 
+### Which command should I use?
+
+- Need to create run inputs/scripts for a single point? → `valska-bayeseor-prepare`
+- Need to submit stages for one prepared run dir? → `valska-bayeseor-submit`
+- Need to prepare/submit multiple perturbation points together? → `valska-bayeseor-sweep`
+- Need to inspect one sweep health quickly? → `valska-bayeseor-sweep-status`
+- Need pass/fail validation semantics for one sweep? → `valska-bayeseor-validate-sweep`
+- Need campaign-wide health and validation overview? → `valska-bayeseor-sweep-audit`
+- Need restart suggestions for incomplete points? → `valska-bayeseor-resume`
+- Need reports for one sweep? → `valska-bayeseor-report`
+- Need reports for many sweeps? → `valska-bayeseor-report-all`
+- Need side-by-side metric comparison between two sweeps? → `valska-bayeseor-compare-sweeps`
+- Need maintenance cleanup (dry-run first)? → `valska-bayeseor-cleanup`
+
 For command-local examples of helper CLIs, run each command with `--help`.
 
 Assumptions:

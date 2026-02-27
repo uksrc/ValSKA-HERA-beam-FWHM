@@ -38,6 +38,12 @@ Basic run (tables + default evidence plots):
 
     valska-bayeseor-report /path/to/_sweeps/<run_id>
 
+Airy sweep helper can trigger this automatically after sweep preparation/submission:
+
+  bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+
+Use `--report-no-plots` on the helper for table-only reporting.
+
 JSON summary payload:
 
     valska-bayeseor-report /path/to/_sweeps/<run_id> --json

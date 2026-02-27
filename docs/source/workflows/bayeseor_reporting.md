@@ -4,6 +4,12 @@ This page documents the `valska-bayeseor-report` post-processing workflow for co
 
 It is designed to work **retroactively** on older sweeps, so you do not need to rerun BayesEoR to generate report artefacts.
 
+Naming conventions used in this page:
+
+- `run_id`: identifier for a sweep campaign
+- `sweep_dir`: `_sweeps/<run_id>` directory containing `sweep_manifest.json`
+- `run_dir`: one per-point directory listed in the sweep manifest
+
 ---
 
 ## What this command does

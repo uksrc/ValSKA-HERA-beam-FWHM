@@ -9,6 +9,12 @@ This page documents the operational helper CLIs used after sweep preparation/sub
 
 These commands are intended for recovery, reporting at campaign scale, comparison of outcomes, and safe maintenance.
 
+Naming conventions used in this page:
+
+- `run_id`: identifier stored in sweep metadata
+- `sweep_dir`: `_sweeps/<run_id>` directory containing `sweep_manifest.json`
+- `run_dir`: one per-point directory referenced by a sweep point row
+
 ---
 
 ## 1) Resume incomplete sweep points

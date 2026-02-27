@@ -11,6 +11,13 @@ context, rationale, and operational detail.
 
 ## Design goals
 
+Naming conventions used in this page:
+
+- `run_id`: user-chosen identifier for one prepared run or sweep campaign
+- `sweep_id`: commonly used synonym for a sweep-level `run_id`
+- `run_dir`: a single prepared point directory
+- `sweep_dir`: the `_sweeps/<run_id>` root containing `sweep_manifest.json`
+
 The BayesEoR workflow in ValSKA is designed to satisfy the following principles:
 
 - **Reproducibility**
@@ -86,11 +93,15 @@ does not attempt to manage or monitor running jobs.
 
 A typical prepared run directory has the form:
 
-    <results_root>/bayeseor/<scenario>/<run_label>/<run_id>/
+  <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>/
 
 or, if `--unique` is used:
 
-    <results_root>/bayeseor/<scenario>/<run_label>/<run_id>/<timestamp>/
+  <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>/<timestamp>/
+
+For sweep campaigns, point run directories are created under:
+
+  <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/<variant>/<run_label>/
 
 Inside this directory you will typically find:
 

@@ -1,14 +1,15 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GLEAM.sh
+# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM.sh
 #
-# Submit a BayesEoR FWHM perturbation sweep for achromatic_Gaussian beam + GLEAM sky.
+# Submit a BayesEoR FWHM perturbation sweep for chromatic_Gaussian beam + GSM sky.
 #
 # Usage:
-#   ./valska-bayeseor-sweep-achromatic_Gaussian-GLEAM.sh [--submit none|cpu|all]
+#   ./valska-bayeseor-sweep-chromatic_Gaussian-GSM.sh [none|cpu|all]
 #
 # Examples:
-#   ./valska-bayeseor-sweep-achromatic_Gaussian-GLEAM.sh              # Submits all (default)
-#   ./valska-bayeseor-sweep-achromatic_Gaussian-GLEAM.sh --submit none  # Prepare only, no submission
+#   ./valska-bayeseor-sweep-chromatic_Gaussian-GSM.sh       # Submits all (default)
+#   ./valska-bayeseor-sweep-chromatic_Gaussian-GSM.sh all   # Submits all (explicit)
+#   ./valska-bayeseor-sweep-chromatic_Gaussian-GSM.sh none  # Prepare only, no submission
 
 set -euo pipefail
 

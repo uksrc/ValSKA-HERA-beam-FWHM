@@ -2,8 +2,8 @@
 # filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh
 #
 # Run a BayesEoR sweep for an airy (14 m diameter) beam configuration.
-# Default behaviour is prepare-only (no submission) with a single 0.0
-# antenna_diameter perturbation.
+# Default behaviour is prepare-only (no submission) across the configured
+# antenna_diameter perturbation list.
 #
 # Usage:
 #   ./valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh [--submit none|cpu|gpu|all] [--run-id ID] [--dry-run]
@@ -12,6 +12,7 @@
 #   ./valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --dry-run
 #   ./valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit none
 #   ./valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit cpu
+#   ./valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all
 
 set -euo pipefail
 
@@ -25,8 +26,9 @@ TEMPLATE="validation_airy_diam14m.yaml"
 RUN_ID="sweep_airy_init"
 
 # Initial airy check-point: single unperturbed run.
-# ANTENNA_DIAMETER_FRACS="-0.2 -0.1 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.1 0.2"
-ANTENNA_DIAMETER_FRACS="0.0"
+# ANTENNA_DIAMETER_FRACS="0.0"
+# Default airy sweep fractions.
+ANTENNA_DIAMETER_FRACS="-0.2 -0.1 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.1 0.2"
 
 # Defaults (can be overridden via CLI flags)
 SUBMIT_MODE="none"

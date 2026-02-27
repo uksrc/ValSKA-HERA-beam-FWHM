@@ -24,6 +24,7 @@ SKY="GSM_plus_GLEAM"
 DATA="/home/ps550/ValSKA-HERA-beam-FWHM/UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/diam14m/gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5"
 TEMPLATE="validation_airy_diam14m.yaml"
 RUN_ID="sweep_airy_init"
+POL="xx"
 
 # Initial airy check-point: single unperturbed run.
 # ANTENNA_DIAMETER_FRACS="0.0"
@@ -77,6 +78,7 @@ echo "  Beam:                $BEAM"
 echo "  Sky:                 $SKY"
 echo "  Data:                $DATA"
 echo "  Template:            $TEMPLATE"
+echo "  Polarization:        $POL"
 echo "  Perturb parameter:   antenna_diameter"
 echo "  antenna_diameter_fracs: $ANTENNA_DIAMETER_FRACS"
 echo "  Run ID:              $RUN_ID"
@@ -91,6 +93,7 @@ cmd=(
     --data "$DATA"
     --template "$TEMPLATE"
     --run-id "$RUN_ID"
+    --override "pol=$POL"
     --perturb-parameter antenna_diameter
     --antenna-diameter-fracs $ANTENNA_DIAMETER_FRACS
     --submit "$SUBMIT_MODE"

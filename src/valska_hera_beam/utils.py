@@ -503,13 +503,12 @@ def _pp_key_to_percent_label(
 
     Parameters
     ----------
-    key
+    key : str
         Full analysis key (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
-    prefix
-        The prefix to strip before the numeric part
-        (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
-    label_prefix
-        Text to put in front of the percentage (default: derived from ``prefix``).
+    prefix : str
+        The prefix to strip before the numeric part (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
+    label_prefix : str, optional
+        Text to put in front of the percentage (default: derived from prefix).
 
     Returns
     -------
@@ -548,27 +547,19 @@ def build_pp_groups_from_paths(
     custom_paths_file: Optional[PathLike] = None,
     label_prefixes: Optional[Dict[str, str]] = None,
 ) -> Dict[str, list[str]]:
-    """Build perturbation groups from ``paths.yaml`` for one or more prefixes.
+    """
+    Build groups for perturbation runs from paths.yaml for one or more prefixes.
 
-    Parameters
-    ----------
-    prefixes
-        Key prefixes to select analyses, e.g.
-        ``['GSM_FgEoR_']`` (GSM v5d0 EoR+Fg),
-        ``['GL_FgEoR_']`` (GSM+GLEAM v7d0 EoR+Fg),
-        or ``['GSM_FgEoR_', 'GL_FgEoR_']`` (combined).
-    custom_paths_file
-        Optional custom paths file to load. If None, uses the default.
-    label_prefixes
-        Optional mapping from prefix to label prefix, e.g.
-        ``{'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}`` to get labels like
-        ``'GSM -1%'`` and ``'GL -1%'``.
+    Examples
+    --------
+    ``prefixes=['GSM_FgEoR_']`` -> GSM v5d0 EoR+Fg
 
-    Returns
-    -------
-    dict
-        Mapping from human-readable label (e.g. ``'GSM -1%'``) to a list of
-        analysis keys (e.g. ``['GSM_FgEoR_-1e0pp', 'GL_FgEoR_-1.0e00pp']``).
+    ``prefixes=['GL_FgEoR_']`` -> GSM+GLEAM v7d0 EoR+Fg
+
+    ``prefixes=['GSM_FgEoR_', 'GL_FgEoR_']`` -> combined
+
+    ``label_prefixes={'GSM_FgEoR_': 'GSM', 'GL_FgEoR_': 'GL'}``
+    -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
     paths = load_paths(custom_paths_file)
     raw_groups: Dict[str, list[str]] = {}

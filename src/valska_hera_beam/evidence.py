@@ -248,13 +248,13 @@ def find_chain_pairs(
 
     This is meant to work with layouts like::
 
-        base_dir / "GL_FgEoR_1.0e00pp"/MN-23-23-38-2-ffm-.../data-
-        base_dir / "GL_FgOnly_1.0e00pp"/MN-23-23-38-2-ffm-.../data-
+        ``base_dir / "GL_FgEoR_1.0e00pp"/MN-23-23-38-2-ffm-.../data-``
+        ``base_dir / "GL_FgOnly_1.0e00pp"/MN-23-23-38-2-ffm-.../data-``
 
     or v5-style directories such as::
 
-        base_dir / "GSM_FgEoR_-5e0pp"/MN-23-23-38-2-.../data-
-        base_dir / "GSM_FgOnly_-5e0pp"/MN-23-23-38-2-.../data-
+        ``base_dir / "GSM_FgEoR_-5e0pp"/MN-23-23-38-2-.../data-``
+        ``base_dir / "GSM_FgOnly_-5e0pp"/MN-23-23-38-2-.../data-``
 
     by adjusting ``fgeor_prefix`` and ``fgonly_prefix``.
 

@@ -91,17 +91,28 @@ That document is the primary reference for:
 - Resubmission after walltime
 - Inspecting manifests and job records
 
+## Testing
+
+For comprehensive testing instructions, see the [Testing Guide](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html).
+
+
 ## Contributing
 
-ValSKA-HERA-beam-FWHM is an open-source project, and contributions of all kinds are very welcome
-(e.g. feature requests, bug reports, documentation improvements, or new validation studies).
+ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request.
 
-Please contribute via GitHub issues and/or pull requests.
+When creating a pull request, please use the provided pull request template which includes a checklist to ensure:
+- Self-review of code
+- Local tests pass (`make python-test` and `make notebook-test`)
+- Relevant documentation is updated
 
-For questions or discussion, contact the UKSRC science-validation tooling team:
+In order to enforce CI checks on pull requests, branch protection rules are in place on the `main` branch to:
 
-- **Peter Sims** (Product Owner) — ps550 [at] cam.ac.uk
-- **Tianyue Chen** (Scrum Master) — tianyue.chen [at] manchester.ac.uk
-- **Quentin Gueuning** — qdg20 [at] cam.ac.uk
-- **Ed Polehampton** — edward.polehampton [at] stfc.ac.uk
-- **Vlad Stolyarov** — vs237 [at] cam.ac.uk
+- Require status checks to pass before merging
+- Require pull request reviews before merging
+
+For any additional questions or comments, please contact one of the UKSRC science validation tooling team:
+ - Peter Sims (PO) - ps550 [at] cam.ac.uk
+ - Tianyue Chen (SM) - tianyue.chen [at] manchester.ac.uk
+ - Quentin Gueuning - qdg20 [at] cam.ac.uk
+ - Ed Polehampton - edward.polehampton [at] stfc.ac.uk
+ - Vlad Stolyarov - vs237 [at] cam.ac.uk

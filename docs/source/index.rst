@@ -17,6 +17,7 @@ Contents
 
    readme
    validation
+   testing
    api
    workflows
    design

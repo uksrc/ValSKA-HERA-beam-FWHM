@@ -1,0 +1,193 @@
+# BayesEoR operations CLI (ValSKA)
+
+This page documents the operational helper CLIs used after sweep preparation/submission:
+
+- `valska-bayeseor-resume`
+- `valska-bayeseor-report-all`
+- `valska-bayeseor-compare-sweeps`
+- `valska-bayeseor-cleanup`
+
+These commands are intended for recovery, reporting at campaign scale, comparison of outcomes, and safe maintenance.
+
+---
+
+## 1) Resume incomplete sweep points
+
+`valska-bayeseor-resume` inspects one sweep and prints exact `valska-bayeseor-submit` commands for missing work.
+
+Basic usage:
+
+    valska-bayeseor-resume /path/to/_sweeps/<run_id>
+
+Generate only GPU-stage suggestions:
+
+    valska-bayeseor-resume /path/to/_sweeps/<run_id> --stage gpu
+
+Generate only CPU-stage suggestions:
+
+    valska-bayeseor-resume /path/to/_sweeps/<run_id> --stage cpu
+
+Machine-readable output:
+
+    valska-bayeseor-resume /path/to/_sweeps/<run_id> --json
+
+Key behavior:
+
+- skips already-complete points
+- emits minimal command set needed per point
+- can include notes about missing `jobs.json` or detected CPU job-id hints
+
+---
+
+## 2) Batch reporting across discovered sweeps
+
+`valska-bayeseor-report-all` discovers sweeps under `results_root` and runs `valska-bayeseor-report` logic for each selected sweep.
+
+Default run:
+
+    valska-bayeseor-report-all
+
+Filter by campaign dimensions:
+
+    valska-bayeseor-report-all --beam airy --sky GSM_plus_GLEAM
+    valska-bayeseor-report-all --run-id sweep_airy_init
+    valska-bayeseor-report-all --latest
+
+Skip already-reported sweeps:
+
+    valska-bayeseor-report-all --only-new
+
+No-plot batch mode (tables only):
+
+    valska-bayeseor-report-all --no-plots
+
+Write reports under a separate root:
+
+    valska-bayeseor-report-all --out-root /path/to/report_mirror
+
+JSON output and CI-friendly failure mode:
+
+    valska-bayeseor-report-all --json
+    valska-bayeseor-report-all --fail-on-error
+
+Key behavior:
+
+- preserves per-sweep report structure and output files
+- records generated/skipped/error counts in summary payload
+
+---
+
+## 3) Compare two sweep outcomes
+
+`valska-bayeseor-compare-sweeps` compares per-point report metrics between two sweep summaries.
+
+Accepted input forms for each side:
+
+- sweep dir containing `report/sweep_report_summary.json`
+- report dir containing `sweep_report_summary.json`
+- direct path to `sweep_report_summary.json`
+
+Basic usage:
+
+    valska-bayeseor-compare-sweeps /path/to/sweep_A /path/to/sweep_B
+
+Choose comparison metric:
+
+    valska-bayeseor-compare-sweeps /path/to/A /path/to/B \
+      --metric log10_bayes_factor_signal_over_no_signal
+
+Show only top-N largest absolute deltas:
+
+    valska-bayeseor-compare-sweeps /path/to/A /path/to/B --top 20
+
+Machine-readable output with labels:
+
+    valska-bayeseor-compare-sweeps /path/to/A /path/to/B \
+      --left-name baseline --right-name trial --json
+
+Compared metric is interpreted as `right - left`.
+
+Summary includes:
+
+- shared / left-only / right-only point counts
+- status mismatch counts
+- compared points and skipped-missing-metric counts
+- mean/min/max delta statistics
+
+---
+
+## 4) Cleanup (safe-by-default maintenance)
+
+`valska-bayeseor-cleanup` supports maintenance cleanup with strong safety controls.
+
+Important defaults:
+
+- default mode is **dry-run** (no filesystem changes)
+- by default, execution uses move-to-trash mode (reversible)
+- hard deletion requires explicit `--hard-delete`
+- run-directory removal requires explicit confirmation token
+
+### Scope selection
+
+Choose one or more scopes:
+
+    --prune-logs
+    --prune-temp
+    --prune-runs
+
+or all scopes:
+
+    --all
+
+### Dry-run preview
+
+Preview all cleanup candidates:
+
+    valska-bayeseor-cleanup --all --json
+
+### Execute log cleanup (reversible)
+
+    valska-bayeseor-cleanup --prune-logs --execute
+
+### Execute run-directory cleanup (requires confirmation)
+
+Run cleanup for missing points only:
+
+    valska-bayeseor-cleanup \
+      --prune-runs \
+      --run-status missing \
+      --execute \
+      --confirm-runs DELETE
+
+Optional hard-delete mode:
+
+    valska-bayeseor-cleanup \
+      --prune-runs \
+      --run-status missing \
+      --execute \
+      --confirm-runs DELETE \
+      --hard-delete
+
+Age gate:
+
+    valska-bayeseor-cleanup --prune-logs --older-than-days 14 --execute
+
+Filtering options mirror sweep discovery tools:
+
+- `--run-id`, `--beam`, `--sky`, `--latest`, `--max-results`
+
+CI-friendly behavior:
+
+    valska-bayeseor-cleanup --prune-logs --execute --fail-on-error
+
+---
+
+## Suggested operational sequence
+
+For large campaigns, a practical order is:
+
+1. `valska-bayeseor-sweep-audit` (health + validation overview)
+2. `valska-bayeseor-resume` (generate exact missing-stage commands)
+3. `valska-bayeseor-report-all` (refresh campaign-wide reports)
+4. `valska-bayeseor-compare-sweeps` (compare baseline vs trial)
+5. `valska-bayeseor-cleanup` (dry-run first; execute only when ready)

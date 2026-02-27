@@ -83,6 +83,7 @@ Detailed command-line examples and workflow patterns are provided in:
 
 - [BayesEoR CLI examples](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_cli_examples.html)
 - [BayesEoR reporting workflows](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_reporting.html)
+- [BayesEoR operations CLI](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_operations.html)
 
 That document is the primary reference for:
 - Preparing validation sweeps

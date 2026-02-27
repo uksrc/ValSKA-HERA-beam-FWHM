@@ -43,9 +43,7 @@ from typing import (
     Dict,
     Iterable,
     List,
-    Mapping,
     Optional,
-    Tuple,
     Union,
 )
 
@@ -586,8 +584,12 @@ def run_complete_bayeseor_analysis(
         )
         all_results.append(result)
 
-        if show_progress and hasattr(perturbation_iterator, "set_description"):
-            perturbation_iterator.set_description(f"Analyzing: {pert_label}")
+        if show_progress:
+            set_description = getattr(
+                perturbation_iterator, "set_description", None
+            )
+            if callable(set_description):
+                set_description(f"Analyzing: {pert_label}")
 
     # Summary table
     print("\n" + "=" * 80)

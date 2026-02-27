@@ -247,7 +247,12 @@ class BeamAnalysisPlotter:
             legend = ax.get_legend()
             if legend is not None:
                 # Get all the line handles and texts
-                handles, texts = legend.legendHandles, legend.get_texts()
+                handles = getattr(legend, "legendHandles", None)
+                if handles is None:
+                    handles = getattr(legend, "legend_handles", None)
+                if handles is None:
+                    handles, _ = ax.get_legend_handles_labels()
+                texts = legend.get_texts()
 
                 # Create a mapping of single letter labels to full labels
                 letter_to_label = {}
@@ -281,11 +286,13 @@ class BeamAnalysisPlotter:
                     )  # Cap at 4 columns max
 
                 # Create a new legend with the updated texts and multiple columns
+                legend_loc = getattr(legend, "_loc", None)
+                legend_fontsize = getattr(legend, "_fontsize", None)
                 ax.legend(
                     handles=handles,
                     labels=[text.get_text() for text in texts],
-                    loc=legend._loc,
-                    fontsize=legend._fontsize,
+                    loc=legend_loc,
+                    fontsize=legend_fontsize,
                     ncol=ncol,  # Use multiple columns
                     frameon=True,  # Add a frame around the legend
                     framealpha=0.8,  # Make the frame slightly transparent

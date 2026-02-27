@@ -95,9 +95,12 @@ def test_load_runtime_paths_env_override(tmp_path, monkeypatch):
     monkeypatch.setenv("VALSKA_RUNTIME_PATHS_FILE", str(runtime_yaml))
 
     data = utils.load_runtime_paths(base_dir=tmp_path / "no_config_here")
+    assert isinstance(data, dict)
+    bayeseor_cfg = data.get("bayeseor")
+    assert isinstance(bayeseor_cfg, dict)
 
     assert data["results_root"] == "/tmp/from_env"
-    assert data["bayeseor"]["repo_path"] == "/tmp/bayeseor"
+    assert bayeseor_cfg["repo_path"] == "/tmp/bayeseor"
 
 
 def test_load_runtime_paths_site_packages_cwd_fallback(tmp_path, monkeypatch):
@@ -118,9 +121,12 @@ def test_load_runtime_paths_site_packages_cwd_fallback(tmp_path, monkeypatch):
     )
 
     data = utils.load_runtime_paths(base_dir=fake_site_base)
+    assert isinstance(data, dict)
+    bayeseor_cfg = data.get("bayeseor")
+    assert isinstance(bayeseor_cfg, dict)
 
     assert data["results_root"] == "/tmp/from_cwd"
-    assert data["bayeseor"]["repo_path"] == "/tmp/cwd_bayeseor"
+    assert bayeseor_cfg["repo_path"] == "/tmp/cwd_bayeseor"
 
 
 def test_path_manager_get_paths(path_manager):
@@ -279,6 +285,8 @@ def test_create_path_manager_default(pm, chains):
                 # Ensure the expected directories actually exist for assertions
                 (Path(base_dir) / "data").mkdir(parents=True, exist_ok=True)
                 (Path(base_dir) / "results").mkdir(parents=True, exist_ok=True)
+            else:
+                raise AssertionError(f"Unexpected pm value: {pm}")
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()

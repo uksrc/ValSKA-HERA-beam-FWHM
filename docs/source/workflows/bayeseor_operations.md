@@ -197,3 +197,24 @@ For large campaigns, a practical order is:
 3. `valska-bayeseor-report-all` (refresh campaign-wide reports)
 4. `valska-bayeseor-compare-sweeps` (compare baseline vs trial)
 5. `valska-bayeseor-cleanup` (dry-run first; execute only when ready)
+
+---
+
+## Wrapper scripts (bash)
+
+Shell wrappers are available under `bash_scripts/` for these commands:
+
+- `bash_scripts/valska-bayeseor-resume-sweep.sh`
+- `bash_scripts/valska-bayeseor-report-all.sh`
+- `bash_scripts/valska-bayeseor-compare-sweeps.sh`
+- `bash_scripts/valska-bayeseor-cleanup.sh`
+
+Each wrapper follows the same fallback order:
+
+1. use the CLI directly from `PATH`
+2. fall back to `conda run -n <VALSKA_CONDA_ENV>`
+3. fall back to local module execution (`PYTHONPATH=src python -m ...`)
+
+Set the optional environment variable if needed:
+
+    export VALSKA_CONDA_ENV=valska

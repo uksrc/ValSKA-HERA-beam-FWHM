@@ -284,23 +284,20 @@ def prepare_bayeseor_run(
     """
     Prepare a BayesEoR run directory containing hypothesis-specific artefacts.
 
-    Canonical non-sweep layout (when run_dir is None):
-      <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
+        Canonical non-sweep layout (when ``run_dir`` is ``None``)::
 
-    Where:
-      - variant defaults to a name derived from the template filename stem
-        (first occurrence of '_template' removed).
-      - if unique=True, we append a timestamp beneath run_id.
+                <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
 
-    Perturbation semantics:
-      At most one perturbation mode can be active.
-      - fwhm_perturb_frac applies multiplicative perturbation to fwhm_deg.
-      - antenna_diameter_perturb_frac applies multiplicative perturbation to
-        antenna_diameter.
+        The ``variant`` defaults to a value derived from the template filename
+        stem (first occurrence of ``_template`` removed). If ``unique=True``, a
+        UTC timestamp is appended beneath ``run_id``.
 
-    CPU precompute sharing:
-      We generate one shared CPU precompute script and point it at whichever
-      hypothesis config exists first (signal_fit preferred if both).
+        At most one perturbation mode can be active. ``fwhm_perturb_frac`` applies
+        a multiplicative perturbation to ``fwhm_deg``. ``antenna_diameter_perturb_frac``
+        applies a multiplicative perturbation to ``antenna_diameter``.
+
+        A single shared CPU precompute script is generated and pointed at an
+        available hypothesis config (``signal_fit`` preferred when both are present).
 
     Returns
     -------

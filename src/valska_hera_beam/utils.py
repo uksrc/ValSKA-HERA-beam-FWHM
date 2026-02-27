@@ -47,15 +47,8 @@ def load_runtime_paths(
 ) -> Dict[str, object]:
     """Load site/user runtime paths from ``config/runtime_paths.yaml`` if present.
 
-    This configuration is intended for *site/user-specific* settings such as:
-
-    - results_root (where all ValSKA outputs go)
-    - data.root (default root for input datasets; used for resolving relative --data paths)
-    - BayesEoR repo_path / conda_sh / conda_env defaults
-    - Other external tool paths (pyuvsim, OSKAR) in future
-
-    By convention, ``config/runtime_paths.yaml`` is often gitignored, and an
-    ``.example`` version is committed instead.
+    This configuration is intended for site/user-specific settings such as
+    ``results_root``, ``data.root``, and default external-tool paths.
 
     Parameters
     ----------
@@ -64,11 +57,10 @@ def load_runtime_paths(
         Only used when runtime_paths_file is None.
     runtime_paths_file
         Explicit path to a runtime paths YAML.
-        If None, resolution order is:
-        1) ``$VALSKA_RUNTIME_PATHS_FILE`` (if set)
-        2) ``<base_dir>/config/runtime_paths.yaml``
-        3) ``$PWD/config/runtime_paths.yaml`` when ``<base_dir>`` appears to be
-           a site-packages/dist-packages install location.
+        If None, resolution order is ``$VALSKA_RUNTIME_PATHS_FILE`` first,
+        then ``<base_dir>/config/runtime_paths.yaml``, then
+        ``$PWD/config/runtime_paths.yaml`` when ``<base_dir>`` appears to be an
+        installed site-packages/dist-packages path.
 
     Returns
     -------
@@ -80,6 +72,7 @@ def load_runtime_paths(
     ValueError
         If the YAML exists but does not contain a mapping at top level.
     """
+
     def _is_site_packages_path(path: Path) -> bool:
         parts = {part.lower() for part in path.parts}
         return "site-packages" in parts or "dist-packages" in parts
@@ -220,11 +213,8 @@ class PathManager:
         base_dir
             Base directory of the project. If None, it's determined automatically.
         chains_dir
-            Directory containing chain files. If None, attempts:
-              - $BAYESEOR_CHAINS_DIR (if set)
-              - <results_root>/bayeseor (if exists)
-              - <base_dir>/chains (if exists)
-              - <base_dir>/results (fallback)
+                        Directory containing chain files. If None, falls back through
+                        environment/config-aware defaults.
         data_dir
             Directory containing data files (input datasets). If None, attempts:
               - config/runtime_paths.yaml: data.root
@@ -234,12 +224,8 @@ class PathManager:
             If None, defaults to <results_root>/validation (created).
         results_root
             Root directory for all ValSKA-generated outputs, including external tool outputs.
-            If None, PathManager checks (in order):
-              - config/runtime_paths.yaml (results_root key)
-              - $VALSKA_RESULTS_ROOT
-              - $SCRATCH/UKSRC/ValSKA/results
-              - $HOME/UKSRC/ValSKA/results
-              - <base_dir>/results
+                        If None, PathManager resolves this from runtime config, environment,
+                        and then a repository-local default.
         runtime_paths_file
             Optional explicit path to a runtime paths YAML file.
             If None, uses ``<base_dir>/config/runtime_paths.yaml``.

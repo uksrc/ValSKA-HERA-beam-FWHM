@@ -256,9 +256,6 @@ def test_create_path_manager_default(pm, chains):
             getfile.return_value = str(test_dir)
 
             if pm == "class":
-                path_manager = utils.PathManager()
-                # Make deterministic: supply test-local results_root so defaults
-                # are created under our temporary base_dir.
                 path_manager = utils.PathManager(
                     base_dir=Path(base_dir),
                     chains_dir=Path(base_dir) / "chains",

@@ -27,8 +27,6 @@ Notes on testing techniques used:
 import json
 from pathlib import Path
 
-import pytest
-
 from valska_hera_beam.external_tools.bayeseor import (
     cli_prepare,
     cli_submit,

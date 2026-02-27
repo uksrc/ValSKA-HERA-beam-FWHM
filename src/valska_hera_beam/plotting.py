@@ -10,7 +10,7 @@ import numpy as np
 from bayeseor.analyze.analyze import DataContainer
 from matplotlib.figure import Figure
 
-from .utils import load_paths
+from .utils import get_default_path_manager, load_paths
 
 
 class BeamAnalysisPlotter:
@@ -43,9 +43,7 @@ class BeamAnalysisPlotter:
             Default expected power spectrum to use in plots. If None, uses noise_ps.
         """
         if base_chains_dir is None:
-            # self.cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
-            self.cwd = Path("/home/ps550/ValSKA-HERA-beam-FWHM/notebooks/")
-            self.dir_prefix = self.cwd / Path("../chains/")
+            self.dir_prefix = Path(get_default_path_manager().chains_dir)
         else:
             self.dir_prefix = Path(base_chains_dir)
 

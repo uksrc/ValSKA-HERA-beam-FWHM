@@ -273,7 +273,9 @@ def _parse_fracs_file(path: Path, *, label: str) -> list[float]:
         if s:
             vals.append(s)
     if not vals:
-        raise ValueError(f"ERROR: No numeric entries found in {label} file: {p}")
+        raise ValueError(
+            f"ERROR: No numeric entries found in {label} file: {p}"
+        )
     return _parse_fracs(vals, label=label)
 
 
@@ -602,12 +604,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # repo_path
     repo_path = args.bayeseor_repo
-    repo_src = "CLI"
     if repo_path is None:
         cfg_repo = _get_nested(runtime, "bayeseor", "repo_path")
         if cfg_repo:
             repo_path = Path(str(cfg_repo)).expanduser()
-            repo_src = "runtime_paths.yaml"
     if repo_path is None and not args.dry_run:
         print(
             "ERROR: BayesEoR repo path not provided. Pass --bayeseor-repo or set bayeseor.repo_path in config/runtime_paths.yaml.",
@@ -618,17 +618,14 @@ def main(argv: list[str] | None = None) -> int:
     # conda_sh/env
     conda_sh = args.conda_sh
     conda_env = args.conda_env
-    conda_src = "CLI"
     if conda_sh is None:
         cfg = _get_nested(runtime, "bayeseor", "conda_sh")
         if cfg:
             conda_sh = str(cfg)
-            conda_src = "runtime_paths.yaml"
     if conda_env is None:
         cfg = _get_nested(runtime, "bayeseor", "conda_env")
         if cfg:
             conda_env = str(cfg)
-            conda_src = "runtime_paths.yaml"
 
     if not args.dry_run:
         if conda_sh is None:
@@ -697,11 +694,15 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 fracs_src = "CLI(--fwhm-fracs-file)"
             else:
-                cfg_fracs = _get_nested(runtime, "bayeseor", "sweep", "fwhm_fracs")
+                cfg_fracs = _get_nested(
+                    runtime, "bayeseor", "sweep", "fwhm_fracs"
+                )
                 if isinstance(cfg_fracs, list) and cfg_fracs:
                     try:
                         fracs = [float(x) for x in cfg_fracs]
-                        fracs_src = "runtime_paths.yaml(bayeseor.sweep.fwhm_fracs)"
+                        fracs_src = (
+                            "runtime_paths.yaml(bayeseor.sweep.fwhm_fracs)"
+                        )
                     except Exception:
                         fracs = None
                         fracs_src = "default"
@@ -1088,9 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     print("     # CPU stage across sweep:")
     run_label_glob = (
-        "fwhm_*"
-        if sweep_res.perturb_parameter == "fwhm_deg"
-        else "antdiam_*"
+        "fwhm_*" if sweep_res.perturb_parameter == "fwhm_deg" else "antdiam_*"
     )
     print(
         f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/{run_label_glob}; do valska-bayeseor-submit "$d" --stage cpu; done'

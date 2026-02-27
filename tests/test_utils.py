@@ -83,6 +83,46 @@ def test_load_paths_with_input_error():
         utils.load_paths("nonexistant_yaml_file.yml")
 
 
+def test_load_runtime_paths_env_override(tmp_path, monkeypatch):
+    """VALSKA_RUNTIME_PATHS_FILE should override inferred locations."""
+
+    runtime_yaml = tmp_path / "runtime.yaml"
+    runtime_yaml.write_text(
+        "results_root: /tmp/from_env\nbayeseor:\n  repo_path: /tmp/bayeseor\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("VALSKA_RUNTIME_PATHS_FILE", str(runtime_yaml))
+
+    data = utils.load_runtime_paths(base_dir=tmp_path / "no_config_here")
+
+    assert data["results_root"] == "/tmp/from_env"
+    assert data["bayeseor"]["repo_path"] == "/tmp/bayeseor"
+
+
+def test_load_runtime_paths_site_packages_cwd_fallback(tmp_path, monkeypatch):
+    """
+    When base_dir is an installed package path, fall back to CWD config.
+    """
+
+    worktree = tmp_path / "worktree"
+    (worktree / "config").mkdir(parents=True)
+    (worktree / "config" / "runtime_paths.yaml").write_text(
+        "results_root: /tmp/from_cwd\nbayeseor:\n  repo_path: /tmp/cwd_bayeseor\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(worktree)
+
+    fake_site_base = (
+        tmp_path / "env" / "lib" / "python3.11" / "site-packages" / "valska"
+    )
+
+    data = utils.load_runtime_paths(base_dir=fake_site_base)
+
+    assert data["results_root"] == "/tmp/from_cwd"
+    assert data["bayeseor"]["repo_path"] == "/tmp/cwd_bayeseor"
+
+
 def test_path_manager_get_paths(path_manager):
     """
     Test PathManager get_paths method

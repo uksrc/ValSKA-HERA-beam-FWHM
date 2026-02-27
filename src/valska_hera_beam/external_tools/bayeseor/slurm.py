@@ -113,9 +113,6 @@ def render_submit_script(
     """
     slurm = dict(slurm or {})
 
-    # DEBUG: Print what we actually received
-    print(f"DEBUG slurm dict: {slurm}")
-
     if mode not in {"cpu", "gpu_run"}:
         raise ValueError("mode must be one of: 'cpu', 'gpu_run'")
 

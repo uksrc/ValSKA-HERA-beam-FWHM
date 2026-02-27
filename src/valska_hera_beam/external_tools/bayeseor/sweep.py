@@ -1,4 +1,4 @@
-"""Sweep orchestration for BayesEoR FWHM perturbation studies."""
+"""Sweep orchestration for BayesEoR perturbation studies."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from .submit import SubmissionError, submit_bayeseor_run
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
+_PERT = Literal["fwhm_deg", "antenna_diameter"]
 
 
 def _utc_now_iso() -> str:
@@ -32,6 +33,22 @@ def _format_run_label_from_fwhm_frac(frac: float) -> str:
     if s.startswith("+"):
         s = s[1:]
     return f"fwhm_{s}"
+
+
+def _format_run_label_from_antenna_diameter_frac(frac: float) -> str:
+    """
+    Must match cli_prepare.py formatting so directory layout is predictable.
+    """
+    s = f"{frac:+.1e}"
+    if s.startswith("+"):
+        s = s[1:]
+    return f"antdiam_{s}"
+
+
+def _format_run_label(*, perturb_parameter: _PERT, frac: float) -> str:
+    if perturb_parameter == "fwhm_deg":
+        return _format_run_label_from_fwhm_frac(frac)
+    return _format_run_label_from_antenna_diameter_frac(frac)
 
 
 def _default_fwhm_fracs() -> list[float]:
@@ -96,10 +113,18 @@ def archive_jobs_json(run_dir: Path) -> Path | None:
 class SweepPoint:
     """Metadata for a single sweep point."""
 
-    fwhm_perturb_frac: float
+    perturb_parameter: _PERT
+    perturb_frac: float
     run_label: str
     run_dir: Path
     manifest_json: Path
+
+    @property
+    def fwhm_perturb_frac(self) -> float | None:
+        """Backward-compatible alias for legacy FWHM-only callers."""
+        if self.perturb_parameter == "fwhm_deg":
+            return self.perturb_frac
+        return None
 
 
 @dataclass(frozen=True)
@@ -111,6 +136,7 @@ class SweepResult:
     sky_model: str
     variant: str
     run_id: str
+    perturb_parameter: _PERT
     data_path: Path
     created_utc: str
     sweep_dir: Path
@@ -127,6 +153,7 @@ def write_sweep_manifest(
     sky_model: str,
     variant: str,
     run_id: str,
+    perturb_parameter: _PERT,
     data_path: Path,
     template_yaml: Path,
     sweep_dir: Path,
@@ -165,13 +192,21 @@ def write_sweep_manifest(
         "sky_model": sky_model,
         "variant": variant,
         "run_id": run_id,
+        "perturb_parameter": perturb_parameter,
         "data_path": str(data_path),
         "template_yaml": str(template_yaml),
         "created_utc": _utc_now_iso(),
         "sweep_dir": str(sweep_dir),
         "points": [
             {
-                "fwhm_perturb_frac": p.fwhm_perturb_frac,
+                "perturb_parameter": p.perturb_parameter,
+                "perturb_frac": p.perturb_frac,
+                "fwhm_perturb_frac": p.perturb_frac
+                if p.perturb_parameter == "fwhm_deg"
+                else None,
+                "antenna_diameter_perturb_frac": p.perturb_frac
+                if p.perturb_parameter == "antenna_diameter"
+                else None,
                 "run_label": p.run_label,
                 "run_dir": str(p.run_dir),
                 "manifest_json": str(p.manifest_json),
@@ -205,6 +240,8 @@ def run_fwhm_sweep(
     slurm_cpu: dict[str, object] | None = None,
     slurm_gpu: dict[str, object] | None = None,
     overrides: dict[str, str] | None = None,
+    perturb_parameter: _PERT = "fwhm_deg",
+    perturb_fracs: Iterable[float] | None = None,
     fwhm_fracs: Iterable[float] | None = None,
     unique: bool = False,
     # Optional submit inputs
@@ -220,7 +257,7 @@ def run_fwhm_sweep(
     dry_run: bool = False,
 ) -> SweepResult:
     """
-    Orchestrate a sweep over multiple fwhm_perturb_frac values.
+    Orchestrate a sweep over multiple perturbation values.
 
     Parameters
     ----------
@@ -240,8 +277,13 @@ def run_fwhm_sweep(
         SLURM settings for CPU and GPU stages.
     overrides
         Template overrides applied to each run.
+    perturb_parameter
+        Which config key to perturb: ``fwhm_deg`` or ``antenna_diameter``.
+    perturb_fracs
+        Iterable of perturbation fractions to apply to ``perturb_parameter``.
     fwhm_fracs
-        Iterable of FWHM perturbation fractions.
+        Backward-compatible alias for ``perturb_fracs`` when using
+        ``perturb_parameter='fwhm_deg'``.
     unique
         If True, append a UTC timestamp to each run directory.
     submit
@@ -276,7 +318,7 @@ def run_fwhm_sweep(
 
     Behaviour
     ---------
-    - Prepares one run_dir per fwhm frac (stable by default unless unique=True).
+    - Prepares one run_dir per perturbation frac (stable unless unique=True).
     - Optionally submits per run_dir via submit_bayeseor_run with stage cpu/gpu/all.
     - Writes/updates sweep_manifest.json under:
         <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/
@@ -301,10 +343,20 @@ def run_fwhm_sweep(
         raise ValueError("sky_model must be a non-empty string")
     if not variant:
         raise ValueError("variant must be a non-empty string")
+    if perturb_parameter not in {"fwhm_deg", "antenna_diameter"}:
+        raise ValueError(
+            "perturb_parameter must be one of: 'fwhm_deg', "
+            "'antenna_diameter'."
+        )
+    if perturb_fracs is not None and fwhm_fracs is not None:
+        raise ValueError(
+            "Provide either perturb_fracs or fwhm_fracs, not both."
+        )
 
-    fracs = list(_default_fwhm_fracs() if fwhm_fracs is None else fwhm_fracs)
+    fracs_in = perturb_fracs if perturb_fracs is not None else fwhm_fracs
+    fracs = list(_default_fwhm_fracs() if fracs_in is None else fracs_in)
     if not fracs:
-        raise ValueError("No FWHM fractions provided for sweep.")
+        raise ValueError("No perturbation fractions provided for sweep.")
 
     sweep_dir = sweep_root(results_root, beam_model, sky_model, run_id)
     sweep_manifest_path = sweep_dir / "sweep_manifest.json"
@@ -317,7 +369,9 @@ def run_fwhm_sweep(
     # --------------------
     if dry_run:
         for frac in fracs:
-            run_label = _format_run_label_from_fwhm_frac(float(frac))
+            run_label = _format_run_label(
+                perturb_parameter=perturb_parameter, frac=float(frac)
+            )
             base = sweep_point_dir(
                 results_root,
                 beam_model,
@@ -330,7 +384,8 @@ def run_fwhm_sweep(
             manifest_json = run_dir / "manifest.json"
             points.append(
                 SweepPoint(
-                    fwhm_perturb_frac=float(frac),
+                    perturb_parameter=perturb_parameter,
+                    perturb_frac=float(frac),
                     run_label=run_label,
                     run_dir=run_dir,
                     manifest_json=manifest_json,
@@ -343,6 +398,7 @@ def run_fwhm_sweep(
             sky_model=sky_model,
             variant=variant,
             run_id=run_id,
+            perturb_parameter=perturb_parameter,
             data_path=data_path,
             created_utc=_utc_now_iso(),
             sweep_dir=sweep_dir,
@@ -357,7 +413,9 @@ def run_fwhm_sweep(
     # --------------------
     for frac in fracs:
         frac_f = float(frac)
-        run_label = _format_run_label_from_fwhm_frac(frac_f)
+        run_label = _format_run_label(
+            perturb_parameter=perturb_parameter, frac=frac_f
+        )
 
         base_run_dir = sweep_point_dir(
             results_root,
@@ -385,7 +443,12 @@ def run_fwhm_sweep(
             overrides=overrides or {},
             slurm_cpu=slurm_cpu or {},
             slurm_gpu=slurm_gpu or {},
-            fwhm_perturb_frac=frac_f,
+            fwhm_perturb_frac=frac_f
+            if perturb_parameter == "fwhm_deg"
+            else None,
+            antenna_diameter_perturb_frac=frac_f
+            if perturb_parameter == "antenna_diameter"
+            else None,
             hypothesis="both",
         )
 
@@ -394,7 +457,8 @@ def run_fwhm_sweep(
 
         points.append(
             SweepPoint(
-                fwhm_perturb_frac=frac_f,
+                perturb_parameter=perturb_parameter,
+                perturb_frac=frac_f,
                 run_label=run_label,
                 run_dir=prepared_run_dir,
                 manifest_json=manifest_json,
@@ -467,6 +531,7 @@ def run_fwhm_sweep(
         sky_model=sky_model,
         variant=variant,
         run_id=run_id,
+        perturb_parameter=perturb_parameter,
         data_path=data_path,
         template_yaml=template_yaml,
         sweep_dir=sweep_dir,
@@ -480,6 +545,7 @@ def run_fwhm_sweep(
         sky_model=sky_model,
         variant=variant,
         run_id=run_id,
+        perturb_parameter=perturb_parameter,
         data_path=data_path,
         created_utc=_utc_now_iso(),
         sweep_dir=sweep_dir,

@@ -21,6 +21,7 @@ from .sweep import run_fwhm_sweep, sweep_root
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
+_PERT = Literal["fwhm_deg", "antenna_diameter"]
 
 
 def _shell_quote(s: str) -> str:
@@ -44,8 +45,11 @@ def _build_rerunnable_sweep_cmd(
     sky_model: str,
     data_arg: Path,
     run_id: str,
+    perturb_parameter: _PERT,
     fwhm_fracs: list[float] | None,
     fwhm_fracs_file: Path | None,
+    antenna_diameter_fracs: list[float] | None,
+    antenna_diameter_fracs_file: Path | None,
     template_arg: str | None,
     variant: str | None,
     results_root_arg: Path | None,
@@ -75,13 +79,24 @@ def _build_rerunnable_sweep_cmd(
 
     parts += ["--data", _shell_quote(str(data_arg))]
     parts += ["--run-id", _shell_quote(run_id)]
+    parts += ["--perturb-parameter", _shell_quote(perturb_parameter)]
 
     # Fractions source
-    if fwhm_fracs is not None:
-        parts.append("--fwhm-fracs")
-        parts += [_shell_quote(str(x)) for x in fwhm_fracs]
-    elif fwhm_fracs_file is not None:
-        parts += ["--fwhm-fracs-file", _shell_quote(str(fwhm_fracs_file))]
+    if perturb_parameter == "fwhm_deg":
+        if fwhm_fracs is not None:
+            parts.append("--fwhm-fracs")
+            parts += [_shell_quote(str(x)) for x in fwhm_fracs]
+        elif fwhm_fracs_file is not None:
+            parts += ["--fwhm-fracs-file", _shell_quote(str(fwhm_fracs_file))]
+    else:
+        if antenna_diameter_fracs is not None:
+            parts.append("--antenna-diameter-fracs")
+            parts += [_shell_quote(str(x)) for x in antenna_diameter_fracs]
+        elif antenna_diameter_fracs_file is not None:
+            parts += [
+                "--antenna-diameter-fracs-file",
+                _shell_quote(str(antenna_diameter_fracs_file)),
+            ]
 
     # Template / variant
     if template_arg is not None:
@@ -222,20 +237,20 @@ def _print_submit_results(submit_results: Any) -> None:
     print(json.dumps(submit_results, indent=2))
 
 
-def _parse_fracs(vals: list[str]) -> list[float]:
-    """Parse a list of strings into float FWHM perturbation values."""
+def _parse_fracs(vals: list[str], *, label: str) -> list[float]:
+    """Parse a list of strings into float perturbation values."""
     out: list[float] = []
     for v in vals:
         try:
             out.append(float(v))
         except Exception as e:
             raise ValueError(
-                f"ERROR: Could not parse fwhm frac '{v}' as float: {e}"
+                f"ERROR: Could not parse {label} value '{v}' as float: {e}"
             )
     return out
 
 
-def _parse_fracs_file(path: Path) -> list[float]:
+def _parse_fracs_file(path: Path, *, label: str) -> list[float]:
     """
     Parse a text file containing one float per line.
 
@@ -245,7 +260,7 @@ def _parse_fracs_file(path: Path) -> list[float]:
     """
     p = Path(path).expanduser()
     if not p.exists():
-        raise ValueError(f"ERROR: fwhm fracs file does not exist: {p}")
+        raise ValueError(f"ERROR: {label} file does not exist: {p}")
     lines = p.read_text(encoding="utf-8").splitlines()
     vals: list[str] = []
     for ln in lines:
@@ -258,10 +273,8 @@ def _parse_fracs_file(path: Path) -> list[float]:
         if s:
             vals.append(s)
     if not vals:
-        raise ValueError(
-            f"ERROR: No numeric entries found in fwhm fracs file: {p}"
-        )
-    return _parse_fracs(vals)
+        raise ValueError(f"ERROR: No numeric entries found in {label} file: {p}")
+    return _parse_fracs(vals, label=label)
 
 
 def _parse_overrides(kvs: list[str]) -> dict[str, str]:
@@ -336,7 +349,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="valska-bayeseor-sweep",
         description=(
-            "Prepare (and optionally submit) a sweep of BayesEoR runs across multiple FWHM perturbations.\n\n"
+            "Prepare (and optionally submit) a sweep of BayesEoR runs across "
+            "multiple perturbations of a selected beam parameter.\n\n"
             "Sweep output layout:\n"
             "  <results_root>/bayeseor/<beam_model>/<sky_model>/_sweeps/<run_id>/<variant>/<run_label>/\n"
         ),
@@ -378,6 +392,15 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Sweep identifier used as run_id (e.g. sweep_v1). Keeps runs grouped and resumable.",
     )
+    p.add_argument(
+        "--perturb-parameter",
+        choices=["fwhm_deg", "antenna_diameter"],
+        default="fwhm_deg",
+        help=(
+            "Which BayesEoR config key to perturb across sweep points.\n"
+            "Default: fwhm_deg."
+        ),
+    )
 
     p.add_argument(
         "--fwhm-fracs",
@@ -398,6 +421,30 @@ def build_parser() -> argparse.ArgumentParser:
             "Path to a text file listing fractional FWHM perturbations (one float per line).\n"
             "Blank lines and '#' comments are ignored.\n"
             "Precedence: --fwhm-fracs > --fwhm-fracs-file > runtime_paths.yaml > built-in default."
+        ),
+    )
+    p.add_argument(
+        "--antenna-diameter-fracs",
+        nargs="+",
+        default=None,
+        help=(
+            "List of fractional antenna_diameter perturbations to run "
+            "(dimensionless).\n"
+            "Example: --antenna-diameter-fracs -0.10 -0.05 ... 0.10\n"
+            "Precedence: --antenna-diameter-fracs > "
+            "--antenna-diameter-fracs-file > runtime_paths.yaml > built-in default."
+        ),
+    )
+    p.add_argument(
+        "--antenna-diameter-fracs-file",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a text file listing fractional antenna_diameter "
+            "perturbations (one float per line).\n"
+            "Blank lines and '#' comments are ignored.\n"
+            "Precedence: --antenna-diameter-fracs > "
+            "--antenna-diameter-fracs-file > runtime_paths.yaml > built-in default."
         ),
     )
 
@@ -623,27 +670,82 @@ def main(argv: list[str] | None = None) -> int:
         variant = _derive_variant_from_template_path(Path(template_yaml))
         variant_src = "auto(template)"
 
-    # ---- fwhm fracs precedence ----
+    perturb_parameter: _PERT = args.perturb_parameter
+
+    # ---- perturbation fracs precedence ----
     fracs: list[float] | None = None
 
     try:
-        if args.fwhm_fracs is not None:
-            fracs = _parse_fracs(list(args.fwhm_fracs))
-            fracs_src = "CLI(--fwhm-fracs)"
-        elif args.fwhm_fracs_file is not None:
-            fracs = _parse_fracs_file(Path(args.fwhm_fracs_file))
-            fracs_src = "CLI(--fwhm-fracs-file)"
-        else:
-            cfg_fracs = _get_nested(runtime, "bayeseor", "sweep", "fwhm_fracs")
-            if isinstance(cfg_fracs, list) and cfg_fracs:
-                try:
-                    fracs = [float(x) for x in cfg_fracs]
-                    fracs_src = "runtime_paths.yaml(bayeseor.sweep.fwhm_fracs)"
-                except Exception:
-                    fracs = None
-                    fracs_src = "default"
+        if perturb_parameter == "fwhm_deg":
+            if (
+                args.antenna_diameter_fracs is not None
+                or args.antenna_diameter_fracs_file is not None
+            ):
+                print(
+                    "ERROR: --perturb-parameter=fwhm_deg does not allow "
+                    "--antenna-diameter-fracs or "
+                    "--antenna-diameter-fracs-file.",
+                    file=sys.stderr,
+                )
+                return 2
+            if args.fwhm_fracs is not None:
+                fracs = _parse_fracs(list(args.fwhm_fracs), label="fwhm frac")
+                fracs_src = "CLI(--fwhm-fracs)"
+            elif args.fwhm_fracs_file is not None:
+                fracs = _parse_fracs_file(
+                    Path(args.fwhm_fracs_file), label="fwhm fracs"
+                )
+                fracs_src = "CLI(--fwhm-fracs-file)"
             else:
-                fracs_src = "default"
+                cfg_fracs = _get_nested(runtime, "bayeseor", "sweep", "fwhm_fracs")
+                if isinstance(cfg_fracs, list) and cfg_fracs:
+                    try:
+                        fracs = [float(x) for x in cfg_fracs]
+                        fracs_src = "runtime_paths.yaml(bayeseor.sweep.fwhm_fracs)"
+                    except Exception:
+                        fracs = None
+                        fracs_src = "default"
+                else:
+                    fracs_src = "default"
+        else:
+            if args.fwhm_fracs is not None or args.fwhm_fracs_file is not None:
+                print(
+                    "ERROR: --perturb-parameter=antenna_diameter does not "
+                    "allow --fwhm-fracs or --fwhm-fracs-file.",
+                    file=sys.stderr,
+                )
+                return 2
+            if args.antenna_diameter_fracs is not None:
+                fracs = _parse_fracs(
+                    list(args.antenna_diameter_fracs),
+                    label="antenna_diameter frac",
+                )
+                fracs_src = "CLI(--antenna-diameter-fracs)"
+            elif args.antenna_diameter_fracs_file is not None:
+                fracs = _parse_fracs_file(
+                    Path(args.antenna_diameter_fracs_file),
+                    label="antenna_diameter fracs",
+                )
+                fracs_src = "CLI(--antenna-diameter-fracs-file)"
+            else:
+                cfg_fracs = _get_nested(
+                    runtime,
+                    "bayeseor",
+                    "sweep",
+                    "antenna_diameter_fracs",
+                )
+                if isinstance(cfg_fracs, list) and cfg_fracs:
+                    try:
+                        fracs = [float(x) for x in cfg_fracs]
+                        fracs_src = (
+                            "runtime_paths.yaml("
+                            "bayeseor.sweep.antenna_diameter_fracs)"
+                        )
+                    except Exception:
+                        fracs = None
+                        fracs_src = "default"
+                else:
+                    fracs_src = "default"
     except ValueError as e:
         print(str(e), file=sys.stderr)
         return 2
@@ -678,9 +780,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  template:     {template_yaml} [{template_src}]")
         print(f"  variant:      {variant} [{variant_src}]")
         print(f"  data:         {data_resolved} [{data_src}]")
-        print(
-            f"  fwhm_fracs:   {fracs if fracs is not None else '(built-in default 9-point set)'} [{fracs_src}]"
-        )
+        print(f"  perturb_parameter:  {perturb_parameter}")
+        if perturb_parameter == "fwhm_deg":
+            print(
+                "  fwhm_fracs:   "
+                f"{fracs if fracs is not None else '(built-in default 9-point set)'} "
+                f"[{fracs_src}]"
+            )
+        else:
+            print(
+                "  antenna_diameter_fracs:   "
+                f"{fracs if fracs is not None else '(built-in default 9-point set)'} "
+                f"[{fracs_src}]"
+            )
         print(f"  unique:       {bool(args.unique)}")
         print(f"  submit:       {args.submit}")
         print(f"  sbatch_exe:   {sbatch_exe}")
@@ -696,7 +808,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         print("\n[DRY RUN] Points:")
         for frac in fracs_to_show:
-            run_label = sweep_mod._format_run_label_from_fwhm_frac(float(frac))
+            run_label = sweep_mod._format_run_label(
+                perturb_parameter=perturb_parameter, frac=float(frac)
+            )
             base = sweep_mod.sweep_point_dir(
                 results_root,
                 beam_model,
@@ -725,7 +839,8 @@ def main(argv: list[str] | None = None) -> int:
         run_id=args.run_id,
         data_path=Path(data_resolved).expanduser(),
         overrides=overrides_dict,
-        fwhm_fracs=fracs,
+        perturb_parameter=perturb_parameter,
+        perturb_fracs=fracs,
         unique=bool(args.unique),
         slurm_cpu=slurm_cpu,
         slurm_gpu=slurm_gpu,
@@ -747,6 +862,7 @@ def main(argv: list[str] | None = None) -> int:
             "sky_model": sweep_res.sky_model,
             "variant": sweep_res.variant,
             "run_id": sweep_res.run_id,
+            "perturb_parameter": sweep_res.perturb_parameter,
             "data_path": str(sweep_res.data_path),
             "created_utc": sweep_res.created_utc,
             "sweep_dir": str(sweep_res.sweep_dir),
@@ -754,7 +870,14 @@ def main(argv: list[str] | None = None) -> int:
             "template_yaml": str(sweep_res.template_yaml),
             "points": [
                 {
-                    "fwhm_perturb_frac": p.fwhm_perturb_frac,
+                    "perturb_parameter": p.perturb_parameter,
+                    "perturb_frac": p.perturb_frac,
+                    "fwhm_perturb_frac": p.perturb_frac
+                    if p.perturb_parameter == "fwhm_deg"
+                    else None,
+                    "antenna_diameter_perturb_frac": p.perturb_frac
+                    if p.perturb_parameter == "antenna_diameter"
+                    else None,
                     "run_label": p.run_label,
                     "run_dir": str(p.run_dir),
                     "manifest_json": str(p.manifest_json),
@@ -775,6 +898,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  beam_model:          {sweep_res.beam_model}")
     print(f"  sky_model:           {sweep_res.sky_model}")
     print(f"  variant:             {sweep_res.variant}")
+    print(f"  perturb_parameter:   {sweep_res.perturb_parameter}")
     print(f"  points:              {len(sweep_res.points)}")
 
     did_submit = args.submit != "none"
@@ -805,7 +929,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print("\nPoints:")
     for p in sweep_res.points:
-        print(f"  {p.fwhm_perturb_frac:+.3f}  {p.run_label}  ->  {p.run_dir}")
+        print(f"  {p.perturb_frac:+.3f}  {p.run_label}  ->  {p.run_dir}")
 
     # Build copy/paste-ready follow-on commands
     cmd_cpu = _build_rerunnable_sweep_cmd(
@@ -813,8 +937,11 @@ def main(argv: list[str] | None = None) -> int:
         sky_model=sky_model,
         data_arg=args.data,
         run_id=args.run_id,
+        perturb_parameter=perturb_parameter,
         fwhm_fracs=fracs,
         fwhm_fracs_file=args.fwhm_fracs_file,
+        antenna_diameter_fracs=fracs,
+        antenna_diameter_fracs_file=args.antenna_diameter_fracs_file,
         template_arg=args.template,
         variant=args.variant,
         results_root_arg=args.results_root,
@@ -836,8 +963,11 @@ def main(argv: list[str] | None = None) -> int:
         sky_model=sky_model,
         data_arg=args.data,
         run_id=args.run_id,
+        perturb_parameter=perturb_parameter,
         fwhm_fracs=fracs,
         fwhm_fracs_file=args.fwhm_fracs_file,
+        antenna_diameter_fracs=fracs,
+        antenna_diameter_fracs_file=args.antenna_diameter_fracs_file,
         template_arg=args.template,
         variant=args.variant,
         results_root_arg=args.results_root,
@@ -859,8 +989,11 @@ def main(argv: list[str] | None = None) -> int:
         sky_model=sky_model,
         data_arg=args.data,
         run_id=args.run_id,
+        perturb_parameter=perturb_parameter,
         fwhm_fracs=fracs,
         fwhm_fracs_file=args.fwhm_fracs_file,
+        antenna_diameter_fracs=fracs,
+        antenna_diameter_fracs_file=args.antenna_diameter_fracs_file,
         template_arg=args.template,
         variant=args.variant,
         results_root_arg=args.results_root,
@@ -931,7 +1064,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             print("     squeue -u $USER")
             print(
-                "     # If you want to submit additional points, re-run with the missing fwhm fracs."
+                "     # If you want to submit additional points, re-run with the missing perturbation fracs."
             )
 
     elif args.submit == "all":
@@ -954,12 +1087,17 @@ def main(argv: list[str] | None = None) -> int:
         "     # valska-bayeseor-submit expects a run_dir containing manifest.json"
     )
     print("     # CPU stage across sweep:")
+    run_label_glob = (
+        "fwhm_*"
+        if sweep_res.perturb_parameter == "fwhm_deg"
+        else "antdiam_*"
+    )
     print(
-        f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/fwhm_*; do valska-bayeseor-submit "$d" --stage cpu; done'
+        f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/{run_label_glob}; do valska-bayeseor-submit "$d" --stage cpu; done'
     )
     print("     # GPU stage across sweep:")
     print(
-        f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/fwhm_*; do valska-bayeseor-submit "$d" --stage gpu; done'
+        f'     for d in {sweep_res.sweep_dir}/{sweep_res.variant}/{run_label_glob}; do valska-bayeseor-submit "$d" --stage gpu; done'
     )
 
     print("\n  Option C) Manual submission:")

@@ -28,12 +28,25 @@ If you are new, start with **Quick Start**. If you are iterating on a validation
   - B) Sweep (dry-run vs real)
   - C) Submitting with dependency handling (CPU → GPU)
   - D) Resubmitting (GPU stage) and job records
-  - E) Advanced: per-point submission with valska-bayeseor-submit
-  - F) Backwards compatibility: deprecated --scenario
+  - E) Submit CPU across sweep points
+  - F) Submit GPU across sweep points (after CPU)
+  - G) Submit CPU+GPU together (fresh sweep)
+  - H) Advanced: per-point submission with valska-bayeseor-submit
+  - I) Monitoring jobs
+  - J) Post-processing reports (valska-bayeseor-report)
+  - K) Sweep health/status checks
+  - L) Aggregate sweep audit
+  - M) Backwards compatibility: deprecated --scenario
 
 ---
 
 ## Quick Start
+
+For sweep post-processing and retroactive report generation, see:
+
+- [BayesEoR reporting workflows](./bayeseor_reporting.md)
+
+For command-local examples of helper CLIs, run each command with `--help`.
 
 Assumptions:
 - You have configured `config/runtime_paths.yaml` (see your repo’s example).
@@ -417,7 +430,6 @@ Or, if you know the run_dir explicitly:
     valska-bayeseor-submit /share/.../_sweeps/sweep_test2/validation_achromatic_Gaussian/fwhm_1.0e-02 --stage gpu
 
 ### I) Monitoring jobs
-
 Common SLURM checks:
 
     squeue -u $USER
@@ -428,7 +440,63 @@ ValSKA also records submission information into:
 - per-point `jobs.json`
 - sweep-level `sweep_manifest.json` (including submit results)
 
-### J) Backwards compatibility: deprecated --scenario
+### J) Post-processing reports (tables + plots)
+
+After sweep jobs complete (or partially complete), generate report artefacts with:
+
+    valska-bayeseor-report /path/to/_sweeps/<run_id>
+
+To include extended outputs (`plot_analysis_results` and `run_complete_bayeseor_analysis` table/json):
+
+    valska-bayeseor-report /path/to/_sweeps/<run_id> \
+      --include-plot-analysis-results \
+      --include-complete-analysis-table
+
+Wrapper equivalent (extended outputs enabled by default):
+
+    bash_scripts/valska-bayeseor-report-sweep.sh --sweep-dir /path/to/_sweeps/<run_id>
+
+For full reporting options and failure-handling behavior, see:
+
+- [BayesEoR reporting workflows](./bayeseor_reporting.md)
+
+### K) Sweep health/status checks
+
+Inspect a sweep and summarize point completeness:
+
+    valska-bayeseor-sweep-status /path/to/_sweeps/SWEEP_ID
+
+JSON mode (scripting/automation):
+
+    valska-bayeseor-sweep-status /path/to/_sweeps/SWEEP_ID --json
+
+Validate and fail non-zero for incomplete sweeps:
+
+    valska-bayeseor-validate-sweep /path/to/_sweeps/SWEEP_ID
+
+If partial completion is acceptable:
+
+    valska-bayeseor-validate-sweep /path/to/_sweeps/SWEEP_ID --allow-partial
+
+If you also require `jobs.json` per point:
+
+    valska-bayeseor-validate-sweep /path/to/_sweeps/SWEEP_ID --require-jobs-json
+
+### L) Aggregate sweep audit
+
+Run one command that discovers sweeps and evaluates status + validation:
+
+  valska-bayeseor-sweep-audit
+
+Apply filters and output JSON:
+
+  valska-bayeseor-sweep-audit --beam airy --sky GSM_plus_GLEAM --json
+
+Use non-zero exit if any audited sweep is invalid:
+
+  valska-bayeseor-sweep-audit --fail-on-invalid
+
+### M) Backwards compatibility: deprecated --scenario
 
 Older scripts used `--scenario` as a single label that mixed multiple concepts.
 

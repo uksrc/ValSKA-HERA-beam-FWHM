@@ -85,6 +85,77 @@ def test_cli_sweep_missing_beam_sky_returns_2():
     assert code == 2
 
 
+def test_cli_prepare_rejects_dual_perturbation_modes():
+    """
+    prepare should reject passing both perturbation modes simultaneously.
+    """
+    code = cli_prepare.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--fwhm-perturb-frac",
+            "0.01",
+            "--antenna-diameter-perturb-frac",
+            "0.01",
+        ]
+    )
+    assert code == 2
+
+
+def test_cli_sweep_antenna_mode_dry_run_returns_0():
+    """
+    sweep dry-run should support antenna_diameter perturbation mode.
+    """
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+        ]
+    )
+    assert code == 0
+
+
+def test_cli_sweep_rejects_mismatched_perturbation_flags():
+    """
+    sweep should reject fwhm-only flags when perturb_parameter is antenna_diameter.
+    """
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--fwhm-fracs",
+            "0.0",
+            "--dry-run",
+        ]
+    )
+    assert code == 2
+
+
 def test_cli_submit_missing_manifest_returns_3(tmp_path):
     """
     Submitting from a run directory without a manifest.json should fail early

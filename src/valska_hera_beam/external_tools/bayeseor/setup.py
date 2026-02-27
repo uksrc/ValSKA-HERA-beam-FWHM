@@ -98,7 +98,7 @@ def _default_variant_from_template(template_yaml: Path) -> str:
 
 
 # -----------------------------------------------------------------------------
-# FWHM perturbation
+# Config perturbations
 # -----------------------------------------------------------------------------
 
 
@@ -136,6 +136,45 @@ def _apply_fwhm_perturbation(
         "fwhm_perturb_frac": float(fwhm_perturb_frac),
         "factor": factor,
         "fwhm_deg_new": new_val,
+    }
+
+
+def _apply_antenna_diameter_perturbation(
+    cfg: CommentedMap,
+    *,
+    antenna_diameter_perturb_frac: float | None,
+) -> dict[str, Any] | None:
+    """
+    If provided, apply a multiplicative perturbation to antenna_diameter:
+      antenna_diameter <- antenna_diameter * (1 + antenna_diameter_perturb_frac)
+    """
+    if antenna_diameter_perturb_frac is None:
+        return None
+
+    if "antenna_diameter" not in cfg:
+        raise KeyError(
+            "Cannot apply antenna diameter perturbation: config has no "
+            "'antenna_diameter' key."
+        )
+
+    try:
+        base = float(cfg["antenna_diameter"])
+    except Exception as e:
+        raise ValueError(
+            "Config 'antenna_diameter' is not numeric: "
+            f"{cfg['antenna_diameter']}"
+        ) from e
+
+    factor = 1.0 + float(antenna_diameter_perturb_frac)
+    new_val = base * factor
+    cfg["antenna_diameter"] = new_val
+
+    return {
+        "type": "multiplicative",
+        "antenna_diameter_base": base,
+        "antenna_diameter_perturb_frac": float(antenna_diameter_perturb_frac),
+        "factor": factor,
+        "antenna_diameter_new": new_val,
     }
 
 
@@ -239,6 +278,7 @@ def prepare_bayeseor_run(
     variant: str | None = None,
     unique: bool = False,
     fwhm_perturb_frac: float | None = None,
+    antenna_diameter_perturb_frac: float | None = None,
     hypothesis: str = "both",
 ) -> dict[str, Path]:
     """
@@ -252,9 +292,11 @@ def prepare_bayeseor_run(
         (first occurrence of '_template' removed).
       - if unique=True, we append a timestamp beneath run_id.
 
-    FWHM perturbation semantics:
-      If provided, fwhm_perturb_frac applies a multiplicative perturbation to
-      fwhm_deg in the rendered config at prepare time.
+    Perturbation semantics:
+      At most one perturbation mode can be active.
+      - fwhm_perturb_frac applies multiplicative perturbation to fwhm_deg.
+      - antenna_diameter_perturb_frac applies multiplicative perturbation to
+        antenna_diameter.
 
     CPU precompute sharing:
       We generate one shared CPU precompute script and point it at whichever
@@ -276,6 +318,14 @@ def prepare_bayeseor_run(
         raise ValueError("beam_model must be a non-empty string")
     if not sky_model:
         raise ValueError("sky_model must be a non-empty string")
+    if (
+        fwhm_perturb_frac is not None
+        and antenna_diameter_perturb_frac is not None
+    ):
+        raise ValueError(
+            "Only one perturbation mode may be provided. "
+            "Choose either fwhm_perturb_frac or antenna_diameter_perturb_frac."
+        )
 
     # Variant: respect explicit argument; otherwise derive from template filename.
     variant_clean = (variant or "").strip()
@@ -316,9 +366,13 @@ def prepare_bayeseor_run(
     # Always overwrite any placeholder (e.g. "__SET_BY_VALSKA__").
     base_cfg["data_path"] = str(data_path)
 
-    # Apply FWHM perturbation before overrides so overrides can still force a value.
+    # Apply perturbation(s) before overrides so overrides can still force a value.
     fwhm_prov = _apply_fwhm_perturbation(
         base_cfg, fwhm_perturb_frac=fwhm_perturb_frac
+    )
+    ant_diam_prov = _apply_antenna_diameter_perturbation(
+        base_cfg,
+        antenna_diameter_perturb_frac=antenna_diameter_perturb_frac,
     )
 
     # Apply simple top-level overrides
@@ -406,6 +460,7 @@ def prepare_bayeseor_run(
             },
             "runner": _runner_manifest(runner),
             "fwhm_perturbation": fwhm_prov,
+            "antenna_diameter_perturbation": ant_diam_prov,
             "cpu_precompute_driver_hypothesis": cpu_precompute_driver_hypothesis,
         },
         "artefacts": {k: str(v) for k, v in outputs.items() if k != "run_dir"},

@@ -109,6 +109,14 @@ def _format_run_label_from_fwhm_frac(frac: float) -> str:
     return f"fwhm_{s}"
 
 
+def _format_run_label_from_antenna_diameter_frac(frac: float) -> str:
+    """Format a run label from a fractional antenna_diameter perturbation."""
+    s = f"{frac:+.1e}"
+    if s.startswith("+"):
+        s = s[1:]
+    return f"antdiam_{s}"
+
+
 def _derive_variant_from_template_path(template_yaml: Path) -> str:
     """
     Derive a stable variant key from a template filename.
@@ -234,6 +242,22 @@ def build_parser() -> argparse.ArgumentParser:
             "place '--' before the value to prevent argparse confusion."
         ),
     )
+    parser.add_argument(
+        "--antenna-diameter-perturb-frac",
+        type=float,
+        default=None,
+        help=(
+            "Apply a multiplicative perturbation to antenna_diameter at "
+            "prepare time, specified as a fraction.\n"
+            "Example: --antenna-diameter-perturb-frac=-1e-3 means -0.1%% "
+            "(multiply by 0.999).\n"
+            "Example: --antenna-diameter-perturb-frac=1e-1 means +10%% "
+            "(multiply by 1.1).\n"
+            "Note: if the value is negative, use either "
+            "'--antenna-diameter-perturb-frac=-1e-3' or place '--' before "
+            "the value to prevent argparse confusion."
+        ),
+    )
 
     parser.add_argument(
         "--template",
@@ -268,8 +292,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help=(
-            "Optional run label directory component. If not provided and --fwhm-perturb-frac is set, "
-            "a label is automatically generated (e.g. fwhm_1.0e-02). Otherwise defaults to 'default'."
+            "Optional run label directory component. If not provided and a "
+            "perturbation frac is set, a label is automatically generated "
+            "(e.g. fwhm_1.0e-02 or antdiam_1.0e-02). "
+            "Otherwise defaults to 'default'."
         ),
     )
 
@@ -488,6 +514,16 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for valska-bayeseor-prepare."""
     parser = build_parser()
     args = parser.parse_args(argv)
+    if (
+        args.fwhm_perturb_frac is not None
+        and args.antenna_diameter_perturb_frac is not None
+    ):
+        print(
+            "ERROR: choose only one perturbation mode. Pass either "
+            "--fwhm-perturb-frac or --antenna-diameter-perturb-frac.",
+            file=sys.stderr,
+        )
+        return 2
 
     if args.list_templates:
         for name in list_templates():
@@ -540,6 +576,11 @@ def main(argv: list[str] | None = None) -> int:
                 float(args.fwhm_perturb_frac)
             )
             run_label_src = "auto(--fwhm-perturb-frac)"
+        elif args.antenna_diameter_perturb_frac is not None:
+            run_label = _format_run_label_from_antenna_diameter_frac(
+                float(args.antenna_diameter_perturb_frac)
+            )
+            run_label_src = "auto(--antenna-diameter-perturb-frac)"
         else:
             run_label = "default"
             run_label_src = "default"
@@ -668,6 +709,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  fwhm_perturb_frac:  {args.fwhm_perturb_frac:+.6g}")
         else:
             print("  fwhm_perturb_frac:  (none)")
+        if args.antenna_diameter_perturb_frac is not None:
+            print(
+                "  antenna_diameter_perturb_frac:  "
+                f"{args.antenna_diameter_perturb_frac:+.6g}"
+            )
+        else:
+            print("  antenna_diameter_perturb_frac:  (none)")
         print(f"  bayeseor_repo:      {repo_path} [{repo_src}]")
         print(f"  conda:              env={conda_env} [{conda_src}]")
         print(f"  run_dir (preview):  {preview_run_dir}")
@@ -697,6 +745,7 @@ def main(argv: list[str] | None = None) -> int:
         slurm_cpu=slurm_cpu,
         slurm_gpu=slurm_gpu,
         fwhm_perturb_frac=args.fwhm_perturb_frac,
+        antenna_diameter_perturb_frac=args.antenna_diameter_perturb_frac,
         hypothesis="both",
     )
 

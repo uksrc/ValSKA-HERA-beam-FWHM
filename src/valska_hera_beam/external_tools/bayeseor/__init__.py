@@ -8,14 +8,18 @@ Primary entry points:
 """
 
 from .constants import TOOL_NAME
+from .report import generate_sweep_report
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
 from .submit import SubmissionError, submit_bayeseor_run
+from .sweep_health import inspect_sweep_health
 from .templates import get_template_path, list_templates
 
 __all__ = [
     "prepare_bayeseor_run",
     "submit_bayeseor_run",
+    "generate_sweep_report",
+    "inspect_sweep_health",
     "SubmissionError",
     "get_template_path",
     "list_templates",

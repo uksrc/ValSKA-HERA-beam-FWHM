@@ -63,8 +63,12 @@ def load_runtime_paths(
         Repository base directory. If None, inferred from this module location.
         Only used when runtime_paths_file is None.
     runtime_paths_file
-        Explicit path to a runtime paths YAML. If None, uses
-        ``<base_dir>/config/runtime_paths.yaml``.
+        Explicit path to a runtime paths YAML.
+        If None, resolution order is:
+        1) ``$VALSKA_RUNTIME_PATHS_FILE`` (if set)
+        2) ``<base_dir>/config/runtime_paths.yaml``
+        3) ``$PWD/config/runtime_paths.yaml`` when ``<base_dir>`` appears to be
+           a site-packages/dist-packages install location.
 
     Returns
     -------
@@ -76,19 +80,37 @@ def load_runtime_paths(
     ValueError
         If the YAML exists but does not contain a mapping at top level.
     """
+    def _is_site_packages_path(path: Path) -> bool:
+        parts = {part.lower() for part in path.parts}
+        return "site-packages" in parts or "dist-packages" in parts
+
     if runtime_paths_file is not None:
         p = Path(runtime_paths_file).expanduser().resolve()
     else:
-        if base_dir is None:
-            # Infer repo root similarly to PathManager
-            utils_dir = Path(
-                inspect.getfile(load_runtime_paths)
-            ).parent.resolve()
-            base_dir_path = utils_dir.parent.parent.resolve()
+        env_runtime = os.environ.get("VALSKA_RUNTIME_PATHS_FILE")
+        if env_runtime:
+            p = Path(env_runtime).expanduser().resolve()
         else:
-            base_dir_path = Path(base_dir).expanduser().resolve()
+            if base_dir is None:
+                # Infer repo root similarly to PathManager
+                utils_dir = Path(
+                    inspect.getfile(load_runtime_paths)
+                ).parent.resolve()
+                base_dir_path = utils_dir.parent.parent.resolve()
+            else:
+                base_dir_path = Path(base_dir).expanduser().resolve()
 
-        p = (base_dir_path / "config" / "runtime_paths.yaml").resolve()
+            p = (base_dir_path / "config" / "runtime_paths.yaml").resolve()
+
+            # Installed package fallback:
+            # if config was not bundled into site-packages, allow local repo
+            # checkout configs when running CLI from that checkout.
+            if not p.exists() and _is_site_packages_path(base_dir_path):
+                cwd_candidate = (
+                    Path.cwd() / "config" / "runtime_paths.yaml"
+                ).resolve()
+                if cwd_candidate.exists():
+                    p = cwd_candidate
 
     if not p.exists():
         return {}

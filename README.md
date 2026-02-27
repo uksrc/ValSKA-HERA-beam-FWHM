@@ -69,6 +69,8 @@ At a high level, the workflow is:
 
 The recommended user interface for this workflow is the `valska-bayeseor-sweep` command, which builds on lower-level `prepare` and `submit` tooling.
 
+For post-processing, `valska-bayeseor-report` can be run on any existing sweep directory to generate summary tables and evidence comparison plots retroactively.
+
 **Detailed usage examples, expected outputs, and recovery patterns are documented separately.**
 
 ---
@@ -80,6 +82,7 @@ Documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedo
 Detailed command-line examples and workflow patterns are provided in:
 
 - [BayesEoR CLI examples](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_cli_examples.html)
+- [BayesEoR reporting workflows](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_reporting.html)
 
 That document is the primary reference for:
 - Preparing validation sweeps

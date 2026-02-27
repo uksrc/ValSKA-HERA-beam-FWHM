@@ -96,6 +96,8 @@ class MockLegend:
         self._fontsize = 1
         self.texts = [MockText("A"), MockText("B"), MockText("Expected")]
         self.ncol = None
+        self.frameon = True
+        self.framealpha = 1.0
 
     def get_texts(self):
         return self.texts

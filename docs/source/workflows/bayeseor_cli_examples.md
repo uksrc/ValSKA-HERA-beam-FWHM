@@ -46,6 +46,27 @@ For sweep post-processing and retroactive report generation, see:
 
 - [BayesEoR reporting workflows](./bayeseor_reporting.md)
 
+For operational commands (resume, batch report, comparison, cleanup), see:
+
+- [BayesEoR operations CLI](./bayeseor_operations.md)
+
+### CLI quick reference
+
+| Command | Purpose | Detailed docs |
+|---|---|---|
+| `valska-bayeseor-prepare` | Prepare one run directory and artefacts | This page |
+| `valska-bayeseor-submit` | Submit CPU/GPU stages for one prepared run | This page |
+| `valska-bayeseor-sweep` | Prepare and/or submit sweep points | This page |
+| `valska-bayeseor-report` | Generate report tables/plots for one sweep | [bayeseor_reporting](./bayeseor_reporting.md) |
+| `valska-bayeseor-list-sweeps` | Discover available sweep directories | [bayeseor_reporting](./bayeseor_reporting.md) |
+| `valska-bayeseor-sweep-status` | Inspect per-point completeness for one sweep | [bayeseor_reporting](./bayeseor_reporting.md) |
+| `valska-bayeseor-validate-sweep` | Validate sweep integrity with exit-code semantics | [bayeseor_reporting](./bayeseor_reporting.md) |
+| `valska-bayeseor-sweep-audit` | Aggregate discovery + status + validation | [bayeseor_reporting](./bayeseor_reporting.md) |
+| `valska-bayeseor-resume` | Generate exact submit commands for incomplete points | [bayeseor_operations](./bayeseor_operations.md) |
+| `valska-bayeseor-report-all` | Batch-generate reports across discovered sweeps | [bayeseor_operations](./bayeseor_operations.md) |
+| `valska-bayeseor-compare-sweeps` | Compare metrics between two sweep summaries | [bayeseor_operations](./bayeseor_operations.md) |
+| `valska-bayeseor-cleanup` | Safe cleanup workflow (dry-run by default) | [bayeseor_operations](./bayeseor_operations.md) |
+
 For command-local examples of helper CLIs, run each command with `--help`.
 
 Assumptions:

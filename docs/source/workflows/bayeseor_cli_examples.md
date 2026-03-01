@@ -57,6 +57,7 @@ For operational commands (resume, batch report, comparison, cleanup), see:
 | `valska-bayeseor-prepare` | Prepare one run directory and artefacts | This page |
 | `valska-bayeseor-submit` | Submit CPU/GPU stages for one prepared run | This page |
 | `valska-bayeseor-sweep` | Prepare and/or submit sweep points | This page |
+| `valska-bayeseor-help` | Print command index and common workflows | [bayeseor_operations](./bayeseor_operations.md) |
 | `valska-bayeseor-report` | Generate report tables/plots for one sweep | [bayeseor_reporting](./bayeseor_reporting.md) |
 | `valska-bayeseor-list-sweeps` | Discover available sweep directories | [bayeseor_reporting](./bayeseor_reporting.md) |
 | `valska-bayeseor-sweep-status` | Inspect per-point completeness for one sweep | [bayeseor_reporting](./bayeseor_reporting.md) |
@@ -72,6 +73,7 @@ For operational commands (resume, batch report, comparison, cleanup), see:
 - Need to create run inputs/scripts for a single point? → `valska-bayeseor-prepare`
 - Need to submit stages for one prepared run dir? → `valska-bayeseor-submit`
 - Need to prepare/submit multiple perturbation points together? → `valska-bayeseor-sweep`
+- Need a quick command map before you start? → `valska-bayeseor-help`
 - Need to inspect one sweep health quickly? → `valska-bayeseor-sweep-status`
 - Need pass/fail validation semantics for one sweep? → `valska-bayeseor-validate-sweep`
 - Need campaign-wide health and validation overview? → `valska-bayeseor-sweep-audit`

@@ -2,6 +2,7 @@
 
 This page documents the operational helper CLIs used after sweep preparation/submission:
 
+- `valska-bayeseor-help`
 - `valska-bayeseor-resume`
 - `valska-bayeseor-report-all`
 - `valska-bayeseor-compare-sweeps`
@@ -14,6 +15,33 @@ Naming conventions used in this page:
 - `run_id`: identifier stored in sweep metadata
 - `sweep_dir`: `_sweeps/<run_id>` directory containing `sweep_manifest.json`
 - `run_dir`: one per-point directory referenced by a sweep point row
+
+---
+
+## 0) Command index / discoverability
+
+`valska-bayeseor-help` prints a concise summary of BayesEoR commands grouped by topic.
+
+Basic usage:
+
+    valska-bayeseor-help
+
+Filter by topic:
+
+    valska-bayeseor-help --topic reporting
+    valska-bayeseor-help --topic operations
+
+Machine-readable output:
+
+    valska-bayeseor-help --json
+
+Topics currently supported:
+
+- `setup`
+- `submission`
+- `reporting`
+- `health`
+- `operations`
 
 ---
 
@@ -218,3 +246,17 @@ Each wrapper follows the same fallback order:
 Set the optional environment variable if needed:
 
     export VALSKA_CONDA_ENV=valska
+
+---
+
+## Future direction (roadmap note)
+
+Current tooling uses separate command entry points (for example, `valska-bayeseor-sweep`,
+`valska-bayeseor-report`, `valska-bayeseor-cleanup`).
+
+A future simplification path is to add a single root command with subcommands:
+
+    valska-bayeseor <subcommand> [...]
+
+This is intentionally tracked as a future migration idea to preserve current stable workflows
+while improving discoverability and shared option handling over time.

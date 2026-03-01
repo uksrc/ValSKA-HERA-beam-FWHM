@@ -232,6 +232,7 @@ For large campaigns, a practical order is:
 
 Shell wrappers are available under `bash_scripts/` for these commands:
 
+- `bash_scripts/valska-bayeseor-help.sh`
 - `bash_scripts/valska-bayeseor-resume-sweep.sh`
 - `bash_scripts/valska-bayeseor-report-all.sh`
 - `bash_scripts/valska-bayeseor-compare-sweeps.sh`

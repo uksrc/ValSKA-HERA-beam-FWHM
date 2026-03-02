@@ -36,6 +36,7 @@ Plot styling conventions (for publication-quality readability):
 - hypothesis labels use spaced names (`signal fit`, `no signal`) in legends
 - in `delta_log_evidence_vs_perturb_frac.png`, points with `\Delta\ln Z > 0`
   are highlighted in red to indicate preference for a spurious detection
+- report plots are exported at 300 DPI by default
 
 ---
 

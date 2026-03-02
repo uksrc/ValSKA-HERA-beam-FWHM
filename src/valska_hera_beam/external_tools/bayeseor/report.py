@@ -26,6 +26,12 @@ _EVIDENCE_LINE_RE = re.compile(
 _Hyp = Literal["signal_fit", "no_signal"]
 _Source = Literal["ns", "ins"]
 
+_AXIS_LABEL_FONTSIZE = 13
+_TICK_LABEL_FONTSIZE = 11
+_TITLE_FONTSIZE = 14
+_LEGEND_FONTSIZE = 10
+_PLOT_DPI = 300
+
 
 @dataclass(frozen=True)
 class EvidenceValues:
@@ -179,12 +185,16 @@ def _select_lnz(e: EvidenceValues, source: _Source) -> float:
 def _plot_delta_log_evidence(
     rows: list[SweepPointReportRow], out_path: Path
 ) -> None:
-    usable = [r for r in rows if r.delta_log_evidence is not None]
-    if not usable:
+    usable_points = [
+        (r.perturb_frac, r.delta_log_evidence)
+        for r in rows
+        if r.delta_log_evidence is not None
+    ]
+    if not usable_points:
         return
 
-    x = [r.perturb_frac for r in usable]
-    y = [r.delta_log_evidence for r in usable]
+    x = [float(xx) for xx, _ in usable_points]
+    y = [float(yy) for _, yy in usable_points]
 
     with plt.rc_context({"font.family": "serif", "mathtext.fontset": "stix"}):
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -204,7 +214,7 @@ def _plot_delta_log_evidence(
                 edgecolors="black",
                 linewidths=0.4,
                 s=38,
-                label=r"$\Delta\ln Z \leq 0$ (null test not failed)",
+                label=r"$\Delta\ln Z \leq 0$ (null test passed)",
                 zorder=3,
             )
         if x_fail:
@@ -220,15 +230,20 @@ def _plot_delta_log_evidence(
             )
 
         ax.axhline(0.0, linestyle="--", linewidth=1.0, color="black")
-        ax.set_xlabel("Perturbation fraction")
+        ax.set_xlabel("Perturbation fraction", fontsize=_AXIS_LABEL_FONTSIZE)
         ax.set_ylabel(
-            r"$\Delta\ln Z\;\left(\mathrm{signal\ fit}-\mathrm{no\ signal}\right)$"
+            r"$\Delta\ln Z\;\left(\mathrm{signal\ fit}-\mathrm{no\ signal}\right)$",
+            fontsize=_AXIS_LABEL_FONTSIZE,
         )
-        ax.set_title(r"BayesEoR sweep: evidence difference ($\Delta\ln Z$)")
+        ax.set_title(
+            r"BayesEoR sweep: evidence difference ($\Delta\ln Z$)",
+            fontsize=_TITLE_FONTSIZE,
+        )
+        ax.tick_params(axis="both", labelsize=_TICK_LABEL_FONTSIZE)
         ax.grid(alpha=0.3)
-        ax.legend(frameon=True)
+        ax.legend(frameon=True, fontsize=_LEGEND_FONTSIZE)
         fig.tight_layout()
-        fig.savefig(out_path, dpi=200)
+        fig.savefig(out_path, dpi=_PLOT_DPI)
         plt.close(fig)
 
 
@@ -238,8 +253,14 @@ def _plot_log_evidence_by_model(
     out_path: Path,
     source: _Source,
 ) -> None:
-    usable = [
-        r
+    usable_points = [
+        (
+            r.perturb_frac,
+            r.signal_fit_ns_log_evidence,
+            r.no_signal_ns_log_evidence,
+            r.signal_fit_ins_log_evidence,
+            r.no_signal_ins_log_evidence,
+        )
         for r in rows
         if (
             r.signal_fit_ns_log_evidence is not None
@@ -248,30 +269,34 @@ def _plot_log_evidence_by_model(
             and r.no_signal_ins_log_evidence is not None
         )
     ]
-    if not usable:
+    if not usable_points:
         return
 
-    x = [r.perturb_frac for r in usable]
+    x = [float(xx) for xx, _, _, _, _ in usable_points]
     if source == "ns":
-        signal_vals = [r.signal_fit_ns_log_evidence for r in usable]
-        no_signal_vals = [r.no_signal_ns_log_evidence for r in usable]
+        signal_vals = [float(sf_ns) for _, sf_ns, _, _, _ in usable_points]
+        no_signal_vals = [float(ns_ns) for _, _, ns_ns, _, _ in usable_points]
         ylabel = r"$\ln Z$ (Nested Sampling)"
     else:
-        signal_vals = [r.signal_fit_ins_log_evidence for r in usable]
-        no_signal_vals = [r.no_signal_ins_log_evidence for r in usable]
+        signal_vals = [float(sf_ins) for _, _, _, sf_ins, _ in usable_points]
+        no_signal_vals = [float(ns_ins) for _, _, _, _, ns_ins in usable_points]
         ylabel = r"$\ln Z$ (Nested Importance Sampling)"
 
     with plt.rc_context({"font.family": "serif", "mathtext.fontset": "stix"}):
         fig, ax = plt.subplots(figsize=(8, 5))
         ax.plot(x, signal_vals, marker="o", label="signal fit")
         ax.plot(x, no_signal_vals, marker="o", label="no signal")
-        ax.set_xlabel("Perturbation fraction")
-        ax.set_ylabel(ylabel)
-        ax.set_title(r"BayesEoR sweep: model evidences ($\ln Z$)")
+        ax.set_xlabel("Perturbation fraction", fontsize=_AXIS_LABEL_FONTSIZE)
+        ax.set_ylabel(ylabel, fontsize=_AXIS_LABEL_FONTSIZE)
+        ax.set_title(
+            r"BayesEoR sweep: model evidences ($\ln Z$)",
+            fontsize=_TITLE_FONTSIZE,
+        )
+        ax.tick_params(axis="both", labelsize=_TICK_LABEL_FONTSIZE)
         ax.grid(alpha=0.3)
-        ax.legend(frameon=True)
+        ax.legend(frameon=True, fontsize=_LEGEND_FONTSIZE)
         fig.tight_layout()
-        fig.savefig(out_path, dpi=200)
+        fig.savefig(out_path, dpi=_PLOT_DPI)
         plt.close(fig)
 
 
@@ -449,7 +474,7 @@ def generate_sweep_report(
                 suptitle="Sweep signal_fit chain comparison",
             )
             out_plot = report_dir / "plot_analysis_results_signal_fit.png"
-            fig.savefig(out_plot, dpi=150)
+            fig.savefig(out_plot, dpi=_PLOT_DPI)
             plt.close(fig)
             if out_plot.exists():
                 plot_analysis_results_png = out_plot

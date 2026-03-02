@@ -6,6 +6,12 @@
 # Usage:
 #   ./bash_scripts/valska-bayeseor-report-all.sh [--beam <name>] [--sky <name>] [--only-new] [--json]
 #
+# Example (current airy analysis):
+#   ./bash_scripts/valska-bayeseor-report-all.sh --beam airy_diam14m --sky GSM_plus_GLEAM --run-id sweep_airy_init
+#
+# Same example (current airy analysis) bu with plots:
+#   ./bash_scripts/valska-bayeseor-report-all.sh --beam airy_diam14m --sky GSM_plus_GLEAM --run-id sweep_airy_init --include-plot-analysis-results --include-complete-analysis-table
+#
 # Optional environment variable:
 #   VALSKA_CONDA_ENV=<name>  (default: valska)
 

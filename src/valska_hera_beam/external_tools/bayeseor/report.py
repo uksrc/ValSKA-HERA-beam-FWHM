@@ -186,16 +186,50 @@ def _plot_delta_log_evidence(
     x = [r.perturb_frac for r in usable]
     y = [r.delta_log_evidence for r in usable]
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(x, y, marker="o")
-    ax.axhline(0.0, linestyle="--", linewidth=1.0)
-    ax.set_xlabel("Perturbation fraction")
-    ax.set_ylabel("Δ ln Z (signal_fit - no_signal)")
-    ax.set_title("BayesEoR sweep: evidence difference")
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
-    plt.close(fig)
+    with plt.rc_context({"font.family": "serif", "mathtext.fontset": "stix"}):
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+        ax.plot(x, y, color="0.5", linewidth=1.25, alpha=0.9)
+
+        x_fail = [xx for xx, yy in zip(x, y, strict=False) if yy > 0.0]
+        y_fail = [yy for yy in y if yy > 0.0]
+        x_pass = [xx for xx, yy in zip(x, y, strict=False) if yy <= 0.0]
+        y_pass = [yy for yy in y if yy <= 0.0]
+
+        if x_pass:
+            ax.scatter(
+                x_pass,
+                y_pass,
+                color="tab:blue",
+                edgecolors="black",
+                linewidths=0.4,
+                s=38,
+                label=r"$\Delta\ln Z \leq 0$ (null test not failed)",
+                zorder=3,
+            )
+        if x_fail:
+            ax.scatter(
+                x_fail,
+                y_fail,
+                color="tab:red",
+                edgecolors="black",
+                linewidths=0.4,
+                s=42,
+                label=r"$\Delta\ln Z > 0$ (spurious detection preference)",
+                zorder=4,
+            )
+
+        ax.axhline(0.0, linestyle="--", linewidth=1.0, color="black")
+        ax.set_xlabel("Perturbation fraction")
+        ax.set_ylabel(
+            r"$\Delta\ln Z\;\left(\mathrm{signal\ fit}-\mathrm{no\ signal}\right)$"
+        )
+        ax.set_title(r"BayesEoR sweep: evidence difference ($\Delta\ln Z$)")
+        ax.grid(alpha=0.3)
+        ax.legend(frameon=True)
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=200)
+        plt.close(fig)
 
 
 def _plot_log_evidence_by_model(
@@ -221,23 +255,24 @@ def _plot_log_evidence_by_model(
     if source == "ns":
         signal_vals = [r.signal_fit_ns_log_evidence for r in usable]
         no_signal_vals = [r.no_signal_ns_log_evidence for r in usable]
-        ylabel = "ln Z (Nested Sampling)"
+        ylabel = r"$\ln Z$ (Nested Sampling)"
     else:
         signal_vals = [r.signal_fit_ins_log_evidence for r in usable]
         no_signal_vals = [r.no_signal_ins_log_evidence for r in usable]
-        ylabel = "ln Z (Nested Importance Sampling)"
+        ylabel = r"$\ln Z$ (Nested Importance Sampling)"
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(x, signal_vals, marker="o", label="signal_fit")
-    ax.plot(x, no_signal_vals, marker="o", label="no_signal")
-    ax.set_xlabel("Perturbation fraction")
-    ax.set_ylabel(ylabel)
-    ax.set_title("BayesEoR sweep: model evidences")
-    ax.grid(alpha=0.3)
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
-    plt.close(fig)
+    with plt.rc_context({"font.family": "serif", "mathtext.fontset": "stix"}):
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(x, signal_vals, marker="o", label="signal fit")
+        ax.plot(x, no_signal_vals, marker="o", label="no signal")
+        ax.set_xlabel("Perturbation fraction")
+        ax.set_ylabel(ylabel)
+        ax.set_title(r"BayesEoR sweep: model evidences ($\ln Z$)")
+        ax.grid(alpha=0.3)
+        ax.legend(frameon=True)
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=200)
+        plt.close(fig)
 
 
 def _rows_to_dicts(rows: list[SweepPointReportRow]) -> list[dict[str, Any]]:

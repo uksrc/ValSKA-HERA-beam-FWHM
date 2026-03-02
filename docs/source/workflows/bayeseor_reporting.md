@@ -30,6 +30,13 @@ By default, output files are written under:
 
     <sweep_dir>/report/
 
+Plot styling conventions (for publication-quality readability):
+
+- math variables are rendered with LaTeX-style mathtext (for example `$\ln Z$`)
+- hypothesis labels use spaced names (`signal fit`, `no signal`) in legends
+- in `delta_log_evidence_vs_perturb_frac.png`, points with `\Delta\ln Z > 0`
+  are highlighted in red to indicate preference for a spurious detection
+
 ---
 
 ## CLI usage

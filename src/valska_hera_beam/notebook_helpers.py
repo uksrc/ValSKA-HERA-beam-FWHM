@@ -111,7 +111,7 @@ def plot_report_summary_diagnostics(
     tick_fs: int = 14,
     legend_fs: int = 14,
 ) -> tuple[dict[str, Any], pd.DataFrame]:
-    """Plot $\Delta\ln Z$ and $\ln Z$ diagnostics from sweep report summary."""
+    """Plot $\\Delta\\ln Z$ and $\\ln Z$ diagnostics from sweep report summary."""
     summary_json = Path(sweep_dir) / "report" / "sweep_report_summary.json"
     if not summary_json.exists():
         raise FileNotFoundError(
@@ -339,7 +339,7 @@ def run_airy_banter_summary(
             verbose=False,
         )
 
-    rows_human: list[dict[str, Any]] = []
+    summary_rows: list[dict[str, Any]] = []
     for row in results.get("successful_results", []):
         raw_label = str(row.get("perturbation", "unknown"))
         log_bf = row.get("log_bayes_factor")
@@ -349,7 +349,7 @@ def run_airy_banter_summary(
             perturb_frac = None
 
         fail = log_bf is not None and log_bf > 0
-        rows_human.append(
+        summary_rows.append(
             {
                 "perturbation": label_from_run_label(raw_label),
                 "perturb_frac": perturb_frac,
@@ -365,10 +365,12 @@ def run_airy_banter_summary(
     )
     print("=" * 88)
 
-    human_df = pd.DataFrame(rows_human)
-    if len(human_df):
-        human_df = human_df.sort_values("perturb_frac").reset_index(drop=True)
-        table_df = human_df[
+    summary_df = pd.DataFrame(summary_rows)
+    if len(summary_df):
+        summary_df = summary_df.sort_values("perturb_frac").reset_index(
+            drop=True
+        )
+        table_df = summary_df[
             ["perturbation", "log_bayes_factor", "validation", "interpretation"]
         ]
         table_html = table_df.to_html(index=False, escape=False)
@@ -383,16 +385,16 @@ def run_airy_banter_summary(
         print("No successful results to summarize.")
 
     summary = results.get("summary", {})
-    if len(human_df):
+    if len(summary_df):
         print(
-            f"TOTAL: {summary.get('total', len(human_df))} | "
-            f"PASS: {summary.get('pass', int((human_df['validation'] == '✅ PASS').sum()))} | "
-            f"FAIL: {summary.get('fail', int((human_df['validation'] == '❌ FAIL').sum()))} | "
+            f"TOTAL: {summary.get('total', len(summary_df))} | "
+            f"PASS: {summary.get('pass', int((summary_df['validation'] == '✅ PASS').sum()))} | "
+            f"FAIL: {summary.get('fail', int((summary_df['validation'] == '❌ FAIL').sum()))} | "
             f"ERROR: {summary.get('error', 0)}"
         )
 
     return {
         "airy_pairs": airy_pairs,
         "results": results,
-        "human_df": human_df,
+        "summary_df": summary_df,
     }

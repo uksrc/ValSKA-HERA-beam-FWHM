@@ -36,22 +36,22 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-  "black>=25.12.0",
-  "flake8>=7.3.0",
-  "isort>=7.0.0",
-  "pylint>=4.0.4",
-  "pylint-junit>=0.3.5",
-  "pytest>=9.0.2",
-  "pytest-cov>=7.0.0",
-  "pytest-mock>=3.15.1",
-  "ruff>=0.14.11",
-  "mypy>=1.19.1",
-  "pre-commit>=4.5.1",
-  "ipykernel>=7.1.0",
-  "nbstripout>=0.8.2",
-  "build>=1.4.0",
-  "twine>=6.2.0",
-  "nbmake>=1.5.5"
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "ruff>=0.12.0",
+  "nbqa",
+  "mypy",
+  "pre-commit",
+  "ipykernel",
+  "nbstripout",
+  "build",
+  "twine",
+  "nbmake",
+  "sphinx",
+  "sphinx_rtd_theme",
+  "myst_parser",
+  "types-pyyaml"
 ]
 docs = [
   "mkdocs>=1.6.1",
@@ -79,3 +79,10 @@ exclude = ["tests*", "docs*", "notebooks*", "scripts*", "temp*"]
 [tool.setuptools_scm]
 write_to = "src/valska_hera_beam/_version.py"
 fallback_version = "0.1.0"
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+# E/F = Flake8, I = Isort, PL = Pylint, UP = Pyupgrade
+select = ["E", "F", "I", "PL", "UP"]

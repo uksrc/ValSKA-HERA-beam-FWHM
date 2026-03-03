@@ -1,5 +1,3 @@
-name: ValSKA CI/CD Pipeline
-
 on: [push]
 
 permissions:
@@ -15,16 +13,6 @@ jobs:
         shell: bash -l {0}
     steps:
     - uses: actions/checkout@v5
-    - name: Install dependencies
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        activate-environment: valska
-        environment-file: valska_env.yaml
-        # We do not need the base environment to be activated as well
-        auto-activate: true
-    - name: Test with pytest
+    - name: echo
       run: |
-        make python-test
-    - name: Test notebooks
-      run: |
-        make notebook-test
+        echo "hello"

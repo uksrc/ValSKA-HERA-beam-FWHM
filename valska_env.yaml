@@ -15,8 +15,8 @@ dependencies:
   - anesthetic>=2.11.0
   - astropy>=7.2.0
   - astropy-healpix>=1.1.2
-  - cudatoolkit>=11.8.0 # Uncomment only on Galahad
-  # - cuda>=13.1.0 # Uncomment everywhere except Galahad
+  # - cudatoolkit>=11.8.0 # Uncomment only on Galahad
+  - cuda>=13.1.0 # Uncomment everywhere except Galahad
   - gcc_linux-64>=15.2.0
   - h5py>=3.15.1
   - jsonargparse>=4.40.2
@@ -37,6 +37,7 @@ dependencies:
   - threadpoolctl>=3.6.0
   - tqdm>=4.67.1
   - pandas>=2.3.3
+  - pyyaml
 
   - pip:
       # - "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"

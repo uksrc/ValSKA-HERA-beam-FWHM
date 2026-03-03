@@ -6,5 +6,3 @@ API
    :recursive:
 
    valska_hera_beam
-   
-

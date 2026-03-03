@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import patch
 
 import numpy
@@ -380,7 +381,7 @@ def test_plot_gleam_analysis(path_manager):
     GLEAM analysis
     """
 
-    fig = plotting.plot_gleam_analysis(path_manager.chains_dir)
+    fig = cast(Any, plotting.plot_gleam_analysis(path_manager.chains_dir))
 
     expected_title = (
         "UKSRC validation: Burba et al. 2023, Case 1. \n"
@@ -405,7 +406,7 @@ def test_plot_gsm_comparison(path_manager):
     GSM foreground analysis
     """
 
-    fig = plotting.plot_gsm_comparison(path_manager.chains_dir)
+    fig = cast(Any, plotting.plot_gsm_comparison(path_manager.chains_dir))
 
     assert (
         fig.suptitle

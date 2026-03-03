@@ -44,6 +44,8 @@ class MockDataContainer:
         ]
 
     def plot_power_spectra_and_posteriors(self, **plot_args):
+        """Return mock figure"""
+
         fig = MockFig(**plot_args)
 
         return fig
@@ -54,8 +56,8 @@ class MockFig:
 
     def __init__(self, **plot_args):
         self.axes = [MockAx()]
-        for a in plot_args:
-            setattr(self, a, plot_args[a])
+        for key, value in plot_args.items():
+            setattr(self, key, value)
 
 
 class MockAx:
@@ -65,9 +67,10 @@ class MockAx:
         self.leg = MockLegend()
 
     def get_legend(self):
+        """Get legend"""
         return self.leg
 
-    def legend(
+    def legend(  # noqa: PLR0913
         self,
         handles,
         labels,
@@ -77,10 +80,11 @@ class MockAx:
         frameon,
         framealpha,
     ):
+        """Set legend parameters"""
         self.leg.legendHandles = handles
         self.leg.texts = [MockText(label) for label in labels]
-        self.leg._loc = loc
-        self.leg._fontsize = fontsize
+        self.leg.set_loc(loc)
+        self.leg.set_fontsize(fontsize)
         self.leg.ncol = ncol
         self.leg.frameon = frameon
         self.leg.framealpha = framealpha
@@ -100,7 +104,16 @@ class MockLegend:
         self.framealpha = 1.0
 
     def get_texts(self):
+        """Return texts"""
         return self.texts
+
+    def set_loc(self, loc):
+        """Set loc"""
+        self._loc = loc
+
+    def set_fontsize(self, fontsize):
+        """Set fontsize"""
+        self._fontsize = fontsize
 
 
 class MockText:
@@ -110,9 +123,11 @@ class MockText:
         self.text = text
 
     def get_text(self):
+        """Get text"""
         return self.text
 
     def set_text(self, text):
+        """Set text"""
         self.text = text
 
 
@@ -126,10 +141,12 @@ class MockChain:
         self.read_chain(chain_path)
 
     def read_chain(self, chain_path):
-        with open(chain_path) as file:
+        """Read chain path and fill logZ"""
+        with open(chain_path, encoding="utf-8") as file:
             self.logZ_value = file.read()
 
     def logZ(self):
+        """Return logZ"""
         return self.logZ_value
 
 

@@ -1,5 +1,4 @@
-# Unit tests for plotting
-
+"""Unit tests for plotting"""
 
 import tempfile
 from pathlib import Path
@@ -245,7 +244,7 @@ def test_plot_analysis_results(beam_analysis, input_args, expected_results):
     assert fig.labels == expected_results["labels"]
 
     # This is set by default and cannot be changed at the moment
-    assert fig.legend_ncols == 6
+    assert fig.legend_ncols == 6  # noqa: PLR2004
 
     if "figsize" in input_args.keys():
         assert fig.plot_width == int(input_args["figsize"][0] / 2)

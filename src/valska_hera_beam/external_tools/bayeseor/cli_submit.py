@@ -234,8 +234,8 @@ def _has_gpu_jobs(existing: dict[str, Any] | None) -> bool:
     return sf_ok or ns_ok
 
 
-def _print_human(result: dict[str, Any]) -> None:
-    """Print a human-readable submission summary."""
+def _print_summary(result: dict[str, Any]) -> None:
+    """Print a readable submission summary."""
     run_dir = result.get("run_dir", "")
     dry_run = bool(result.get("dry_run", False))
 
@@ -428,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         print(json.dumps(result, indent=2))
     else:
-        _print_human(result)
+        _print_summary(result)
 
     return 0
 

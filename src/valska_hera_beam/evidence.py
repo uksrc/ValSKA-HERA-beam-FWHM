@@ -36,7 +36,10 @@ Typical usage examples
 
 from __future__ import annotations
 
+import traceback
+from collections.abc import Iterable
 from dataclasses import dataclass
+from os.path import commonpath
 from pathlib import Path
 from typing import (
     Any,
@@ -52,13 +55,13 @@ import tqdm  # noqa: F401
 from anesthetic import read_chains
 from bayeseor.analyze.analyze import DataContainer
 
-PathLike = Union[str, Path]
-BayesFactorResult = Dict[str, Any]
-PerturbationResult = Dict[str, Any]
-SummaryDict = Dict[str, int]
+PathLike = str | Path
+BayesFactorResult = dict[str, Any]
+PerturbationResult = dict[str, Any]
+SummaryDict = dict[str, int]
 
 
-def interpret_bayes_factor(log_bf: float) -> str:
+def interpret_bayes_factor(log_bf: float) -> str:  # noqa: PLR0911
     """
     Interpret the strength of evidence given a log Bayes factor.
 
@@ -70,23 +73,23 @@ def interpret_bayes_factor(log_bf: float) -> str:
     Returns
     -------
     str
-        Human-readable description of evidence strength, based on
+        Readable description of evidence strength, based on
         commonly used (Jeffreys-like) thresholds.
     """
-    if log_bf > 5:
+    if log_bf > 5:  # noqa: PLR2004
         return "Very strong evidence for model 1"
-    elif log_bf > 3:
+    if log_bf > 3:  # noqa: PLR2004
         return "Strong evidence for model 1"
-    elif log_bf > 1:
+    if log_bf > 1:  # noqa: PLR2004
         return "Moderate evidence for model 1"
-    elif log_bf > -1:
+    if log_bf > -1:  # noqa: PLR2004
         return "Weak/inconclusive evidence"
-    elif log_bf > -3:
+    if log_bf > -3:  # noqa: PLR2004
         return "Moderate evidence for model 2"
-    elif log_bf > -5:
+    if log_bf > -5:  # noqa: PLR2004
         return "Strong evidence for model 2"
-    else:
-        return "Very strong evidence for model 2"
+
+    return "Very strong evidence for model 2"
 
 
 def calculate_bayes_factor(
@@ -97,18 +100,22 @@ def calculate_bayes_factor(
     verbose: bool = True,
 ) -> BayesFactorResult:
     """
-    Calculate Bayes factor between two models given their nested-sampling chains.
+    Calculate Bayes factor between two models given their nested-sampling
+    chains.
 
     The function assumes that the directories at ``chain_path_1`` and
-    ``chain_path_2`` are readable by :func:`anesthetic.read_chains` and that
-    the returned objects implement a ``logZ()`` method (as in anesthetic).
+    ``chain_path_2`` are readable by :func:`anesthetic.read_chains` and
+    that the returned objects implement a ``logZ()`` method (as in
+    anesthetic).
 
     Parameters
     ----------
     chain_path_1 :
-        Path to the first model's chain directory (numerator in Bayes factor).
+        Path to the first model's chain directory (numerator in Bayes
+        factor).
     chain_path_2 :
-        Path to the second model's chain directory (denominator in Bayes factor).
+        Path to the second model's chain directory (denominator in Bayes
+        factor).
     model_name_1 :
         Name of the first model for display and reporting.
     model_name_2 :
@@ -124,10 +131,10 @@ def calculate_bayes_factor(
 
         - ``'model_1'``: str, the name of model 1.
         - ``'model_2'``: str, the name of model 2.
-        - ``'log_evidence_1'``: float or ``None``, log-evidence of model 1.
-        - ``'log_evidence_2'``: float or ``None``, log-evidence of model 2.
+        - ``'log_evidence_1'``: float or ``None``, log-evidence of model 1
+        - ``'log_evidence_2'``: float or ``None``, log-evidence of model 2
         - ``'log_bayes_factor'``: float or ``None``, ln(Z1/Z2).
-        - ``'interpretation'``: str, human-readable interpretation.
+        - ``'interpretation'``: str, readable interpretation.
         - ``'success'``: bool, True if computation succeeded.
         - ``'error'``: str or ``None``, error message if failed.
     """
@@ -169,13 +176,12 @@ def calculate_bayes_factor(
 
         if verbose:
             print(
-                f"Log Bayes Factor (ln({model_name_1}/{model_name_2})): {log_bayes_factor:.6f}"
+                f"Log Bayes Factor (ln({model_name_1}/{model_name_2})):"
+                f" {log_bayes_factor:.6f}"
             )
             print(f"Interpretation: {result['interpretation']}")
 
     except Exception as e:
-        import traceback
-
         error_msg = (
             "Error calculating Bayes factor:\n"
             f"  model_1 path: {chain_path_1}\n"
@@ -190,9 +196,9 @@ def calculate_bayes_factor(
     return result
 
 
-# =============================================================================
+# ==========================================================================
 # PAIR-BASED API
-# =============================================================================
+# ==========================================================================
 
 
 @dataclass
@@ -204,7 +210,7 @@ class ChainPair:
     fgonly_root: Path  # directory that directly contains data-*
 
 
-ChainPairMap = Dict[str, ChainPair]
+ChainPairMap = dict[str, ChainPair]
 
 
 def _find_single_mn_subdir(root: Path) -> Path:
@@ -235,7 +241,7 @@ def _normalize_perturbation_key(raw_suffix: str) -> str:
     return raw_suffix
 
 
-def find_chain_pairs(
+def find_chain_pairs(  # noqa: PLR0912
     base_dir: Path,
     fgeor_prefix: str = "GL_FgEoR_",
     fgonly_prefix: str = "GL_FgOnly_",
@@ -291,8 +297,8 @@ def find_chain_pairs(
         )
 
     # Collect top-level FgEoR and FgOnly directories
-    fgeor_dirs: Dict[str, Path] = {}
-    fgonly_dirs: Dict[str, Path] = {}
+    fgeor_dirs: dict[str, Path] = {}
+    fgonly_dirs: dict[str, Path] = {}
 
     for entry in base_dir.iterdir():
         if not entry.is_dir():
@@ -323,10 +329,12 @@ def find_chain_pairs(
 
     if debug:
         print(
-            f"[find_chain_pairs] Collected FgEoR keys: {sorted(fgeor_dirs.keys())}"
+            "[find_chain_pairs] Collected FgEoR keys: "
+            f"{sorted(fgeor_dirs.keys())}"
         )
         print(
-            f"[find_chain_pairs] Collected FgOnly keys: {sorted(fgonly_dirs.keys())}"
+            "[find_chain_pairs] Collected FgOnly keys:"
+            f" {sorted(fgonly_dirs.keys())}"
         )
 
     # Determine all perturbation keys where we have both sides
@@ -369,9 +377,9 @@ def find_chain_pairs(
     return pairs
 
 
-def analyze_chain_pair(
+def analyze_chain_pair(  # noqa: PLR0912
     pair: ChainPair,
-    dir_prefix: Optional[Path] = None,
+    dir_prefix: Path | None = None,
     expected_ps: float = 214777.66068216303,
     create_plots: bool = True,
     verbose: bool = True,
@@ -384,8 +392,9 @@ def analyze_chain_pair(
     pair :
         :class:`ChainPair` describing the perturbation and root directories.
     dir_prefix :
-        Optional prefix to strip off when handing paths to :class:`DataContainer`.
-        If ``None``, the common ancestor of both roots is used.
+        Optional prefix to strip off when handing paths to
+        :class:`DataContainer`. If ``None``, the common ancestor of both
+        roots is used.
     expected_ps :
         Expected power spectrum value passed through to :class:`DataContainer`.
     create_plots :
@@ -417,8 +426,8 @@ def analyze_chain_pair(
 
     # Determine dir_prefix for DataContainer if not provided
     if dir_prefix is None:
-        # Use the true common ancestor of both roots (may be several levels up)
-        from os.path import commonpath
+        # Use the true common ancestor of both roots
+        # (may be several levels up)
 
         common_str = commonpath([str(pair.fgeor_root), str(pair.fgonly_root)])
         dir_prefix = Path(common_str)
@@ -481,7 +490,8 @@ def analyze_chain_pair(
                 print("✅ PASS: BaNTER correctly favors foreground-only model")
             else:
                 print(
-                    "❌ FAIL: BaNTER incorrectly detects EoR signal in foreground-only data"
+                    "❌ FAIL: BaNTER incorrectly detects EoR signal in "
+                    "foreground-only data"
                 )
     else:
         result["validation"] = "ERROR"
@@ -489,16 +499,16 @@ def analyze_chain_pair(
     return result
 
 
-def run_complete_bayeseor_analysis(
+def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
     chain_pairs: ChainPairMap,
-    perturbation_levels: Optional[Iterable[str]] = None,
-    dir_prefix: Optional[Path] = None,
+    perturbation_levels: Iterable[str] | None = None,
+    dir_prefix: Path | None = None,
     expected_ps: float = 214777.66068216303,
     create_plots: bool = False,
     show_detailed_results: bool = False,
     verbose: bool = True,
     show_progress: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run a complete BayesEoR perturbation analysis over multiple chain pairs.
 
@@ -521,7 +531,7 @@ def run_complete_bayeseor_analysis(
         If ``True``, print detailed numerical results per successful
         perturbation.
     verbose :
-        If ``True``, print human-readable progress and summary messages.
+        If ``True``, print readable progress and summary messages.
     show_progress :
         If ``True`` and multiple perturbation levels are analyzed, display
         a ``tqdm`` progress bar (if available).
@@ -539,7 +549,7 @@ def run_complete_bayeseor_analysis(
         pair_items = [(k, v) for k, v in pair_items if k in requested]
 
     pair_items.sort(key=lambda kv: kv[0])
-    labels: List[str] = [k for k, _ in pair_items]
+    labels: list[str] = [k for k, _ in pair_items]
     total_cases = len(labels)
 
     if verbose:
@@ -549,7 +559,7 @@ def run_complete_bayeseor_analysis(
         if create_plots:
             print("Note: Plots will be generated for each perturbation")
 
-    all_results: List[PerturbationResult] = []
+    all_results: list[PerturbationResult] = []
 
     # Progress bar
     if verbose and show_progress and total_cases > 1:
@@ -655,14 +665,14 @@ def run_complete_bayeseor_analysis(
     )
 
     # Collect successful results
-    successful_results: List[Dict[str, Any]] = []
+    successful_results: list[dict[str, Any]] = []
     for result in all_results:
         if (
             result["validation"] != "ERROR"
             and result["bayes_factor_result"]["success"]
         ):
             bf_data = result["bayes_factor_result"]
-            detailed_result: Dict[str, Any] = {
+            detailed_result: dict[str, Any] = {
                 "perturbation": result["perturbation"],
                 "log_evidence_fgeor": bf_data["log_evidence_1"],
                 "log_evidence_fgonly": bf_data["log_evidence_2"],
@@ -715,20 +725,20 @@ def run_complete_bayeseor_analysis(
 # EXAMPLES (MANUAL)
 # =============================================================================
 
-run_run_examples: bool = False
+RUN_RUN_EXAMPLES: bool = False
 
-if run_run_examples:
+if RUN_RUN_EXAMPLES:
     cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
     chains_dir = cwd / Path("../chains/")
     v7_base = chains_dir / "v7d0"
 
     print("=== Discovering v7d0 chain pairs ===")
-    pairs = find_chain_pairs(v7_base)
-    print(f"Found {len(pairs)} pairs:", list(pairs.keys()))
+    found_pairs = find_chain_pairs(v7_base)
+    print(f"Found {len(found_pairs)} pairs:", list(found_pairs.keys()))
 
     print("=== Example: Complete analysis over all discovered pairs ===")
     results = run_complete_bayeseor_analysis(
-        chain_pairs=pairs,
+        chain_pairs=found_pairs,
         create_plots=False,
         verbose=True,
     )

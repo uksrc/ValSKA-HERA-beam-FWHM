@@ -51,15 +51,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "black",
-  "flake8",
-  "isort",
-  "pylint",
-  "pylint-junit",
   "pytest",
   "pytest-cov",
   "pytest-mock",
   "ruff>=0.12.0",
+  "nbqa",
   "mypy",
   "pre-commit",
   "ipykernel",
@@ -69,7 +65,8 @@ dev = [
   "nbmake",
   "sphinx",
   "sphinx_rtd_theme",
-  "myst_parser"
+  "myst_parser",
+  "types-pyyaml"
 ]
 docs = [
   "mkdocs",
@@ -118,3 +115,10 @@ exclude = ["tests*", "docs*", "notebooks*", "scripts*", "temp*"]
 [tool.setuptools_scm]
 write_to = "src/valska_hera_beam/_version.py"
 fallback_version = "0.1.0"
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+# E/F = Flake8, I = Isort, PL = Pylint, UP = Pyupgrade
+select = ["E", "F", "I", "PL", "UP"]

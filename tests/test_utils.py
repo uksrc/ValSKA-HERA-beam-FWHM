@@ -1,4 +1,4 @@
-# Unit tests for utils
+"""Unit tests for utils"""
 
 import json
 import os
@@ -77,10 +77,10 @@ def test_load_paths_with_input():
 
 
 def test_load_paths_with_input_error():
-    """Test load paths from non-existant yaml file"""
+    """Test load paths from non-existent yaml file"""
 
     with pytest.raises(FileNotFoundError):
-        utils.load_paths("nonexistant_yaml_file.yml")
+        utils.load_paths("nonexistent_yaml_file.yml")
 
 
 def test_load_runtime_paths_env_override(tmp_path, monkeypatch):
@@ -192,7 +192,7 @@ def test_repr(path_manager):
         "results_root": path_manager.results_root,
     }
 
-    repr_string = path_manager.__repr__()
+    repr_string = repr(path_manager)
 
     # Don't require exact ordering/complete equality; ensure required lines exist.
     assert repr_string.startswith("PathManager:\n")
@@ -302,29 +302,6 @@ def test_create_path_manager_default(pm, chains):
 
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
-
-
-@pytest.mark.parametrize(
-    "key, prefix, label_prefix, expected_result",
-    [
-        ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", None, "GSM -1%"),
-        ("GSM_FgEoR_-1e1pp", "GSM_FgEoR_", None, "GSM -10%"),
-        ("GSM_FgEoR_-1e-3pp", "GSM_FgEoR_", None, "GSM -0.001%"),
-        ("GSM_FgEoR_-1.123e0pp", "GSM_FgEoR_", None, "GSM -1.12%"),
-        ("GSM_FgEoR_1e0pp", "GSM_FgEoR_", None, "GSM +1%"),
-        ("GSM_FgEoR_1e1pp", "GSM_FgEoR_", None, "GSM +10%"),
-        ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", "MyPrefix", "MyPrefix -1%"),
-        ("GSM_FgEoR_-1e0pp", "MyPrefix_", None, None),
-        ("GSM_FgEoR_-1e0", "GSM_FgEoR_", None, None),
-        ("GSM_FgEoR_-abcpp", "GSM_FgEoR_", None, None),
-    ],
-)
-def test_pp_key_to_percent_label(key, prefix, label_prefix, expected_result):
-    """Test to strip prefix from key to produce labels"""
-
-    label = utils._pp_key_to_percent_label(key, prefix, label_prefix)
-
-    assert label == expected_result
 
 
 def test_build_pp_groups_from_paths_default():

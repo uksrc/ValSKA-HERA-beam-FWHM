@@ -111,6 +111,9 @@ In order to enforce CI checks on pull requests, branch protection rules are in p
 - Require status checks to pass before merging
 - Require pull request reviews before merging
 
+We use pre-commit hooks to ensure code quality and consistency - please see the [Guide to Contributing](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/contributing.html) for further information about setting up and using pre-commit.
+
+
 For any additional questions or comments, please contact one of the UKSRC science validation tooling team:
  - Peter Sims (PO) - ps550 [at] cam.ac.uk
  - Tianyue Chen (SM) - tianyue.chen [at] manchester.ac.uk

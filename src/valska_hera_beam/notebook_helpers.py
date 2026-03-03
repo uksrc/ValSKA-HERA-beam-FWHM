@@ -282,7 +282,7 @@ def plot_signal_fit_chain_comparison(
 def run_airy_banter_summary(
     points: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Run Airy BaNTER summary and display a wide, non-truncating results table."""
+    """Run Airy BaNTER summary and display a wide, non-truncating summary table."""
 
     def label_from_run_label(run_label: str) -> str:
         try:
@@ -361,7 +361,7 @@ def run_airy_banter_summary(
 
     print("=" * 88)
     print(
-        "COMPLETE BAYESEOR PERTURBATION ANALYSIS SUMMARY (AIRY, HUMAN-READABLE)"
+        "COMPLETE BAYESEOR PERTURBATION ANALYSIS SUMMARY (AIRY, PLAIN-LANGUAGE)"
     )
     print("=" * 88)
 

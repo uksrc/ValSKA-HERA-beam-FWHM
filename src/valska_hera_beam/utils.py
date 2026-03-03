@@ -5,7 +5,7 @@ This module provides:
 - Path management via :class:`PathManager`
 - Loading of analysis paths from ``config/paths.yaml``
 - Loading of site/user runtime paths from ``config/runtime_paths.yaml``
-- Helpers to build perturbation groups and human-readable labels
+- Helpers to build perturbation groups and readable labels
 - Simple filtering helpers for perturbation keys
 
 Notes on runtime_paths.yaml
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import inspect
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Mapping, MutableMapping, Optional, Union
 
@@ -322,7 +323,7 @@ class PathManager:
         """
         return resolve_data_path(data_path, self.runtime_paths)
 
-    def get_paths(self) -> Dict[str, Path]:
+    def get_paths(self) -> dict[str, Path]:
         """Get a dictionary of all managed paths.
 
         Returns
@@ -392,7 +393,7 @@ class PathManager:
         return new_dir
 
     def find_file(
-        self, pattern: str, path_name: Optional[str] = None
+        self, pattern: str, path_name: str | None = None
     ) -> list[Path]:
         """Find files matching a pattern in a specified directory.
 
@@ -440,7 +441,6 @@ def make_timestamp() -> str:
     str
         Current timestamp in format ``YYYY-MM-DD_HHMMSS``.
     """
-    from datetime import datetime
 
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
@@ -469,7 +469,7 @@ def load_paths(custom_paths_file: Optional[PathLike] = None) -> Dict[str, str]:
     if not paths_file.exists():
         raise FileNotFoundError(f"Paths file not found: {paths_file}")
 
-    with open(paths_file, "r") as f:
+    with open(paths_file, encoding="utf-8") as f:
         paths = yaml.safe_load(f)
 
     return paths
@@ -490,22 +490,25 @@ def _pp_key_to_percent_label(
     Parameters
     ----------
     key : str
-        Full analysis key (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
+        Full analysis key
+        (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
     prefix : str
-        The prefix to strip before the numeric part (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
+        The prefix to strip before the numeric part
+        (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
     label_prefix : str, optional
         Text to put in front of the percentage (default: derived from prefix).
 
     Returns
     -------
     str or None
-        Human-readable label (e.g. ``'GSM -1%'``, ``'GL +0.1%'``)
+        Readable label (e.g. ``'GSM -1%'``, ``'GL +0.1%'``)
         or ``None`` if the key does not match the expected format.
     """
     if not key.startswith(prefix):
         return None
 
-    middle = key[len(prefix) :]  # e.g. '-1e0pp' or '1.0e-01pp'
+    #  # e.g. '-1e0pp' or '1.0e-01pp'
+    middle = key[len(prefix) :]  # noqa: E203
     if not middle.endswith("pp"):
         return None
 
@@ -534,7 +537,8 @@ def build_pp_groups_from_paths(
     label_prefixes: Optional[Dict[str, str]] = None,
 ) -> Dict[str, list[str]]:
     """
-    Build groups for perturbation runs from paths.yaml for one or more prefixes.
+    Build groups for perturbation runs from paths.yaml for one or more
+    prefixes.
 
     Examples
     --------
@@ -548,7 +552,7 @@ def build_pp_groups_from_paths(
     -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
     paths = load_paths(custom_paths_file)
-    raw_groups: Dict[str, list[str]] = {}
+    raw_groups: dict[str, list[str]] = {}
 
     for key in paths.keys():
         for prefix in prefixes:
@@ -572,11 +576,11 @@ def build_pp_groups_from_paths(
     def label_to_val(lbl: str) -> float:
         # 'GSM -0.1%' -> -0.1
         try:
-            return float(lbl.split()[-1].strip("%"))
+            return float(lbl.rsplit(maxsplit=1)[-1].strip("%"))
         except Exception:
             return 0.0
 
-    groups: Dict[str, list[str]] = {}
+    groups: dict[str, list[str]] = {}
     for label in sorted(raw_groups.keys(), key=label_to_val):
         groups[label] = sorted(raw_groups[label])
 

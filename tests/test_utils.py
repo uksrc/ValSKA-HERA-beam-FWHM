@@ -64,7 +64,9 @@ def test_load_paths_with_input():
     """Test load paths from yaml file"""
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
-        yaml_file.writelines("Test1: test/directory1/\nTest2: test/directory2/")
+        yaml_file.writelines(
+            "Test1: test/directory1/\nTest2: test/directory2/"
+        )
         yaml_file.seek(0)
 
         paths = utils.load_paths(yaml_file.name)

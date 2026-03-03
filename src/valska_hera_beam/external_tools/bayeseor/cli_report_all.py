@@ -263,7 +263,8 @@ def main(argv: list[str] | None = None) -> int:
     search_root = results_root / "bayeseor"
     if not search_root.exists():
         print(
-            f"ERROR: search root does not exist: {search_root}", file=sys.stderr
+            f"ERROR: search root does not exist: {search_root}",
+            file=sys.stderr,
         )
         return 2
 

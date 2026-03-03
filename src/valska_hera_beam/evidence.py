@@ -41,14 +41,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from os.path import commonpath
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Union,
-)
+from typing import Any
 
 import matplotlib.pyplot as plt
 import tqdm  # noqa: F401

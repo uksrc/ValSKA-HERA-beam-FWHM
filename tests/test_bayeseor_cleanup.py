@@ -21,7 +21,10 @@ def _write_data_stats(path: Path) -> None:
 
 
 def _mk_complete_point(run_dir: Path) -> None:
-    for hyp, mn in (("signal_fit", "MN-signal"), ("no_signal", "MN-no-signal")):
+    for hyp, mn in (
+        ("signal_fit", "MN-signal"),
+        ("no_signal", "MN-no-signal"),
+    ):
         base = run_dir / "output" / hyp / mn
         base.mkdir(parents=True, exist_ok=True)
         (base / "data-.txt").write_text("chain\n", encoding="utf-8")

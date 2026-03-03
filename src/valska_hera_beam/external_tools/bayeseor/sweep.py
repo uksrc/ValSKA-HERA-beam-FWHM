@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Literal
 
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
@@ -345,8 +346,7 @@ def run_fwhm_sweep(
         raise ValueError("variant must be a non-empty string")
     if perturb_parameter not in {"fwhm_deg", "antenna_diameter"}:
         raise ValueError(
-            "perturb_parameter must be one of: 'fwhm_deg', "
-            "'antenna_diameter'."
+            "perturb_parameter must be one of: 'fwhm_deg', 'antenna_diameter'."
         )
     if perturb_fracs is not None and fwhm_fracs is not None:
         raise ValueError(

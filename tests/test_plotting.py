@@ -21,7 +21,9 @@ def test_create_beam_plotter_with_paths_file(path_manager):
     """Test creating beam plotter with paths in yaml file"""
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
-        yaml_file.writelines("Test1: test/directory1/\nTest2: test/directory2/")
+        yaml_file.writelines(
+            "Test1: test/directory1/\nTest2: test/directory2/"
+        )
         yaml_file.seek(0)
 
         beam_analysis_plotter = plotting.BeamAnalysisPlotter(

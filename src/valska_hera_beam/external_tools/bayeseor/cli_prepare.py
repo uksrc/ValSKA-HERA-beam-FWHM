@@ -548,7 +548,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         results_root = Path(pm.results_root).expanduser()
         results_root_src = (
-            "runtime_paths.yaml" if "results_root" in runtime else "env/default"
+            "runtime_paths.yaml"
+            if "results_root" in runtime
+            else "env/default"
         )
 
     # unique default via runtime_paths.yaml
@@ -570,20 +572,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.run_label is not None and str(args.run_label).strip():
         run_label = str(args.run_label).strip()
         run_label_src = "CLI(--run-label)"
+    elif args.fwhm_perturb_frac is not None:
+        run_label = _format_run_label_from_fwhm_frac(
+            float(args.fwhm_perturb_frac)
+        )
+        run_label_src = "auto(--fwhm-perturb-frac)"
+    elif args.antenna_diameter_perturb_frac is not None:
+        run_label = _format_run_label_from_antenna_diameter_frac(
+            float(args.antenna_diameter_perturb_frac)
+        )
+        run_label_src = "auto(--antenna-diameter-perturb-frac)"
     else:
-        if args.fwhm_perturb_frac is not None:
-            run_label = _format_run_label_from_fwhm_frac(
-                float(args.fwhm_perturb_frac)
-            )
-            run_label_src = "auto(--fwhm-perturb-frac)"
-        elif args.antenna_diameter_perturb_frac is not None:
-            run_label = _format_run_label_from_antenna_diameter_frac(
-                float(args.antenna_diameter_perturb_frac)
-            )
-            run_label_src = "auto(--antenna-diameter-perturb-frac)"
-        else:
-            run_label = "default"
-            run_label_src = "default"
+        run_label = "default"
+        run_label_src = "default"
 
     # BayesEoR repo path
     repo_path = args.bayeseor_repo
@@ -793,7 +794,9 @@ def main(argv: list[str] | None = None) -> int:
             gpu_cmds.append(f"sbatch {out[kgpu]}")
 
     if gpu_cmds:
-        print("     2) GPU run stage (after CPU stage completes successfully):")
+        print(
+            "     2) GPU run stage (after CPU stage completes successfully):"
+        )
         for c in gpu_cmds:
             print(f"        {c}")
 

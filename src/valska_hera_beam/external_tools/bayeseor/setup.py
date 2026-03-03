@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
@@ -196,7 +197,9 @@ def _materialise_hypothesis_config(
       - removes hypothesis-specific prior keys from the rendered config
     """
     if hypothesis not in {"signal_fit", "no_signal"}:
-        raise ValueError("hypothesis must be one of: 'signal_fit', 'no_signal'")
+        raise ValueError(
+            "hypothesis must be one of: 'signal_fit', 'no_signal'"
+        )
 
     cfg = CommentedMap(base_cfg)
 
@@ -416,7 +419,9 @@ def prepare_bayeseor_run(
         outputs[f"submit_sh_{hyp}_gpu_run"] = submit_gpu
 
     # One shared CPU precompute script (driven by chosen hypothesis config)
-    cpu_config_yaml = outputs[f"config_yaml_{cpu_precompute_driver_hypothesis}"]
+    cpu_config_yaml = outputs[
+        f"config_yaml_{cpu_precompute_driver_hypothesis}"
+    ]
     submit_cpu = run_dir / "submit_cpu_precompute.sh"
     submit_cpu.write_text(
         render_submit_script(

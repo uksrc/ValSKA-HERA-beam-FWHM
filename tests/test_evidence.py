@@ -447,7 +447,9 @@ def test_run_full_analysis(monkeypatch, input_list, summary, successful):
             fgonly_path.mkdir(parents=True, exist_ok=True)
 
             if inputs["log_evidence"][0]:
-                with open(f"{fgeor_path}/data-", "a", encoding="utf-8") as file:
+                with open(
+                    f"{fgeor_path}/data-", "a", encoding="utf-8"
+                ) as file:
                     file.write(f"{inputs['log_evidence'][0]:.9f}")
 
             if inputs["log_evidence"][1]:

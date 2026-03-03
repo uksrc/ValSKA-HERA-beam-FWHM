@@ -371,7 +371,12 @@ def run_airy_banter_summary(
             drop=True
         )
         table_df = summary_df[
-            ["perturbation", "log_bayes_factor", "validation", "interpretation"]
+            [
+                "perturbation",
+                "log_bayes_factor",
+                "validation",
+                "interpretation",
+            ]
         ]
         table_html = table_df.to_html(index=False, escape=False)
         display(

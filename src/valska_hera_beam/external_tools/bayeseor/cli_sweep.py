@@ -88,15 +88,14 @@ def _build_rerunnable_sweep_cmd(
             parts += [_shell_quote(str(x)) for x in fwhm_fracs]
         elif fwhm_fracs_file is not None:
             parts += ["--fwhm-fracs-file", _shell_quote(str(fwhm_fracs_file))]
-    else:
-        if antenna_diameter_fracs is not None:
-            parts.append("--antenna-diameter-fracs")
-            parts += [_shell_quote(str(x)) for x in antenna_diameter_fracs]
-        elif antenna_diameter_fracs_file is not None:
-            parts += [
-                "--antenna-diameter-fracs-file",
-                _shell_quote(str(antenna_diameter_fracs_file)),
-            ]
+    elif antenna_diameter_fracs is not None:
+        parts.append("--antenna-diameter-fracs")
+        parts += [_shell_quote(str(x)) for x in antenna_diameter_fracs]
+    elif antenna_diameter_fracs_file is not None:
+        parts += [
+            "--antenna-diameter-fracs-file",
+            _shell_quote(str(antenna_diameter_fracs_file)),
+        ]
 
     # Template / variant
     if template_arg is not None:
@@ -542,7 +541,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Prepare for real, but print sbatch commands only.",
     )
     p.add_argument(
-        "--force", action="store_true", help="Pass through force to submission."
+        "--force",
+        action="store_true",
+        help="Pass through force to submission.",
     )
     p.add_argument(
         "--resubmit",
@@ -591,7 +592,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         results_root = Path(pm.results_root).expanduser()
         results_root_src = (
-            "runtime_paths.yaml" if "results_root" in runtime else "env/default"
+            "runtime_paths.yaml"
+            if "results_root" in runtime
+            else "env/default"
         )
 
     # Resolve data path (supports runtime_paths.yaml:data.root)
@@ -1029,7 +1032,9 @@ def main(argv: list[str] | None = None) -> int:
         print("  Option A) Submit via valska-bayeseor-sweep (recommended):")
         print("     # CPU stage across all sweep points:")
         print(f"     {cmd_cpu_real}")
-        print("     # GPU stage across all sweep points (after CPU completes):")
+        print(
+            "     # GPU stage across all sweep points (after CPU completes):"
+        )
         print(f"     {cmd_gpu_real}")
         print("     # Or do both in one go:")
         print(f"     {cmd_all_real}")

@@ -109,7 +109,9 @@ def inspect_sweep_health(sweep_dir: Path) -> SweepHealth:
         )
 
         signal_chain = signal_dir / "data-.txt" if signal_dir else None
-        no_signal_chain = no_signal_dir / "data-.txt" if no_signal_dir else None
+        no_signal_chain = (
+            no_signal_dir / "data-.txt" if no_signal_dir else None
+        )
         signal_stats = signal_dir / "data-stats.dat" if signal_dir else None
         no_signal_stats = (
             no_signal_dir / "data-stats.dat" if no_signal_dir else None

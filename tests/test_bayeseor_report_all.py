@@ -129,7 +129,9 @@ def test_cli_report_all_json_and_only_new(tmp_path: Path, capsys) -> None:
     assert payload["summary"]["count_errors"] == 0
 
 
-def test_cli_report_all_fail_on_error_returns_1(tmp_path: Path, capsys) -> None:
+def test_cli_report_all_fail_on_error_returns_1(
+    tmp_path: Path, capsys
+) -> None:
     results_root = tmp_path / "results"
     _mk_sweep(
         results_root,

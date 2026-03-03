@@ -279,7 +279,9 @@ def _plot_log_evidence_by_model(
         ylabel = r"$\ln Z$ (Nested Sampling)"
     else:
         signal_vals = [float(sf_ins) for _, _, _, sf_ins, _ in usable_points]
-        no_signal_vals = [float(ns_ins) for _, _, _, _, ns_ins in usable_points]
+        no_signal_vals = [
+            float(ns_ins) for _, _, _, _, ns_ins in usable_points
+        ]
         ylabel = r"$\ln Z$ (Nested Importance Sampling)"
 
     with plt.rc_context({"font.family": "serif", "mathtext.fontset": "stix"}):
@@ -304,7 +306,9 @@ def _rows_to_dicts(rows: list[SweepPointReportRow]) -> list[dict[str, Any]]:
     return [asdict(r) for r in rows]
 
 
-def _write_summary_csv(rows: list[SweepPointReportRow], out_path: Path) -> None:
+def _write_summary_csv(
+    rows: list[SweepPointReportRow], out_path: Path
+) -> None:
     payload = _rows_to_dicts(rows)
     if not payload:
         headers = [
@@ -446,7 +450,9 @@ def generate_sweep_report(
     evidence_plot: Path | None = None
     if make_plots:
         delta_plot = report_dir / "delta_log_evidence_vs_perturb_frac.png"
-        evidence_plot = report_dir / "log_evidence_by_model_vs_perturb_frac.png"
+        evidence_plot = (
+            report_dir / "log_evidence_by_model_vs_perturb_frac.png"
+        )
         _plot_delta_log_evidence(rows, delta_plot)
         _plot_log_evidence_by_model(
             rows,
@@ -506,16 +512,16 @@ def generate_sweep_report(
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
             ) as handle:
-                writer = csv.DictWriter(handle, fieldnames=headers)
-                writer.writeheader()
+                dict_writer = csv.DictWriter(handle, fieldnames=headers)
+                dict_writer.writeheader()
                 for row in successful_rows:
-                    writer.writerow(row)
+                    dict_writer.writerow(row)
         else:
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
             ) as handle:
-                writer = csv.writer(handle)
-                writer.writerow(
+                csv_writer = csv.writer(handle)
+                csv_writer.writerow(
                     [
                         "perturbation",
                         "log_evidence_fgeor",

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 
@@ -132,13 +132,22 @@ def render_submit_script(
         val = slurm.get(key, default)
         if val is None:
             return None
+        if not isinstance(val, int | str):
+            raise TypeError(
+                f"slurm['{key}'] must be int or str, got {type(val).__name__}"
+            )
         return int(val)
 
     # -------------------------
     # Job identification
     # -------------------------
-    job_name_prefix = get_str_or_none("job_name_prefix", "bayeseor") or "bayeseor"
-    job_name = get_str_or_none("job_name") or f"{job_name_prefix}-{run_dir.name}-{mode}"
+    job_name_prefix = (
+        get_str_or_none("job_name_prefix", "bayeseor") or "bayeseor"
+    )
+    job_name = (
+        get_str_or_none("job_name")
+        or f"{job_name_prefix}-{run_dir.name}-{mode}"
+    )
 
     # -------------------------
     # Resource selection
@@ -185,9 +194,13 @@ def render_submit_script(
     out_log_default = run_dir / f"slurm-{mode}-%j.out"
     out_log = slurm.get("output", out_log_default)
     if out_log is not None:
+        if not isinstance(out_log, str | Path):
+            raise TypeError("slurm['output'] must be str or Path if provided")
         out_log = Path(out_log)
     err_log = slurm.get("error", None)
     if err_log is not None:
+        if not isinstance(err_log, str | Path):
+            raise TypeError("slurm['error'] must be str or Path if provided")
         err_log = Path(err_log)
 
     # -------------------------

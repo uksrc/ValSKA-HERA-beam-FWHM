@@ -13,7 +13,7 @@ def list_templates() -> list[str]:
         [
             p.name
             for p in resources.files(pkg).iterdir()
-            if p.suffix in {".yaml", ".yml"}
+            if Path(p.name).suffix in {".yaml", ".yml"}
         ]
     )
 

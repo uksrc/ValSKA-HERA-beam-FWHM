@@ -285,7 +285,8 @@ def main(argv: list[str] | None = None) -> int:
     search_root = results_root / "bayeseor"
     if not search_root.exists():
         print(
-            f"ERROR: search root does not exist: {search_root}", file=sys.stderr
+            f"ERROR: search root does not exist: {search_root}",
+            file=sys.stderr,
         )
         return 2
 
@@ -462,13 +463,16 @@ def main(argv: list[str] | None = None) -> int:
                     )
 
     if execute:
-        for row in actions:
-            if row.get("status") == "skipped" or row.get("status") == "error":
+        for action in actions:
+            if (
+                action.get("status") == "skipped"
+                or action.get("status") == "error"
+            ):
                 continue
-            p = Path(str(row["path"]))
+            p = Path(str(action["path"]))
             if not p.exists():
-                row["status"] = "skipped"
-                row["reason"] = "already missing"
+                action["status"] = "skipped"
+                action["reason"] = "already missing"
                 skipped += 1
                 continue
 
@@ -478,7 +482,7 @@ def main(argv: list[str] | None = None) -> int:
                         shutil.rmtree(p)
                     else:
                         p.unlink()
-                    row["status"] = "deleted"
+                    action["status"] = "deleted"
                     deleted += 1
                 else:
                     assert trash_root is not None
@@ -487,12 +491,12 @@ def main(argv: list[str] | None = None) -> int:
                         trash_root=trash_root,
                         rel_root=(results_root / "bayeseor"),
                     )
-                    row["status"] = "moved"
-                    row["target_path"] = str(target)
+                    action["status"] = "moved"
+                    action["target_path"] = str(target)
                     moved += 1
             except Exception as exc:
-                row["status"] = "error"
-                row["reason"] = str(exc)
+                action["status"] = "error"
+                action["reason"] = str(exc)
                 errors += 1
 
     payload = {

@@ -22,17 +22,17 @@ from __future__ import annotations
 
 import inspect
 import os
+from collections.abc import Mapping, MutableMapping
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Mapping, MutableMapping, Optional, Union
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 # =============================================================================
 # TYPE ALIASES
 # =============================================================================
 
-PathLike = Union[str, Path]
+PathLike = str | Path
 PairsMap = Mapping[str, object]  # generic mapping of key -> value
 MutablePairsMap = MutableMapping[str, object]
 
@@ -43,9 +43,9 @@ MutablePairsMap = MutableMapping[str, object]
 
 
 def load_runtime_paths(
-    base_dir: Optional[PathLike] = None,
-    runtime_paths_file: Optional[PathLike] = None,
-) -> Dict[str, object]:
+    base_dir: PathLike | None = None,
+    runtime_paths_file: PathLike | None = None,
+) -> dict[str, object]:
     """Load site/user runtime paths from ``config/runtime_paths.yaml`` if present.
 
     This configuration is intended for site/user-specific settings such as
@@ -197,12 +197,12 @@ class PathManager:
 
     def __init__(
         self,
-        base_dir: Optional[PathLike] = None,
-        chains_dir: Optional[PathLike] = None,
-        data_dir: Optional[PathLike] = None,
-        results_dir: Optional[PathLike] = None,
-        results_root: Optional[PathLike] = None,
-        runtime_paths_file: Optional[PathLike] = None,
+        base_dir: PathLike | None = None,
+        chains_dir: PathLike | None = None,
+        data_dir: PathLike | None = None,
+        results_dir: PathLike | None = None,
+        results_root: PathLike | None = None,
+        runtime_paths_file: PathLike | None = None,
     ):
         """Initialize the PathManager with configurable directories.
 
@@ -244,7 +244,7 @@ class PathManager:
             self.base_dir = Path(base_dir).expanduser().resolve()
 
         # Load runtime paths YAML (site/user config)
-        self.runtime_paths: Dict[str, object] = load_runtime_paths(
+        self.runtime_paths: dict[str, object] = load_runtime_paths(
             base_dir=self.base_dir,
             runtime_paths_file=runtime_paths_file,
         )
@@ -445,7 +445,7 @@ def make_timestamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
 
-def load_paths(custom_paths_file: Optional[PathLike] = None) -> Dict[str, str]:
+def load_paths(custom_paths_file: PathLike | None = None) -> dict[str, str]:
     """Load analysis paths from a YAML configuration file.
 
     Parameters
@@ -484,7 +484,7 @@ def _pp_key_to_percent_label(
     key: str,
     prefix: str,
     label_prefix: str | None = None,
-) -> Optional[str]:
+) -> str | None:
     """Convert ``'<prefix><pp>'`` key into a ``'<label_prefix> ±X%'`` label.
 
     Parameters
@@ -533,9 +533,9 @@ def _pp_key_to_percent_label(
 
 def build_pp_groups_from_paths(
     prefixes: list[str],
-    custom_paths_file: Optional[PathLike] = None,
-    label_prefixes: Optional[Dict[str, str]] = None,
-) -> Dict[str, list[str]]:
+    custom_paths_file: PathLike | None = None,
+    label_prefixes: dict[str, str] | None = None,
+) -> dict[str, list[str]]:
     """
     Build groups for perturbation runs from paths.yaml for one or more
     prefixes.
@@ -587,7 +587,7 @@ def build_pp_groups_from_paths(
     return groups
 
 
-def build_group_labels(groups: Dict[str, list[str]]) -> Dict[str, str]:
+def build_group_labels(groups: dict[str, list[str]]) -> dict[str, str]:
     """Build a simple group_labels dict (identity mapping)."""
     return {label: label for label in groups.keys()}
 
@@ -624,7 +624,7 @@ def _parse_pp_key_to_float(key: str) -> float:
         raise ValueError(f"Key does not end with 'pp': {key}")
 
     # Extract the last token that contains the numeric part with 'pp'
-    token = key.split("_")[-1]  # e.g. '-1e0pp' or '1.0e-01pp'
+    token = key.rsplit("_", maxsplit=1)[-1]  # e.g. '-1e0pp' or '1.0e-01pp'
     mag_str = token[:-2]  # strip 'pp'
     return float(mag_str)
 
@@ -633,7 +633,7 @@ def filter_chain_pairs(
     pairs: PairsMap,
     min_value: float = -0.1,
     max_value: float = 0.1,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """Filter chain pairs by signed perturbation value in percentage points.
 
     Parameters
@@ -657,7 +657,7 @@ def filter_chain_pairs(
     The numeric value is taken directly from the ``'<value>pp'`` suffix, e.g.
     ``'-1e0pp' -> -1.0``, ``'1.0e-01pp' -> 0.1``.
     """
-    filtered: Dict[str, object] = {}
+    filtered: dict[str, object] = {}
     for key, value in pairs.items():
         try:
             numeric_value = _parse_pp_key_to_float(key)
@@ -675,7 +675,7 @@ def filter_chain_pairs_absolute_range(
     pairs: PairsMap,
     min_abs_value: float = 0.001,
     max_abs_value: float = 0.1,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """Filter chain pairs by absolute perturbation value in percentage points.
 
     Parameters
@@ -694,7 +694,7 @@ def filter_chain_pairs_absolute_range(
         Filtered mapping containing only keys with
         ``min_abs_value <= |value| <= max_abs_value``.
     """
-    filtered: Dict[str, object] = {}
+    filtered: dict[str, object] = {}
     for key, value in pairs.items():
         try:
             numeric_value = abs(_parse_pp_key_to_float(key))

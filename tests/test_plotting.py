@@ -1,5 +1,4 @@
-# Unit tests for plotting
-
+"""Unit tests for plotting"""
 
 import tempfile
 from pathlib import Path
@@ -7,12 +6,7 @@ from unittest.mock import patch
 
 import numpy
 import pytest
-from constants import (
-    CHAINS_DIR,
-    EOR_PS,
-    NOISE_RATIO,
-    MockDataContainer,
-)
+from constants import CHAINS_DIR, EOR_PS, NOISE_RATIO, MockDataContainer
 
 from valska_hera_beam import plotting
 
@@ -22,7 +16,7 @@ def test_create_beam_plotter_with_paths_file():
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
         yaml_file.writelines(
-            "Test1: test/directory1/\n" "Test2: test/directory2/"
+            "Test1: test/directory1/\nTest2: test/directory2/"
         )
         yaml_file.seek(0)
 
@@ -239,7 +233,7 @@ def test_plot_analysis_results(beam_analysis, input_args, expected_results):
     assert fig.labels == expected_results["labels"]
 
     # This is set by default and cannot be changed at the moment
-    assert fig.legend_ncols == 6
+    assert fig.legend_ncols == 6  # noqa: PLR2004
 
     if "figsize" in input_args.keys():
         assert fig.plot_width == int(input_args["figsize"][0] / 2)

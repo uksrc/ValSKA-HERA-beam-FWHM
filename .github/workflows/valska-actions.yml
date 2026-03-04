@@ -20,7 +20,16 @@ jobs:
         environment-file: valska_env.yaml
         # We do not need the base environment to be activated as well
         auto-activate: true
-        cache-environment: true
+        use-mamba: true
+        conda-solver: libmamba
+        pkgs-dirs: ~/conda_pkgs_dir
+    - name: Cache conda packages
+      uses: actions/cache@v4
+      env: # Increase this value to reset cache if valska_env.yaml has not changed 
+        CACHE_NUMBER: 0 
+      with: 
+        path: ~/conda_pkgs_dir
+        key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('valska_env.yaml') }}
     - name: Pre-commit
       run: pre-commit run --all-files
     - name: Upload Lint Results

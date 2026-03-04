@@ -10,7 +10,6 @@ name: valska
 # name: valska2
 # name: valska3
 channels:
-  - nvidia
   - conda-forge
 dependencies:
   - anesthetic>=2.13.1

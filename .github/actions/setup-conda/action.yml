@@ -2,12 +2,8 @@ name: "Setup Conda Environment"
 description: "Restore cache and install conda environment"
 
 inputs:
-  environment-file:
-    required: true
-    default: valska_env.yml
-  env-name:
-    required: true
-    default: valska
+  environment-file: ${{ github.workspace }}/valska_env.yml
+  env-name: valska
 
 runs:
   using: "composite"

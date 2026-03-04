@@ -12,15 +12,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-        cache: "pip"
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      uses: actions/cache@v4
+      env:
+        # Increase this value to reset cache if valska_env.yaml has not changed
+        CACHE_NUMBER: 0
+      with:
+        path: ~/conda_pkgs_dir
+        key:
+          ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+          hashFiles('valska_env.yaml') }}
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: valska
+        channel-priority: strict
+        environment-file: valska_env.yaml
+        use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+        # We do not need the base environment to be activated as well
+        auto-activate: true
     - name: Pre-commit
       run: pre-commit run --all-files
     - name: Upload Lint Results
@@ -36,15 +45,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-        cache: "pip"
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      uses: actions/cache@v4
+      env:
+        # Increase this value to reset cache if valska_env.yaml has not changed
+        CACHE_NUMBER: 0
+      with:
+        path: ~/conda_pkgs_dir
+        key:
+          ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+          hashFiles('valska_env.yaml') }}
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: valska
+        channel-priority: strict
+        environment-file: valska_env.yaml
+        use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+        # We do not need the base environment to be activated as well
+        auto-activate: true
     - name: Test with pytest
       run: |
         make python-test
@@ -58,15 +76,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-        cache: "pip"
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      uses: actions/cache@v4
+      env:
+        # Increase this value to reset cache if valska_env.yaml has not changed
+        CACHE_NUMBER: 0
+      with:
+        path: ~/conda_pkgs_dir
+        key:
+          ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+          hashFiles('valska_env.yaml') }}
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: valska
+        channel-priority: strict
+        environment-file: valska_env.yaml
+        use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+        # We do not need the base environment to be activated as well
+        auto-activate: true
     - name: Build docs
       run: |
         sphinx-build -W -b html docs/source/ docs/_build/html

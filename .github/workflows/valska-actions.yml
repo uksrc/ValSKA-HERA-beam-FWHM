@@ -6,34 +6,17 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash -l {0}
-
     steps:
     - uses: actions/checkout@v5
-    - name: Install dependencies
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        activate-environment: valska
-        channel-priority: strict
-        environment-file: valska_env.yaml
-        # We do not need the base environment to be activated as well
-        auto-activate: true
-        use-mamba: true
-        conda-solver: libmamba
-        pkgs-dirs: ~/conda_pkgs_dir
-    - name: Cache conda packages
-      uses: actions/cache@v4
-      env: # Increase this value to reset cache if valska_env.yaml has not changed 
-        CACHE_NUMBER: 0 
-      with: 
-        path: ~/conda_pkgs_dir
-        key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('valska_env.yaml') }}
+    - uses: ./.github/actions/setup-conda
     - name: Pre-commit
       run: pre-commit run --all-files
     - name: Upload Lint Results
@@ -47,30 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
 
-    defaults:
-      run:
-        shell: bash -l {0}
-
     steps:
     - uses: actions/checkout@v5
-    - name: Install dependencies
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        activate-environment: valska
-        channel-priority: strict
-        environment-file: valska_env.yaml
-        # We do not need the base environment to be activated as well
-        auto-activate: true
-        use-mamba: true
-        conda-solver: libmamba
-        pkgs-dirs: ~/conda_pkgs_dir
-    - name: Cache conda packages
-      uses: actions/cache@v4
-      env: # Increase this value to reset cache if valska_env.yaml has not changed 
-        CACHE_NUMBER: 0 
-      with: 
-        path: ~/conda_pkgs_dir
-        key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('valska_env.yaml') }}
+    - uses: ./.github/actions/setup-conda
     - name: Test with pytest
       run: |
         make python-test
@@ -82,30 +44,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
 
-    defaults:
-      run:
-        shell: bash -l {0}
-
     steps:
     - uses: actions/checkout@v5
-    - name: Install dependencies
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        activate-environment: valska
-        channel-priority: strict
-        environment-file: valska_env.yaml
-        # We do not need the base environment to be activated as well
-        auto-activate: true
-        use-mamba: true
-        conda-solver: libmamba
-        pkgs-dirs: ~/conda_pkgs_dir
-    - name: Cache conda packages
-      uses: actions/cache@v4
-      env: # Increase this value to reset cache if valska_env.yaml has not changed 
-        CACHE_NUMBER: 0 
-      with: 
-        path: ~/conda_pkgs_dir
-        key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('valska_env.yaml') }}
+    - uses: ./.github/actions/setup-conda
     - name: Build docs
       run: |
         sphinx-build -W -b html docs/source/ docs/_build/html

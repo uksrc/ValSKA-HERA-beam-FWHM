@@ -1,0 +1,31 @@
+name: "Setup Conda Environment"
+description: "Restore cache and install conda environment"
+
+inputs:
+  environment-file:
+    required: true
+    default: valska_env.yml
+  env-name:
+    required: true
+    default: valska
+
+runs:
+  using: "composite"
+  steps:
+    - name: Restore conda package cache
+      uses: actions/cache@v4
+      with:
+        path: ~/conda_pkgs_dir
+        key: ${{ runner.os }}-conda-${{ hashFiles(inputs.environment-file) }}
+
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: ${{ inputs.env-name }}
+        environment-file: ${{ inputs.environment-file }}
+        # We do not need the base environment to be activated as well
+        auto-activate: true
+        use-mamba: true
+        conda-solver: libmamba
+        pkgs-dirs: ~/conda_pkgs_dir
+        channel-priority: strict

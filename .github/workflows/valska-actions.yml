@@ -25,7 +25,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: valska
-        channel-priority: strict
+        #channel-priority: strict
         environment-file: valska_env.yaml
         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
         # We do not need the base environment to be activated as well
@@ -58,7 +58,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: valska
-        channel-priority: strict
+        #channel-priority: strict
         environment-file: valska_env.yaml
         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
         # We do not need the base environment to be activated as well
@@ -89,7 +89,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: valska
-        channel-priority: strict
+        #channel-priority: strict
         environment-file: valska_env.yaml
         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
         # We do not need the base environment to be activated as well

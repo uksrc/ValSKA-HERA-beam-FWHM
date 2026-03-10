@@ -36,22 +36,22 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-  "pytest",
-  "pytest-cov",
-  "pytest-mock",
-  "ruff>=0.12.0",
-  "nbqa",
-  "mypy",
-  "pre-commit",
-  "ipykernel",
-  "nbstripout",
-  "build",
-  "twine",
-  "nbmake",
-  "sphinx",
-  "sphinx_rtd_theme",
-  "myst_parser",
-  "types-pyyaml"
+  "pytest>=9.0.2",
+  "pytest-cov>=7.0.0",
+  "pytest-mock>=3.15.1",
+  "ruff>=0.14.11",
+  "nbqa>=1.9.0",
+  "mypy>=1.19.1",
+  "pre-commit>=4.5.1",
+  "ipykernel>=7.1.0",
+  "nbstripout>=0.8.2",
+  "build>=1.4.0",
+  "twine>=6.2.0",
+  "nbmake>=1.5.5",
+  "sphinx>=9.1.0",
+  "sphinx_rtd_theme>=3.1.0",
+  "myst_parser>=5.0.0",
+  "types-pyyaml>=6.0.12.20250915"
 ]
 docs = [
   "mkdocs>=1.6.1",
@@ -64,9 +64,6 @@ Issues = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM/issues"
 
 [project.scripts]
 valska-beam-validate = "valska_hera_beam.cli:main"
-
-[tool.isort]
-profile = "black"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

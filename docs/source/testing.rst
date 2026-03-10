@@ -188,6 +188,7 @@ and running the following steps:
 2. Testing
 
    - Run ``make python-test`` (unit tests)
+
 ..   - Run ``make notebook-test`` (notebook validation)
 
 3. Documentation
@@ -198,9 +199,10 @@ The CI pipeline runs on every push to validate that:
 
 - Formatting and linting rules have been followed
 - All unit tests pass
-.. - All notebooks execute without errors
 - Code coverage is maintained
 - Documentation builds without errors or warnings
+
+.. - All notebooks execute without errors
 
 **Viewing CI Results:**
 

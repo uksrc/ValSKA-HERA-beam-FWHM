@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0-draft
 **Status:** Draft
-**Last updated:** 2026-01-21
+**Last updated:** 2026-03-10
 
 ---
 
@@ -867,3 +867,167 @@ Tool modules depend on core; core never imports from tools.
 - [External Tool Integration Specification](external_tool_integration_spec.md)
 - [Tool Implementer's Guide](tool_implementers_guide.md)
 - BayesEoR reference implementation: `src/valska_hera_beam/external_tools/bayeseor/`
+
+---
+
+## 11. Related future direction: public Python API and documentation strategy
+
+### 11.1 Purpose
+
+This roadmap primarily covers shared infrastructure for external tool
+integration. A closely related, but distinct, future task is to define a small,
+intentional **public Python API** for `valska_hera_beam` and align the
+documentation around that supported surface.
+
+This section records the intended direction so that later refactoring can be
+planned deliberately rather than emerging accidentally from documentation or
+import convenience.
+
+### 11.2 Earlier approach and current interim state
+
+At present, the repository still exposes only a minimal top-level Python API,
+while the documentation includes a broader set of module pages.
+
+The **earlier recursive documentation approach** relied more heavily on broad
+discovery from the package root. In practice, that created a few avoidable
+problems:
+
+1. **Fragile documentation builds**
+    API generation became sensitive to how Sphinx discovered and imported
+    submodules, rather than depending only on the pages we intended to build.
+
+2. **Accidental coupling to package layout**
+    Internal module organisation and generated intermediate package pages began
+    to affect the success of the docs build, even when the runtime behaviour of
+    the package itself was unchanged.
+
+3. **Ambiguity about what is public**
+    Recursive discovery made it easier for internal modules to look supported
+    merely because they appeared in the generated reference output.
+
+4. **Higher maintenance cost when imports evolved**
+    Changes in import structure, optional dependencies, or notebook-related
+    modules could cause documentation failures that were disproportionate to the
+    actual code change.
+
+The **new interim explicit-module approach** improves this situation
+substantially. In particular, it:
+
+1. reduces dependence on recursive module discovery;
+2. removes the need for fragile intermediate package-summary pages to remain
+    consistent;
+3. makes the documentation build depend on an intentional list of module pages;
+    and
+4. provides a practical, low-risk fix that keeps continuous integration stable
+    without changing runtime behaviour.
+
+This interim approach is acceptable for now, because it:
+
+1. avoids making premature compatibility promises through
+    `valska_hera_beam.__init__`;
+2. keeps the branch-protection-critical documentation build stable; and
+3. allows BayesEoR and related tooling to continue evolving without implying
+    that every internal module is public and supported.
+
+### 11.3 Recommended target state
+
+The recommended long-term model is the one commonly used by public-facing
+scientific Python packages:
+
+1. **Curate a supported public API**
+    Re-export only the functions, classes, and helpers that are intended for
+    external users.
+
+2. **Document the public API first**
+    Treat the top-level package, and a small number of genuinely public
+    subpackages, as the main reference surface.
+
+3. **Keep internal modules internal**
+    Workflow orchestration helpers, implementation details, and CLI plumbing
+    should not become de facto public merely because they appear in recursive
+    documentation output.
+
+4. **Use narrative documentation for workflows**
+    Operational and scientific workflows should continue to be explained through
+    guides, examples, and CLI documentation rather than relying on low-level API
+    pages alone.
+
+This long-term direction is still preferable to the present explicit-module
+listing, because it offers a better overall balance for a public-facing
+repository:
+
+1. **Clearer support boundary**
+    Users can distinguish more easily between supported public imports and
+    internal implementation detail.
+
+2. **Lower ongoing documentation churn**
+    A curated public API reduces the need to update long lists of individual
+    modules whenever internal structure changes.
+
+3. **Greater refactoring freedom**
+    Internal modules can evolve with less risk of accidental public commitments.
+
+4. **Better alignment with user needs**
+    Most users need stable entry points and workflow documentation rather than a
+    near-complete map of internal source files.
+
+### 11.4 Why this is deferred
+
+This change should be deferred until after the current modularisation work is
+merged and the public surface can be reviewed intentionally.
+
+Deferral is recommended because:
+
+1. **The package surface is still evolving**
+    BayesEoR orchestration code is currently being restructured, so it would be
+    unhelpful to freeze import paths prematurely.
+
+2. **Not every documented module should be public**
+    Some modules are implementation detail, developer utility, or CLI support
+    code rather than stable library API.
+
+3. **Top-level re-exports create maintenance obligations**
+    Once symbols are presented as public, later refactoring becomes more
+    constrained.
+
+4. **Documentation stability is currently the priority**
+    The present explicit module listing is a pragmatic fix that keeps the docs
+    build reliable without changing runtime behaviour.
+
+### 11.5 Interim approach
+
+Until a public API review is completed, the preferred documentation strategy is:
+
+- keep the current explicit API reference list in `docs/source/api.rst`;
+- avoid broad recursive discovery from the package root;
+- continue documenting workflows and CLI usage separately from the Python API;
+- treat any future top-level re-export as an explicit design decision.
+
+### 11.6 Proposed review questions for the follow-up task
+
+When this work is taken up, the review should answer the following:
+
+1. Which functions and classes are intended for external Python users?
+2. Which import paths should be considered stable across releases?
+3. Which modules are internal implementation detail and should remain outside
+    the top-level namespace?
+4. Which CLI-facing modules should be documented as commands rather than as
+    Python API surface?
+5. Which imports are lightweight and safe enough to expose at package-import
+    time?
+
+### 11.7 Suggested implementation sequence
+
+1. Review the existing Python surface and identify genuinely public objects.
+2. Define a small curated export set in `valska_hera_beam.__init__`.
+3. Add or refine top-level package documentation around that curated surface.
+4. Retain detailed module pages only where they are useful for advanced users
+    or developers.
+5. Update contributor guidance once the public/private boundary has been agreed.
+
+### 11.8 Decision note
+
+For the avoidance of doubt, the current documentation fix does **not** commit
+the project to the present module layout as a permanent public API. It is an
+interim documentation-stability measure, not a statement that every documented
+module path is part of the long-term supported interface.

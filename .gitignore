@@ -228,3 +228,4 @@ UKSRC_val_mock_vis
 *.sh.swp
 *.sh.swo
 docs/source/generated/
+uksrc-st_memos/drafts

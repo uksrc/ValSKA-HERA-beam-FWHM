@@ -46,6 +46,8 @@ autodoc_mock_imports = [
     "bayeseor",
     "anesthetic",
     "matplotlib",
+    "pandas",
+    "IPython",
     "yaml",
     "tqdm",
     "numpy",

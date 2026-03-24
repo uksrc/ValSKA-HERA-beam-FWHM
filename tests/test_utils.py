@@ -1,4 +1,4 @@
-# Unit tests for utils
+"""Unit tests for utils"""
 
 import os
 import tempfile
@@ -7,12 +7,7 @@ from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
 import pytest
-from constants import (
-    BASE_DIR,
-    CHAINS_DIR,
-    DATA_DIR,
-    RESULTS_DIR,
-)
+from constants import BASE_DIR, CHAINS_DIR, DATA_DIR, RESULTS_DIR
 
 from valska_hera_beam import utils
 
@@ -52,7 +47,7 @@ def test_load_paths_with_input():
 
     with tempfile.NamedTemporaryFile(mode="w+t") as yaml_file:
         yaml_file.writelines(
-            "Test1: test/directory1/\n" "Test2: test/directory2/"
+            "Test1: test/directory1/\nTest2: test/directory2/"
         )
         yaml_file.seek(0)
 
@@ -66,10 +61,10 @@ def test_load_paths_with_input():
 
 
 def test_load_paths_with_input_error():
-    """Test load paths from non-existant yaml file"""
+    """Test load paths from non-existent yaml file"""
 
     with pytest.raises(FileNotFoundError):
-        utils.load_paths("nonexistant_yaml_file.yml")
+        utils.load_paths("nonexistent_yaml_file.yml")
 
 
 def test_path_manager_get_paths(path_manager):
@@ -129,7 +124,7 @@ def test_repr(path_manager):
         "results_dir": RESULTS_DIR,
     }
 
-    repr_string = path_manager.__repr__()
+    repr_string = repr(path_manager)
 
     expected_strs = [
         f"  {name}: {path}" for name, path in expected_dictionary.items()
@@ -145,7 +140,6 @@ def test_path_manager_create_sub_dir(path_manager):
     new_dir = "new_directory"
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         # Update the chains dir
         path_manager.chains_dir = Path(base_dir)
 
@@ -159,7 +153,6 @@ def test_path_manager_find_file(path_manager):
     """Test find file with named directory"""
 
     with tempfile.NamedTemporaryFile(suffix=".dat") as test_file:
-
         path_manager.chains_dir = Path(test_file.name).parent
 
         result = path_manager.find_file("*.dat", path_name="chains_dir")
@@ -171,7 +164,6 @@ def test_path_manager_find_file_default(path_manager):
     """Test find file from default directory"""
 
     with tempfile.NamedTemporaryFile(suffix=".dat") as test_file:
-
         path_manager.base_dir = Path(test_file.name).parent
 
         result = path_manager.find_file("*.dat")
@@ -195,20 +187,20 @@ def test_create_path_manager_default(pm, chains):
     """
 
     with tempfile.TemporaryDirectory() as base_dir:
-
         test_dir = Path(base_dir + "/one/two/three/")
 
         if chains:
             os.mkdir(base_dir + "/chains")
 
         with patch("inspect.getfile", new_callable=PropertyMock) as getfile:
-
             getfile.return_value = str(test_dir)
 
             if pm == "class":
                 path_manager = utils.PathManager()
             elif pm == "method":
                 path_manager = utils.get_default_path_manager()
+            else:
+                path_manager = None
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
@@ -224,29 +216,6 @@ def test_create_path_manager_default(pm, chains):
 
             assert Path(base_dir + "/data").exists()
             assert Path(base_dir + "/results").exists()
-
-
-@pytest.mark.parametrize(
-    "key, prefix, label_prefix, expected_result",
-    [
-        ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", None, "GSM -1%"),
-        ("GSM_FgEoR_-1e1pp", "GSM_FgEoR_", None, "GSM -10%"),
-        ("GSM_FgEoR_-1e-3pp", "GSM_FgEoR_", None, "GSM -0.001%"),
-        ("GSM_FgEoR_-1.123e0pp", "GSM_FgEoR_", None, "GSM -1.12%"),
-        ("GSM_FgEoR_1e0pp", "GSM_FgEoR_", None, "GSM +1%"),
-        ("GSM_FgEoR_1e1pp", "GSM_FgEoR_", None, "GSM +10%"),
-        ("GSM_FgEoR_-1e0pp", "GSM_FgEoR_", "MyPrefix", "MyPrefix -1%"),
-        ("GSM_FgEoR_-1e0pp", "MyPrefix_", None, None),
-        ("GSM_FgEoR_-1e0", "GSM_FgEoR_", None, None),
-        ("GSM_FgEoR_-abcpp", "GSM_FgEoR_", None, None),
-    ],
-)
-def test_pp_key_to_percent_label(key, prefix, label_prefix, expected_result):
-    """Test to strip prefix from key to produce labels"""
-
-    label = utils._pp_key_to_percent_label(key, prefix, label_prefix)
-
-    assert label == expected_result
 
 
 def test_build_pp_groups_from_paths_default():

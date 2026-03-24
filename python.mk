@@ -48,21 +48,15 @@ else
 	PYTHON_SWITCHES_FOR_NBMAKE ?= --disable-warnings -rs -k "$(PYTHON_FILE_EXTENSION_IGNORE) and $(NOTEBOOK_IGNORE_FILES)"
 endif
 
-PYTHON_SWITCHES_FOR_BLACK ?=## Custom switches added to black
-
-PYTHON_SWITCHES_FOR_ISORT ?=## Custom switches added to isort
-
-PYTHON_SWITCHES_FOR_PYLINT ?=## Custom switches added to pylint for all python code
-
-NOTEBOOK_SWITCHES_FOR_PYLINT ?=## Custom switches added to pylint for notebooks
-
-PYTHON_SWITCHES_FOR_FLAKE8 ?=## Custom switches added to flake8 for all python code
-
-NOTEBOOK_SWITCHES_FOR_FLAKE8 ?=## Custom switches added to flake8 for notebooks
+# Disable the following pylint checks in ruff for notebooks:
+# 	missing-module-docstring
+# 	invalid-name
+NOTEBOOK_SWITCHES_FOR_RUFF ?= --ignore=D100,N802
+PYTHON_SWITCHES_FOR_RUFF ?= 
 
 PYTHON_LINT_TARGET ?= $(PYTHON_SRC) tests/## Paths containing python to be formatted and linted
 
-NOTEBOOK_LINT_TARGET ?= .## Paths containing Jupyter notebooks to be formatted and linted
+NOTEBOOK_LINT_TARGET ?= notebooks/## Paths containing Jupyter notebooks to be formatted and linted
 
 
 .PHONY: python-format python-pre-format python-do-format python-post-format \
@@ -75,8 +69,10 @@ python-pre-format:
 python-post-format:
 
 python-do-format:
-	$(PYTHON_RUNNER) isort --profile black --line-length $(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_ISORT) $(PYTHON_LINT_TARGET)
-	$(PYTHON_RUNNER) black --exclude .+\.ipynb --line-length $(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_BLACK) $(PYTHON_LINT_TARGET)
+	## 1. Organize imports (Replaces isort)
+	$(PYTHON_RUNNER) ruff check --fix-only $(PYTHON_LINT_TARGET)
+	## 2. Format code (Replaces black)
+	$(PYTHON_RUNNER) ruff format --line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_LINT_TARGET)
 
 ## TARGET: python-format
 ## SYNOPSIS: make python-format
@@ -85,10 +81,8 @@ python-do-format:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       PYTHON_LINT_TARGET=<file or directory path to Python code> - default 'src/ tests/'
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
 ##
-##  Reformat project Python code in the given directories/files using black and isort.
+##  Reformat project Python code in the given directories/files using ruff.
 
 python-format: python-pre-format python-do-format python-post-format  ## format the Python code
 
@@ -98,11 +92,21 @@ python-post-lint:
 
 python-do-lint:
 	@mkdir -p build/reports;
-	$(PYTHON_RUNNER) isort --check-only --profile black --line-length $(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_ISORT) $(PYTHON_LINT_TARGET)
-	$(PYTHON_RUNNER) black --exclude .+\.ipynb --check --line-length $(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_BLACK) $(PYTHON_LINT_TARGET)
-	$(PYTHON_RUNNER) flake8 --show-source --statistics --max-line-length $(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_FLAKE8) $(PYTHON_LINT_TARGET)
-	$(PYTHON_RUNNER) pylint --output-format=parseable,parseable:build/code_analysis.stdout,pylint_junit.JUnitReporter:build/reports/linting-python.xml --max-line-length $(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_PYLINT) $(PYTHON_LINT_TARGET)
-	@make --no-print-directory join-lint-reports
+	## 1. Run Linter with correct format and pipefail to catch errors
+	$(PYTHON_RUNNER) ruff check $(PYTHON_LINT_TARGET) $(PYTHON_SWITCHES_FOR_RUFF) \
+		--line-length=$(PYTHON_LINE_LENGTH) \
+		--output-format=$$( [ "$$GITHUB_ACTIONS" = "true" ] && echo "github" || echo "grouped" )
+	## 2. Generate JUnit Report for CI
+	$(PYTHON_RUNNER) ruff check $(PYTHON_LINT_TARGET) $(PYTHON_SWITCHES_FOR_RUFF) \
+		--line-length=$(PYTHON_LINE_LENGTH) \
+		--output-format=junit \
+		--output-file=build/reports/linting-python.xml
+	## 3. Check Formatting
+	$(PYTHON_RUNNER) ruff format --check $(PYTHON_LINT_TARGET) \
+		--line-length=$(PYTHON_LINE_LENGTH)
+	## 4. Type checking
+	$(PYTHON_RUNNER) mypy $(PYTHON_LINT_TARGET) --ignore-missing-imports
+
 
 ## TARGET: python-lint
 ## SYNOPSIS: make python-lint
@@ -111,12 +115,9 @@ python-do-lint:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       PYTHON_LINT_TARGET=<file or directory path to Python code> - default 'src/ tests/'
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
-##       PYTHON_SWITCHES_FOR_FLAKE8=<additional switch to pass to flake8>
-##       PYTHON_SWITCHES_FOR_PYLINT=<additional switch to pass to pylint>
+##       PYTHON_SWITCHES_FOR_RUFF=<additional switches to pass to ruff>
 ##
-##  Lint check project Python code in the given directories/files using black, isort, flake8 and pylint.
+##  Lint check project Python code in the given directories/files using ruff.
 
 python-lint: python-pre-lint python-do-lint python-post-lint  ## lint the Python code
 
@@ -149,8 +150,11 @@ notebook-pre-format:
 notebook-post-format:
 
 notebook-do-format:
-	$(PYTHON_RUNNER) nbqa isort --profile=black --line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_ISORT) $(NOTEBOOK_LINT_TARGET)
-	$(PYTHON_RUNNER) nbqa black --line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_BLACK) $(NOTEBOOK_LINT_TARGET)
+	## 1. Organize imports (Replaces isort)
+	$(PYTHON_RUNNER) ruff check --fix-only $(NOTEBOOK_LINT_TARGET)
+	## 2. Format code (Replaces black)
+	$(PYTHON_RUNNER) ruff format --line-length=$(PYTHON_LINE_LENGTH) $(NOTEBOOK_LINT_TARGET)
+
 
 ## TARGET: notebook-format
 ## SYNOPSIS: make notebook-format
@@ -159,10 +163,8 @@ notebook-do-format:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       NOTEBOOK_LINT_TARGET=<file or directory path to Python code> - defaults to . (all notebooks in the repo)
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
 ##
-##  Reformat Jupyter notebooks in the given directories/files using nbQa, black and isort.
+##  Reformat Jupyter notebooks in the given directories/files using ruff.
 
 notebook-format: notebook-pre-format notebook-do-format notebook-do-format
 
@@ -175,12 +177,20 @@ notebook-post-lint:
 
 notebook-do-lint:
 	@mkdir -p build/reports;
-	$(PYTHON_RUNNER) nbqa isort --check-only --profile=black --line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_ISORT) $(NOTEBOOK_LINT_TARGET)
-	$(PYTHON_RUNNER) nbqa black --check --line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_BLACK) $(NOTEBOOK_LINT_TARGET)
-	$(PYTHON_RUNNER) nbqa flake8 --show-source --statistics --max-line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_FLAKE8) $(NOTEBOOK_SWITCHES_FOR_FLAKE8) $(NOTEBOOK_LINT_TARGET)
-	$(PYTHON_RUNNER) nbqa pylint --output-format=parseable --max-line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_PYLINT) $(NOTEBOOK_SWITCHES_FOR_PYLINT) $(NOTEBOOK_LINT_TARGET) | tee build/code_analysis.stdout
-	$(PYTHON_RUNNER) nbqa pylint --output-format=pylint_junit.JUnitReporter:build/reports/linting-notebooks.xml --max-line-length=$(PYTHON_LINE_LENGTH) $(PYTHON_SWITCHES_FOR_PYLINT) $(NOTEBOOK_SWITCHES_FOR_PYLINT) $(NOTEBOOK_LINT_TARGET)
-	@make --no-print-directory join-lint-reports
+	## 1. Run Linter with correct format and pipefail to catch errors
+	$(PYTHON_RUNNER) ruff check $(NOTEBOOK_LINT_TARGET) $(NOTEBOOK_SWITCHES_FOR_RUFF) \
+		--line-length=$(PYTHON_LINE_LENGTH) \
+		--output-format=$$( [ "$$GITHUB_ACTIONS" = "true" ] && echo "github" || echo "grouped" )
+	## 2. Generate JUnit Report for CI
+	$(PYTHON_RUNNER) ruff check $(NOTEBOOK_LINT_TARGET) $(NOTEBOOK_SWITCHES_FOR_RUFF) \
+		--line-length=$(PYTHON_LINE_LENGTH) \
+		--output-format=junit \
+		--output-file=build/reports/linting-notebooks.xml
+	## 3. Check Formatting
+	$(PYTHON_RUNNER) ruff format --check $(NOTEBOOK_LINT_TARGET) \
+		--line-length=$(PYTHON_LINE_LENGTH)
+	## 4. Type checking
+	$(PYTHON_RUNNER) nbqa mypy $(NOTEBOOK_LINT_TARGET) --ignore-missing-imports
 
 ## TARGET: notebook-lint
 ## SYNOPSIS: make notebook-lint
@@ -189,14 +199,9 @@ notebook-do-lint:
 ##       PYTHON_RUNNER=<python executor> - defaults to empty, but could pass something like python -m
 ##       NOTEBOOK_LINT_TARGET=<file or directory path to notebooks> - defaults to . (all notebooks in the repo)
 ##		 PYTHON_LINE_LENGTH=<line length> - defaults to 79, set it once and all linters will use this value
-##       PYTHON_SWITCHES_FOR_ISORT=<additional switches to pass to isort>
-##       PYTHON_SWITCHES_FOR_BLACK=<additional switch to pass to black>
-##       PYTHON_SWITCHES_FOR_FLAKE8=<additional switch to pass to flake8 for all python code>
-##       PYTHON_SWITCHES_FOR_PYLINT=<additional switch to pass to pylint for all python code>
-##       NOTEBOOK_SWITCHES_FOR_FLAKE8=<additional switch to pass to flake8 for notebooks>
-##       NOTEBOOK_SWITCHES_FOR_PYLINT=<additional switch to pass to pylint for notebooks>
+##       NOTEBOOK_SWITCHES_FOR_RUFF=<additional switches to pass to ruff>
 ##
-##  Lint check Jupyter notebooks in the given directories/files using nbQa, black, isort, flake8 and pylint.
+##  Lint check Jupyter notebooks in the given directories/files using ruff.
 
 notebook-lint: notebook-pre-lint notebook-do-lint notebook-post-lint ## Lint Jupyter notebooks
 
@@ -225,19 +230,6 @@ notebook-do-test:
 ##  Run pytest --nbmake  against the notebooks defined in PYTHON_TEST_FOLDER_NBMAKE.  By default, this will pickup any jupyter notebooks
 
 notebook-test: notebook-pre-test notebook-do-test notebook-post-test  ## test the Jupyter Notebook package
-
-
-join-lint-reports: ## Join linting report (chart and python)
-	@echo -e "<testsuites>\n</testsuites>" > build/reports/linting.xml; \
-	for FILE in build/reports/linting-*.xml; do \
-	TEST_RESULTS=$$(tr -d "\n" < $${FILE} | \
-	sed -e "s/.*<testsuites[^<]*\(.*\)<\/testsuites>.*/\1/"); \
-	TT=$$(echo $${TEST_RESULTS} | sed 's/\//\\\//g'); \
-	echo "/<\/testsuites>/ s/.*/$${TT}\n&/" > build/reports/command; \
-	sed -i.x -f build/reports/command -- build/reports/linting.xml; \
-	rm -f build/reports/linting.xml.x; \
-	rm -f build/reports/command; \
-	done
 
 
 # end of switch to suppress targets for help

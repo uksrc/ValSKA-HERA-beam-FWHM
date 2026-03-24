@@ -1,10 +1,10 @@
 """Utility functions for the ValSKA-HERA-beam-FWHM package."""
 
 import inspect
+from datetime import datetime
 
 # import os
 from pathlib import Path
-from typing import Dict, Optional, Union
 
 import yaml
 
@@ -14,27 +14,31 @@ class PathManager:
 
     def __init__(
         self,
-        base_dir: Optional[Union[str, Path]] = None,
-        chains_dir: Optional[Union[str, Path]] = None,
-        data_dir: Optional[Union[str, Path]] = None,
-        results_dir: Optional[Union[str, Path]] = None,
+        base_dir: str | Path | None = None,
+        chains_dir: str | Path | None = None,
+        data_dir: str | Path | None = None,
+        results_dir: str | Path | None = None,
     ):
         """Initialize the PathManager with configurable directories.
 
-        If directories are not specified, they will be automatically determined
-        relative to the package location.
+        If directories are not specified, they will be automatically
+        determined relative to the package location.
 
         Parameters
         ----------
         base_dir : str or Path, optional
-            Base directory of the project. If None, it's determined automatically.
+            Base directory of the project. If None, it's determined
+            automatically.
         chains_dir : str or Path, optional
-            Directory containing chain files. If None, defaults to {base_dir}/chains
+            Directory containing chain files. If None, defaults to
+            {base_dir}/chains
             or falls back to BayesEoR default location.
         data_dir : str or Path, optional
-            Directory containing data files. If None, defaults to {base_dir}/data.
+            Directory containing data files. If None, defaults to
+            {base_dir}/data.
         results_dir : str or Path, optional
-            Directory for storing results. If None, defaults to {base_dir}/results.
+            Directory for storing results. If None, defaults to
+            {base_dir}/results.
         """
         # Get the directory of this file
         self.utils_dir = Path(inspect.getfile(self.__class__)).parent.resolve()
@@ -72,7 +76,7 @@ class PathManager:
         else:
             self.results_dir = Path(results_dir).resolve()
 
-    def get_paths(self) -> Dict[str, Path]:
+    def get_paths(self) -> dict[str, Path]:
         """Get a dictionary of all managed paths.
 
         Returns
@@ -141,7 +145,7 @@ class PathManager:
         return new_dir
 
     def find_file(
-        self, pattern: str, path_name: Optional[str] = None
+        self, pattern: str, path_name: str | None = None
     ) -> list[Path]:
         """Find files matching a pattern in a specified directory.
 
@@ -198,14 +202,13 @@ def make_timestamp() -> str:
     str
         Current timestamp in format YYYY-MM-DD_HHMMSS
     """
-    from datetime import datetime
 
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
 
 def load_paths(
-    custom_paths_file: Optional[Union[str, Path]] = None,
-) -> Dict[str, str]:
+    custom_paths_file: str | Path | None = None,
+) -> dict[str, str]:
     """Load analysis paths from a YAML configuration file.
 
     Parameters
@@ -228,7 +231,7 @@ def load_paths(
     if not paths_file.exists():
         raise FileNotFoundError(f"Paths file not found: {paths_file}")
 
-    with open(paths_file, "r") as f:
+    with open(paths_file, encoding="utf-8") as f:
         paths = yaml.safe_load(f)
 
     return paths
@@ -238,27 +241,31 @@ def _pp_key_to_percent_label(
     key: str,
     prefix: str,
     label_prefix: str | None = None,
-) -> Optional[str]:
+) -> str | None:
     """Convert '<prefix><pp>' key into a '<label_prefix> ±X%' label.
 
     Parameters
     ----------
     key : str
-        Full analysis key (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
+        Full analysis key
+        (e.g. ``'GSM_FgEoR_-1e0pp'``, ``'GL_FgEoR_1.0e-01pp'``).
     prefix : str
-        The prefix to strip before the numeric part (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
+        The prefix to strip before the numeric part
+        (e.g. ``'GSM_FgEoR_'``, ``'GL_FgEoR_'``).
     label_prefix : str, optional
         Text to put in front of the percentage (default: derived from prefix).
 
     Returns
     -------
     str or None
-        Human-readable label (e.g. 'GSM -1%', 'GL +0.1%') or None if not matched.
+        Human-readable label (e.g. 'GSM -1%', 'GL +0.1%') or None if
+        not matched.
     """
     if not key.startswith(prefix):
         return None
 
-    middle = key[len(prefix) :]  # e.g. '-1e0pp' or '1.0e-01pp'
+    #  # e.g. '-1e0pp' or '1.0e-01pp'
+    middle = key[len(prefix) :]  # noqa: E203
     if not middle.endswith("pp"):
         return None
 
@@ -283,11 +290,12 @@ def _pp_key_to_percent_label(
 
 def build_pp_groups_from_paths(
     prefixes: list[str],
-    custom_paths_file: Optional[Union[str, Path]] = None,
-    label_prefixes: Optional[Dict[str, str]] = None,
-) -> Dict[str, list[str]]:
+    custom_paths_file: str | Path | None = None,
+    label_prefixes: dict[str, str] | None = None,
+) -> dict[str, list[str]]:
     """
-    Build groups for perturbation runs from paths.yaml for one or more prefixes.
+    Build groups for perturbation runs from paths.yaml for one or more
+    prefixes.
 
     Examples
     --------
@@ -301,7 +309,7 @@ def build_pp_groups_from_paths(
     -> labels like 'GSM -1%', 'GL -1%' instead of both 'GSM ...'
     """
     paths = load_paths(custom_paths_file)
-    raw_groups: Dict[str, list[str]] = {}
+    raw_groups: dict[str, list[str]] = {}
 
     for key in paths.keys():
         for prefix in prefixes:
@@ -322,18 +330,18 @@ def build_pp_groups_from_paths(
 
     def label_to_val(lbl: str) -> float:
         try:
-            return float(lbl.split()[-1].strip("%"))
+            return float(lbl.rsplit(maxsplit=1)[-1].strip("%"))
         except Exception:
             return 0.0
 
-    groups: Dict[str, list[str]] = {}
+    groups: dict[str, list[str]] = {}
     for label in sorted(raw_groups.keys(), key=label_to_val):
         groups[label] = sorted(raw_groups[label])
 
     return groups
 
 
-def build_group_labels(groups: Dict[str, list[str]]) -> Dict[str, str]:
+def build_group_labels(groups: dict[str, list[str]]) -> dict[str, str]:
     """Simple label -> label mapping."""
     return {label: label for label in groups.keys()}
 
@@ -345,5 +353,7 @@ if __name__ == "__main__":
 
     # # Create a timestamped results directory
     # timestamp = make_timestamp()
-    # results_subdir = path_manager.create_subdir("results_dir", f"run_{timestamp}")
+    # results_subdir = path_manager.create_subdir(
+    #    "results_dir", f"run_{timestamp}"
+    # )
     # print(f"\nCreated results directory: {results_subdir}")

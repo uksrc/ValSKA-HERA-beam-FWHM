@@ -36,26 +36,38 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
+  # Testing
   "pytest>=9.0.2",
-  "pytest-cov>=7.0.0",
+  "pytest-cov>=7.1.0",
   "pytest-mock>=3.15.1",
-  "ruff>=0.14.11",
-  "nbqa>=1.9.0",
-  "mypy>=1.19.1",
-  "pre-commit>=4.5.1",
-  "ipykernel>=7.1.0",
-  "nbstripout>=0.8.2",
-  "build>=1.4.0",
-  "twine>=6.2.0",
   "nbmake>=1.5.5",
+
+  # Linting & formatting
+  "ruff>=0.15.7",
+
+  # Type checking
+  "mypy>=1.19.1",
+  "types-pyyaml>=6.0.12.20250915",
+
+  # Notebooks
+  "nbqa>=1.9.1",
+  "nbstripout>=0.9.1",
+  "ipykernel>=7.2.0",
+
+  # Packaging & distribution
+  "build>=1.4.1",
+  "twine>=6.2.0",
+
+  # Dev workflow
+  "pre-commit>=4.5.1",
+]
+
+docs = [
   "sphinx>=9.1.0",
   "sphinx_rtd_theme>=3.1.0",
   "myst_parser>=5.0.0",
-  "types-pyyaml>=6.0.12.20250915"
-]
-docs = [
-  "mkdocs>=1.6.1",
-  "mkdocs-material>=9.7.1"
+  # "mkdocs>=1.6.1",
+  # "mkdocs-material>=9.7.1",
 ]
 
 [project.urls]

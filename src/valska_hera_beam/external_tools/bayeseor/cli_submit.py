@@ -14,6 +14,7 @@ from .submit import (
     MissingDependencyError,
     SbatchError,
     SubmissionError,
+    _find_completed_cpu_precompute_matrix_dir,
     submit_bayeseor_run,
 )
 
@@ -381,11 +382,20 @@ def main(argv: list[str] | None = None) -> int:
             if cpu_exists:
                 # This is the normal continuation case; allow it and permit the submit layer to read CPU job id.
                 force = True
+            elif (
+                args.depend_afterok is not None
+                or _find_completed_cpu_precompute_matrix_dir(run_dir)
+                is not None
+            ):
+                # Allow the submit layer to proceed when the user supplies an
+                # explicit dependency or when CPU matrix outputs are already present.
+                force = True
             else:
-                # If we can't see a recorded CPU job id, we still refuse by default because GPU dependencies are unclear.
+                # If we can't see a recorded CPU job id or completed CPU outputs,
+                # refuse by default because GPU dependencies are unclear.
                 print(
                     "ERROR: jobs.json exists but does not record a CPU precompute job id; refusing to submit GPU.\n"
-                    "Either submit CPU first, pass --depend-afterok <JOBID>, or use --force/--resubmit as appropriate.",
+                    "Either submit CPU first, pass --depend-afterok <JOBID>, wait for CPU precompute outputs to exist under run_dir/matrices/, or use --force/--resubmit as appropriate.",
                     file=sys.stderr,
                 )
                 return 2

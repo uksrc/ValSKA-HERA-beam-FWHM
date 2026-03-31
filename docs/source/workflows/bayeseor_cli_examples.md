@@ -13,20 +13,23 @@ If you are new, start with **Quick Start**. If you are iterating on a validation
 
 ## Contents
 
-- Quick Start
-  - 1) Prepare a single run kit (no jobs submitted)
-  - 2) Submit CPU stage
-  - 3) Submit GPU stage (after CPU completes)
-  - 4) Prepare & submit a sweep
-- Concepts
+- [Quick Start](#quick-start)
+  - [Before You Start](#before-you-start)
+  - [CLI quick reference](#cli-quick-reference)
+  - [valska-bayeseor-help](#valska-bayeseor-help)
+  - [valska-bayeseor-prepare](#valska-bayeseor-prepare)
+  - [valska-bayeseor-sweep](#valska-bayeseor-sweep)
+  - [valska-bayeseor-submit --stage cpu](#valska-bayeseor-submit---stage-cpu)
+  - [valska-bayeseor-submit --stage gpu](#valska-bayeseor-submit---stage-gpu)
+- [Concepts](#concepts)
   - Beam / sky taxonomy (directory layout)
   - Template + variant concept (collision-free template differences)
   - What gets created where
-- Lifecycle diagram
-- Detailed examples
+- [Lifecycle diagram](#lifecycle-diagram)
+- [Detailed examples](#detailed-examples)
   - A) Prepare (dry-run vs real)
   - B) Sweep (dry-run vs real)
-  - C) Submitting with dependency handling (CPU → GPU)
+  - C) Submitting with dependency handling (CPU -> GPU)
   - D) Resubmitting (GPU stage) and job records
   - E) Submit CPU across sweep points
   - F) Submit GPU across sweep points (after CPU)
@@ -42,38 +45,78 @@ If you are new, start with **Quick Start**. If you are iterating on a validation
 
 ## Quick Start
 
-For sweep post-processing and retroactive report generation, see:
+### Before You Start
 
-- [BayesEoR reporting workflows](./bayeseor_reporting.md)
+Before trying the workflow examples below, make sure you have completed the setup steps that ValSKA assumes:
 
-For operational commands (resume, batch report, comparison, cleanup), see:
+ValSKA setup:
 
-- [BayesEoR operations CLI](./bayeseor_operations.md)
+- install the `valska` environment so the `valska-bayeseor-*` CLI commands are available
+  See the Installation section in the project README for environment setup details.
+
+BayesEoR setup:
+
+- clone BayesEoR locally in a location you control from [BayesEoR on GitHub](https://github.com/PSims/BayesEoR)
+- create the BayesEoR conda environment using the environment file shipped with that BayesEoR checkout
+- make sure the BayesEoR checkout and conda environment used by batch jobs are compatible with this ValSKA version
+
+Runtime configuration in your ValSKA checkout:
+
+- copy `config/runtime_paths.example.yaml` to `config/runtime_paths.yaml` in your ValSKA repository
+- edit `config/runtime_paths.yaml` for your system:
+  - set `results_root`
+  - set `data.root` if you want relative `--data` paths to resolve automatically
+  - set `bayeseor.repo_path` to your local BayesEoR clone
+  - set `bayeseor.conda_sh` and `bayeseor.conda_env`
+  - set CPU and GPU SLURM defaults for your site
+- obtain or generate the UVH5 dataset you want to analyse
+- if you are using one of the example commands below, replace the example `--data` value with a dataset path that actually exists on your system
+
+If you are unsure which command to start with, run:
+
+    valska-bayeseor-help
 
 ### CLI quick reference
 
+#### Setup And Submission
+
 | Command | Purpose | Detailed docs |
 |---|---|---|
-| `valska-bayeseor-prepare` | Prepare one run directory and artefacts | This page |
-| `valska-bayeseor-submit` | Submit CPU/GPU stages for one prepared run | This page |
-| `valska-bayeseor-sweep` | Prepare and/or submit sweep points | This page |
-| `valska-bayeseor-help` | Print command index and common workflows | [bayeseor_operations](./bayeseor_operations.md) |
-| `valska-bayeseor-report` | Generate report tables/plots for one sweep | [bayeseor_reporting](./bayeseor_reporting.md) |
-| `valska-bayeseor-list-sweeps` | Discover available sweep directories | [bayeseor_reporting](./bayeseor_reporting.md) |
-| `valska-bayeseor-sweep-status` | Inspect per-point completeness for one sweep | [bayeseor_reporting](./bayeseor_reporting.md) |
-| `valska-bayeseor-validate-sweep` | Validate sweep integrity with exit-code semantics | [bayeseor_reporting](./bayeseor_reporting.md) |
-| `valska-bayeseor-sweep-audit` | Aggregate discovery + status + validation | [bayeseor_reporting](./bayeseor_reporting.md) |
-| `valska-bayeseor-resume` | Generate exact submit commands for incomplete points | [bayeseor_operations](./bayeseor_operations.md) |
-| `valska-bayeseor-report-all` | Batch-generate reports across discovered sweeps | [bayeseor_operations](./bayeseor_operations.md) |
-| `valska-bayeseor-compare-sweeps` | Compare metrics between two sweep summaries | [bayeseor_operations](./bayeseor_operations.md) |
-| `valska-bayeseor-cleanup` | Safe cleanup workflow (dry-run by default) | [bayeseor_operations](./bayeseor_operations.md) |
+| `valska-bayeseor-help` | Print command index and common workflows | [operations: command index](./bayeseor_operations.md#0-command-index--discoverability) |
+| `valska-bayeseor-prepare` | Prepare one run directory and artefacts | [valska-bayeseor-prepare](#valska-bayeseor-prepare) |
+| `valska-bayeseor-sweep` | Prepare and/or submit sweep points | [valska-bayeseor-sweep](#valska-bayeseor-sweep) |
+| `valska-bayeseor-submit` | Submit CPU/GPU stages for one prepared run | [valska-bayeseor-submit --stage cpu](#valska-bayeseor-submit---stage-cpu), [valska-bayeseor-submit --stage gpu](#valska-bayeseor-submit---stage-gpu) |
+
+#### Reporting And Health
+
+| Command | Purpose | Detailed docs |
+|---|---|---|
+| `valska-bayeseor-report` | Generate report tables/plots for one sweep | [reporting: CLI usage](./bayeseor_reporting.md#cli-usage) |
+| `valska-bayeseor-list-sweeps` | Discover available sweep directories | [reporting: wrapper script usage](./bayeseor_reporting.md#wrapper-script-usage) |
+| `valska-bayeseor-sweep-status` | Inspect per-point completeness for one sweep | [reporting: sweep health helpers](./bayeseor_reporting.md#sweep-health-helpers) |
+| `valska-bayeseor-validate-sweep` | Validate sweep integrity with exit-code semantics | [reporting: sweep health helpers](./bayeseor_reporting.md#sweep-health-helpers) |
+| `valska-bayeseor-sweep-audit` | Aggregate discovery + status + validation | [reporting: sweep health helpers](./bayeseor_reporting.md#sweep-health-helpers) |
+
+#### Operations
+
+| Command | Purpose | Detailed docs |
+|---|---|---|
+| `valska-bayeseor-resume` | Generate exact submit commands for incomplete points | [operations: resume incomplete sweep points](./bayeseor_operations.md#1-resume-incomplete-sweep-points) |
+| `valska-bayeseor-report-all` | Batch-generate reports across discovered sweeps | [operations: batch reporting](./bayeseor_operations.md#2-batch-reporting-across-discovered-sweeps) |
+| `valska-bayeseor-compare-sweeps` | Compare metrics between two sweep summaries | [operations: compare two sweep outcomes](./bayeseor_operations.md#3-compare-two-sweep-outcomes) |
+| `valska-bayeseor-cleanup` | Safe cleanup workflow (dry-run by default) | [operations: cleanup](./bayeseor_operations.md#4-cleanup-safe-by-default-maintenance) |
+
+### Quick Definitions
+
+- a single point is one prepared run directory for one perturbation value
+- a sweep is a collection of single-point runs across multiple perturbation values
 
 ### Which command should I use?
 
-- Need to create run inputs/scripts for a single point? → `valska-bayeseor-prepare`
-- Need to submit stages for one prepared run dir? → `valska-bayeseor-submit`
-- Need to prepare/submit multiple perturbation points together? → `valska-bayeseor-sweep`
 - Need a quick command map before you start? → `valska-bayeseor-help`
+- Need to create run inputs/scripts for one single-point run? → `valska-bayeseor-prepare`
+- Need to submit stages for one prepared run dir? → `valska-bayeseor-submit`
+- Need to prepare/submit a sweep across multiple perturbation values? → `valska-bayeseor-sweep`
 - Need to inspect one sweep health quickly? → `valska-bayeseor-sweep-status`
 - Need pass/fail validation semantics for one sweep? → `valska-bayeseor-validate-sweep`
 - Need campaign-wide health and validation overview? → `valska-bayeseor-sweep-audit`
@@ -85,32 +128,38 @@ For operational commands (resume, batch report, comparison, cleanup), see:
 
 For command-local examples of helper CLIs, run each command with `--help`.
 
-Assumptions:
-- You have configured `config/runtime_paths.yaml` (see your repo’s example).
-- You have a BayesEoR checkout and conda env accessible to batch jobs (also configured in runtime_paths.yaml).
-- You are on a SLURM cluster (e.g. Galahad).
+Public documentation note:
+- do not put personal filesystem paths into your committed `runtime_paths.yaml`
+- replace all example paths with paths that are valid for your own system or site
 
 Replace:
-- `achromatic_Gaussian` with your beam model label
-- `GLEAM` with your sky model label
+- `achromatic_Gaussian` with a beam-model label matching the data you are analysing
+- `GLEAM` with a sky-model label matching the data you are analysing
 - `...uvh5` with your dataset
 - `RUN_ID` / `SWEEP_ID` with something meaningful
 
-### 1) Prepare a single run kit (no jobs submitted)
+### valska-bayeseor-help
 
-This creates a run directory containing:
+If you want the shortest possible command map before you start:
+
+    valska-bayeseor-help
+
+For topic-specific help:
+
+    valska-bayeseor-help --topic setup
+    valska-bayeseor-help --topic submission
+    valska-bayeseor-help --topic reporting
+
+### valska-bayeseor-prepare
+
+What this command does:
+
+- creates a run directory containing:
 - BayesEoR config YAML(s)
 - SLURM submit scripts for CPU and GPU stages
 - a manifest recording provenance and resolved paths
 
-    valska-bayeseor-prepare \
-      --beam achromatic_Gaussian \
-      --sky GLEAM \
-      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
-      --run-id RUN_ID \
-      --fwhm-perturb-frac 0.01
-
-If you want to see what would happen without creating files:
+Dry-run example:
 
     valska-bayeseor-prepare \
       --beam achromatic_Gaussian \
@@ -120,32 +169,9 @@ If you want to see what would happen without creating files:
       --fwhm-perturb-frac 0.01 \
       --dry-run
 
-### 2) Submit CPU stage
+To create the files for real, run the same command without `--dry-run`.
 
-If you are using the submit CLI:
-
-    valska-bayeseor-submit /path/to/run_dir --stage cpu
-
-Or manually (inside the run_dir output from prepare):
-
-    sbatch /path/to/run_dir/submit_cpu_precompute.sh
-
-### 3) Submit GPU stage (after CPU completes)
-
-GPU stage submissions should depend on the CPU job finishing successfully (`afterok:<CPU_JOBID>`).
-If you submitted CPU using `valska-bayeseor-submit`, it records the CPU job id in `jobs.json`,
-which GPU submission can then use.
-
-Using the submit CLI:
-
-    valska-bayeseor-submit /path/to/run_dir --stage gpu
-
-Or manually:
-
-    sbatch --dependency=afterok:<CPU_JOBID> /path/to/run_dir/submit_signal_fit_gpu_run.sh
-    sbatch --dependency=afterok:<CPU_JOBID> /path/to/run_dir/submit_no_signal_gpu_run.sh
-
-### 4) Prepare & submit a sweep
+### valska-bayeseor-sweep
 
 A sweep prepares N run dirs (one per FWHM perturbation) and can optionally submit CPU/GPU stages
 across all points.
@@ -160,6 +186,21 @@ Prepare only (no submission):
       --fwhm-fracs 0.01 0.0 \
       --submit none
 
+For a first end-to-end run on a new system, prefer a single submission command:
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data /path/to/your/input.uvh5 \
+      --run-id SWEEP_ID \
+      --fwhm-fracs 0.01 0.0 \
+      --submit all
+
+This is the most reliable path because ValSKA submits CPU and GPU together per point
+and manages the dependency chain in one invocation.
+
+If you want finer control, you can split the stages:
+
 Submit CPU stage across all points:
 
     valska-bayeseor-sweep \
@@ -170,7 +211,7 @@ Submit CPU stage across all points:
       --fwhm-fracs 0.01 0.0 \
       --submit cpu
 
-Submit GPU stage across all points (after CPU job IDs have been recorded in each point’s `jobs.json`):
+Submit GPU stage across all points later (advanced / recovery workflow):
 
     valska-bayeseor-sweep \
       --beam achromatic_Gaussian \
@@ -179,6 +220,12 @@ Submit GPU stage across all points (after CPU job IDs have been recorded in each
       --run-id SWEEP_ID \
       --fwhm-fracs 0.01 0.0 \
       --submit gpu
+
+If you use the split CPU/GPU path, make sure:
+
+- your CPU stage has already produced the required precompute outputs
+- `jobs.json` exists for each point if you expect ValSKA to reuse recorded CPU job ids
+- your site-specific SLURM defaults in `runtime_paths.yaml` are correct before submission
 
 Dry-run submission (show `sbatch` commands but do not submit):
 
@@ -190,6 +237,38 @@ Dry-run submission (show `sbatch` commands but do not submit):
       --fwhm-fracs 0.01 0.0 \
       --submit cpu \
       --submit-dry-run
+
+### valska-bayeseor-submit --stage cpu
+
+If you are using the submit CLI:
+
+    valska-bayeseor-submit /path/to/run_dir --stage cpu
+
+Or manually (inside the run_dir output from prepare):
+
+    sbatch /path/to/run_dir/submit_cpu_precompute.sh
+
+### valska-bayeseor-submit --stage gpu
+
+Use this mode when you already have a prepared run directory and you want to
+launch GPU work separately from CPU precompute.
+
+Important:
+
+- this split CPU-then-GPU workflow is useful for recovery and explicit control
+- on some SLURM sites, later GPU submission can be sensitive to how CPU job
+  dependencies are handled
+- for a first end-to-end run, `valska-bayeseor-sweep --submit all` is usually
+  the safest path
+
+Using the submit CLI:
+
+    valska-bayeseor-submit /path/to/run_dir --stage gpu
+
+Or manually:
+
+    sbatch --dependency=afterok:<CPU_JOBID> /path/to/run_dir/submit_signal_fit_gpu_run.sh
+    sbatch --dependency=afterok:<CPU_JOBID> /path/to/run_dir/submit_no_signal_gpu_run.sh
 
 ---
 
@@ -273,12 +352,17 @@ This is the “mental model” for the typical workflow.
     | - records GPU job ids     |
     +---------------------------+
 
-Sweeps are a thin wrapper that repeats PREPARE across multiple FWHM fractions:
+Sweeps are a thin wrapper that repeats PREPARE across multiple FWHM fractions.
+
+Recommended first run:
+
+    valska-bayeseor-sweep --submit all    (submit CPU+GPU in one go per point)
+
+Other modes for setup checks, recovery, or tighter stage-by-stage control:
 
     valska-bayeseor-sweep --submit none   (prepare all points)
     valska-bayeseor-sweep --submit cpu    (submit CPU across points)
-    valska-bayeseor-sweep --submit gpu    (submit GPU across points; needs CPU job ids)
-    valska-bayeseor-sweep --submit all    (submit CPU+GPU in one go per point)
+    valska-bayeseor-sweep --submit gpu    (submit GPU across points; reuses completed CPU outputs or CPU job ids)
 
 ---
 
@@ -375,7 +459,22 @@ This writes:
 - sweep manifest: `.../_sweeps/<sweep_id>/sweep_manifest.json`
 - per-point run dirs containing `manifest.json`, configs, and SLURM scripts
 
-### E) Submit CPU across sweep points
+### E) Submit CPU+GPU together (fresh sweep)
+
+If you want the most reliable first end-to-end run, use:
+
+    valska-bayeseor-sweep \
+      --beam achromatic_Gaussian \
+      --sky GLEAM \
+      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+      --run-id sweep_test2 \
+      --fwhm-fracs 0.01 0.0 \
+      --submit all
+
+This is the recommended first-run path because ValSKA submits CPU and GPU together per point
+and manages the dependency chain in one invocation.
+
+### F) Submit CPU across sweep points
 
     valska-bayeseor-sweep \
       --beam achromatic_Gaussian \
@@ -399,9 +498,11 @@ To preview the sbatch commands without submitting:
       --submit cpu \
       --submit-dry-run
 
-### F) Submit GPU across sweep points (after CPU)
+### G) Submit GPU across sweep points (after CPU)
 
-GPU-only submission needs a dependency job id per point (typically from that point’s `jobs.json`).
+GPU-only submission works when each point either:
+- has completed CPU precompute outputs already present, or
+- has a dependency job id available (typically from that point’s `jobs.json`)
 
     valska-bayeseor-sweep \
       --beam achromatic_Gaussian \
@@ -415,7 +516,8 @@ If you attempt GPU submission before CPU job ids exist, ValSKA should report an 
 you must either:
 - submit CPU in the same invocation (`--submit all`), or
 - pass `--depend-afterok <JOBID>` (advanced), or
-- ensure `jobs.json` exists with a recorded CPU job id
+- ensure `jobs.json` exists with a recorded CPU job id, or
+- wait for CPU precompute to finish so the required matrix stack exists under the run directory
 
 Dry-run GPU submission (show commands, no jobs submitted):
 
@@ -432,21 +534,6 @@ Example output (abridged; dependency read from jobs.json):
 
     sbatch --dependency=afterok:<CPU_JOBID> .../submit_signal_fit_gpu_run.sh
     sbatch --dependency=afterok:<CPU_JOBID> .../submit_no_signal_gpu_run.sh
-
-### G) Submit CPU+GPU together (fresh sweep)
-
-If you want “one command per point” orchestration (CPU then GPU dependent), use:
-
-    valska-bayeseor-sweep \
-      --beam achromatic_Gaussian \
-      --sky GLEAM \
-      --data gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
-      --run-id sweep_test2 \
-      --fwhm-fracs 0.01 0.0 \
-      --submit all
-
-This is convenient for “fresh” runs, but some teams prefer splitting CPU and GPU stages into
-separate invocations for clearer control.
 
 ### H) Advanced: per-point submission with valska-bayeseor-submit
 
@@ -586,4 +673,3 @@ Ambiguous older patterns like `GLEAM_beam` are rejected to prevent silent misrou
 - `src/valska_hera_beam/external_tools/bayeseor/submit.py`
 - `config/runtime_paths.yaml`
 - `bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh`
-

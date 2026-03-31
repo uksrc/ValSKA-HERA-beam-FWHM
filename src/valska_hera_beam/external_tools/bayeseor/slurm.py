@@ -319,6 +319,20 @@ def render_submit_script(
     # -------------------------
     cpus_default = cpus_per_task if cpus_per_task is not None else 4
 
+    gpu_diag_block = ""
+    if mode == "gpu_run":
+        gpu_diag_block = """
+echo "===== GPU DIAGNOSTICS (begin) ====="
+echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-<unset>}"
+if command -v nvidia-smi >/dev/null 2>&1; then
+  nvidia-smi -L || true
+else
+  echo "nvidia-smi not found on PATH"
+fi
+echo "===== GPU DIAGNOSTICS (end) ====="
+echo "----------------------------------------"
+"""
+
     # -------------------------
     # Script body (robust timing: no `time` dependency)
     # -------------------------
@@ -365,6 +379,8 @@ echo "----------------------------------------"
 echo "Python: $(which python || true)"
 python -V || true
 echo "----------------------------------------"
+
+{gpu_diag_block}
 
 echo "Command:"
 echo "  {inner_cmd}"

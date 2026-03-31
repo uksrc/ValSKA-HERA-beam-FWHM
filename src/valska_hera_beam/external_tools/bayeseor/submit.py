@@ -16,6 +16,10 @@ _RECORD = Literal["jobs.json", "manifest"]
 
 _JOBID_RE = re.compile(r"Submitted\s+batch\s+job\s+(\d+)\s*$", re.IGNORECASE)
 _AFTEROK_RE = re.compile(r"afterok:(\d+)")
+_CPU_MATRIX_MARKERS: dict[str, tuple[str, ...]] = {
+    "Ninv": ("Ninv.h5", "Ninv.npz"),
+    "T_Ninv_T": ("T_Ninv_T.h5", "T_Ninv_T.npz"),
+}
 
 
 class SubmissionError(RuntimeError):
@@ -244,6 +248,39 @@ def _extract_cpu_jobid_from_existing(
     return None
 
 
+def _find_completed_cpu_precompute_matrix_dir(run_dir: Path) -> Path | None:
+    """
+    Return a matrix-stack directory when CPU precompute outputs appear complete.
+
+    BayesEoR GPU runs require the CPU-built matrix stack, most importantly the
+    ``Ninv`` and ``T_Ninv_T`` artefacts. For the standard ValSKA-generated
+    configs these are written beneath ``run_dir/matrices/...``.
+
+    We treat CPU precompute as reusable only when both markers are present in
+    the same matrix directory.
+    """
+    matrices_root = run_dir / "matrices"
+    if not matrices_root.exists():
+        return None
+
+    candidate_dirs: list[set[Path]] = []
+    for filenames in _CPU_MATRIX_MARKERS.values():
+        dirs_for_marker: set[Path] = set()
+        for filename in filenames:
+            dirs_for_marker.update(
+                p.parent for p in matrices_root.rglob(filename)
+            )
+        if not dirs_for_marker:
+            return None
+        candidate_dirs.append(dirs_for_marker)
+
+    common_dirs = set.intersection(*candidate_dirs)
+    if not common_dirs:
+        return None
+
+    return max(common_dirs, key=lambda p: p.stat().st_mtime)
+
+
 def _merge_jobs_record(
     existing: dict[str, Any] | None, new_result: dict[str, Any]
 ) -> dict[str, Any]:
@@ -443,27 +480,52 @@ def submit_bayeseor_run(
     # --------------------
     if stage in ("gpu", "all"):
         dep: str | None = None
+        dependency_source: str | None = None
+        verified_matrix_dir: Path | None = None
 
         if cpu_jobid:
             dep = cpu_jobid
-        elif depend_afterok:
+            dependency_source = "same_invocation_cpu"
+        elif depend_afterok is not None:
             dep = _safe_int_jobid(depend_afterok)
+            if dep is None:
+                raise InvalidArgumentError(
+                    "--depend-afterok must be a numeric SLURM job id."
+                )
+            dependency_source = "explicit_depend_afterok"
+        elif dry_run and stage == "all":
+            dep = "<CPU_JOBID>"
+            dependency_source = "dry_run_placeholder"
         else:
-            dep = _extract_cpu_jobid_from_existing(existing_jobs)
+            verified_matrix_dir = _find_completed_cpu_precompute_matrix_dir(
+                plan.run_dir
+            )
+            if verified_matrix_dir is not None:
+                dependency_source = "cpu_precompute_outputs_verified"
+            else:
+                dep = _extract_cpu_jobid_from_existing(existing_jobs)
+                if dep is not None:
+                    dependency_source = "jobs_json"
 
         if dep is None:
-            if dry_run and stage == "all":
-                dep = "<CPU_JOBID>"
-            else:
+            if verified_matrix_dir is None:
                 raise MissingDependencyError(
-                    "GPU submission requested but no dependency job id is available. "
+                    "GPU submission requested but neither a reusable CPU dependency "
+                    "job id nor completed CPU precompute outputs are available. "
                     "Either submit CPU in the same invocation (--stage all), "
                     "or pass --depend-afterok <JOBID>, "
                     "or ensure jobs.json exists with a recorded cpu_precompute.job_id "
-                    "(or an existing jobs.gpu.dependency like 'afterok:<JOBID>') and use --force."
+                    "(or an existing jobs.gpu.dependency like 'afterok:<JOBID>'), "
+                    "or rerun CPU so BayesEoR writes the required matrix stack under "
+                    "run_dir/matrices/."
                 )
 
-        gpu_jobs: dict[str, Any] = {"dependency": f"afterok:{dep}"}
+        gpu_jobs: dict[str, Any] = {
+            "dependency": f"afterok:{dep}" if dep is not None else None,
+            "dependency_source": dependency_source,
+        }
+        if verified_matrix_dir is not None:
+            gpu_jobs["cpu_precompute_matrix_dir"] = str(verified_matrix_dir)
 
         if hypothesis in ("signal_fit", "both"):
             if plan.gpu_signal_fit_script is None:

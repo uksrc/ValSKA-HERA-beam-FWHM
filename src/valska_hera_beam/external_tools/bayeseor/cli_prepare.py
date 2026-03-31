@@ -772,7 +772,7 @@ def main(argv: list[str] | None = None) -> int:
     print("     # CPU only:")
     print(f"     valska-bayeseor-submit {run_dir} --stage cpu")
     print(
-        "     # GPU only (depends on recorded CPU job ID, or provide --depend-afterok):"
+        "     # GPU only (reuses completed CPU outputs if present, otherwise uses a recorded CPU job ID or --depend-afterok):"
     )
     print(f"     valska-bayeseor-submit {run_dir} --stage gpu")
     print(

@@ -16,30 +16,32 @@ If you are new, start with **Quick Start**. If you are iterating on a validation
 - [Quick Start](#quick-start)
   - [Before You Start](#before-you-start)
   - [CLI quick reference](#cli-quick-reference)
+  - [Quick Definitions](#quick-definitions)
+  - [Which command should I use?](#which-command-should-i-use)
   - [valska-bayeseor-help](#valska-bayeseor-help)
   - [valska-bayeseor-prepare](#valska-bayeseor-prepare)
   - [valska-bayeseor-sweep](#valska-bayeseor-sweep)
   - [valska-bayeseor-submit --stage cpu](#valska-bayeseor-submit---stage-cpu)
   - [valska-bayeseor-submit --stage gpu](#valska-bayeseor-submit---stage-gpu)
 - [Concepts](#concepts)
-  - Beam / sky taxonomy (directory layout)
-  - Template + variant concept (collision-free template differences)
-  - What gets created where
+  - [Beam / sky taxonomy (directory layout)](#beam--sky-taxonomy-directory-layout)
+  - [Template + variant concept (collision-free template differences)](#template--variant-concept-collision-free-template-differences)
+  - [What gets created where](#what-gets-created-where)
 - [Lifecycle diagram](#lifecycle-diagram)
 - [Detailed examples](#detailed-examples)
-  - A) Prepare (dry-run vs real)
-  - B) Sweep (dry-run vs real)
-  - C) Submitting with dependency handling (CPU -> GPU)
-  - D) Resubmitting (GPU stage) and job records
-  - E) Submit CPU across sweep points
-  - F) Submit GPU across sweep points (after CPU)
-  - G) Submit CPU+GPU together (fresh sweep)
-  - H) Advanced: per-point submission with valska-bayeseor-submit
-  - I) Monitoring jobs
-  - J) Post-processing reports (valska-bayeseor-report)
-  - K) Sweep health/status checks
-  - L) Aggregate sweep audit
-  - M) Backwards compatibility: deprecated --scenario
+  - [A) Prepare (dry-run)](#a-prepare-dry-run)
+  - [B) Prepare (real)](#b-prepare-real)
+  - [C) Sweep (dry-run with point directories)](#c-sweep-dry-run-with-point-directories)
+  - [D) Sweep (prepare only)](#d-sweep-prepare-only)
+  - [E) Submit CPU+GPU together (fresh sweep)](#e-submit-cpugpu-together-fresh-sweep)
+  - [F) Submit CPU across sweep points](#f-submit-cpu-across-sweep-points)
+  - [G) Submit GPU across sweep points (after CPU)](#g-submit-gpu-across-sweep-points-after-cpu)
+  - [H) Advanced: per-point submission with valska-bayeseor-submit](#h-advanced-per-point-submission-with-valska-bayeseor-submit)
+  - [I) Monitoring jobs](#i-monitoring-jobs)
+  - [J) Post-processing reports (tables + plots)](#j-post-processing-reports-tables--plots)
+  - [K) Sweep health/status checks](#k-sweep-healthstatus-checks)
+  - [L) Aggregate sweep audit](#l-aggregate-sweep-audit)
+  - [M) Backwards compatibility: deprecated --scenario](#m-backwards-compatibility-deprecated---scenario)
 
 ---
 
@@ -75,6 +77,9 @@ Runtime configuration in your ValSKA checkout:
 If you are unsure which command to start with, run:
 
     valska-bayeseor-help
+
+If you want copy/paste command sequences rather than a command map, jump to
+[Detailed examples](#detailed-examples).
 
 ### CLI quick reference
 

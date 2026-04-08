@@ -9,6 +9,7 @@
 name: valska
 # name: valska2
 # name: valska3
+# name: valska4
 channels:
   - conda-forge
 dependencies:
@@ -28,11 +29,15 @@ dependencies:
   - pymultinest
   - python
   - pyuvdata
+  - pyyaml
   - rich
+  - ruamel.yaml
   - scipy
   - setuptools
   - setuptools_scm
   - sphinx
+  - sphinx-rtd-theme
+  - myst-parser
   - threadpoolctl
   - pandas
   - pyyaml

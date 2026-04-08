@@ -9,8 +9,6 @@
 # mamba activate valska
 # ---
 name: valska
-# name: valska2
-# name: valska3
 channels:
   - conda-forge
 dependencies:
@@ -53,10 +51,6 @@ dependencies:
   - mpi4py>=4.1.1
 
   - pip:
-      # - "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"
-      - bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure
-      # - -c constraints.txt # uses constraints file if needed (e.g. for specific numpy version) but would need to write constraints.txt
-      # - -e . # editable-installs valska and standard deps from pyproject.toml
+      - bayeseor@git+https://github.com/PSims/BayesEoR.git@main
+      # - bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure
       - -e .[dev,docs] # editable-installs valska and all deps from pyproject.toml
-      # - . # standard-installs valska and standard deps from pyproject.toml
-      # - .[dev] # default installs valska and all deps from pyproject.toml

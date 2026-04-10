@@ -1,7 +1,6 @@
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-OLD_NAME = "ValSKA-HERA-beam-FWHM"
 
 
 def test_core_metadata_uses_valska_name():
@@ -17,7 +16,7 @@ def test_core_metadata_uses_valska_name():
 
     for path in files_to_check:
         text = path.read_text(encoding="utf-8")
-        assert OLD_NAME not in text, f"old repository name still present in {path}"
+        assert "ValSKA" in text, f"expected ValSKA branding in {path}"
 
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")

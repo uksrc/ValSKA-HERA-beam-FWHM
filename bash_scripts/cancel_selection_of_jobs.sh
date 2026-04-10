@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/cancel_selection_of_jobs.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/cancel_selection_of_jobs.sh
 
 # ==============================================================================
 # Script: cancel_selection_of_jobs.sh

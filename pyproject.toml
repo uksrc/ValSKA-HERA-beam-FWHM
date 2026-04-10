@@ -9,10 +9,10 @@ requires = ["setuptools>=68", "wheel", "setuptools-scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "valska-hera-beam-fwhm"
+name = "valska"
 # Version is derived from your Git tags by setuptools-scm
 dynamic = ["version"]
-description = "Validation utilities for HERA beam FWHM sensitivity in 21-cm power-spectrum forward modelling."
+description = "Validation tooling for SKA and precursor science workflows, including HERA beam perturbation studies."
 readme = "README.md"
 # requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -76,8 +76,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM"
-Issues = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM/issues"
+Homepage = "https://github.com/UKSRC/ValSKA"
+Issues = "https://github.com/UKSRC/ValSKA/issues"
 
 [project.scripts]
 # valska-beam-validate = "valska_hera_beam.cli:main"

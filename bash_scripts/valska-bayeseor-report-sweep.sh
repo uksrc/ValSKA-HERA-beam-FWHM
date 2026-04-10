@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-report-sweep.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/valska-bayeseor-report-sweep.sh
 #
 # Generate ValSKA BayesEoR sweep report artefacts (tables + plots)
 # for an already-completed sweep directory.

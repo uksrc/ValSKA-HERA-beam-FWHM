@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GLEAM_v2.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GLEAM_v2.sh
 #
 # Submit a BayesEoR FWHM perturbation sweep for chromatic_Gaussian beam + GLEAM sky.
 #

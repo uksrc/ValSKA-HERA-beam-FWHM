@@ -1,8 +1,8 @@
 """
-ValSKA-HERA-beam-FWHM
+ValSKA
 
-Validation utilities for assessing sensitivity of 21-cm power spectrum
-forward-modelling pipelines to primary beam FWHM uncertainties.
+Validation tooling for SKA and precursor science workflows, including
+21-cm power-spectrum studies of primary beam FWHM uncertainties.
 """
 
 from __future__ import annotations

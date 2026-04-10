@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-compare-sweeps.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/valska-bayeseor-compare-sweeps.sh
 #
 # Wrapper for valska-bayeseor-compare-sweeps.
 #

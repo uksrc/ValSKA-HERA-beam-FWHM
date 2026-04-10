@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import cli_compare_sweeps
+from valska.external_tools.bayeseor import cli_compare_sweeps
 
 
 def _write_summary(path: Path, points: list[dict[str, object]]) -> None:

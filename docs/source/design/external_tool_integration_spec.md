@@ -83,8 +83,8 @@ Entry points **must** be registered in `pyproject.toml`:
 
 ```toml
 [project.scripts]
-valska-pyuvsim-prepare = "valska_hera_beam.external_tools.pyuvsim.cli_prepare:main"
-valska-pyuvsim-submit = "valska_hera_beam.external_tools.pyuvsim.cli_submit:main"
+valska-pyuvsim-prepare = "valska.external_tools.pyuvsim.cli_prepare:main"
+valska-pyuvsim-submit = "valska.external_tools.pyuvsim.cli_submit:main"
 ```
 
 ---
@@ -714,7 +714,7 @@ Sweep CLIs **should** support:
 Tools **should** follow this module structure:
 
 ```
-src/valska_hera_beam/external_tools/<tool>/
+src/valska/external_tools/<tool>/
 ├── __init__.py          # Public API exports
 ├── cli_prepare.py       # Prepare CLI implementation
 ├── cli_submit.py        # Submit CLI implementation
@@ -839,7 +839,7 @@ When implementing a new tool integration, verify:
 
 ## Appendix A: Reference implementation
 
-The BayesEoR integration (`src/valska_hera_beam/external_tools/bayeseor/`) serves as the reference implementation for this specification.
+The BayesEoR integration (`src/valska/external_tools/bayeseor/`) serves as the reference implementation for this specification.
 
 Key files:
 - `cli_prepare.py` — Prepare CLI
@@ -900,7 +900,7 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 
 **Current state:** Resolved — the `manifest.json` now includes a `tool` field identifying the generating tool.
 
-**Resolution:** Added `tool` field to manifest generation in `src/valska_hera_beam/external_tools/bayeseor/setup.py` (uses canonical `TOOL_NAME`). Tests updated to assert presence (`tests/test_utils.py`); full test-suite passes.
+**Resolution:** Added `tool` field to manifest generation in `src/valska/external_tools/bayeseor/setup.py` (uses canonical `TOOL_NAME`). Tests updated to assert presence (`tests/test_utils.py`); full test-suite passes.
 
 **Priority:** Resolved.
 
@@ -924,7 +924,7 @@ This appendix tracks the conformance status of the BayesEoR reference implementa
 
 **Current state:** Resolved — `valska-bayeseor-prepare` already supports `--results-root` as a CLI argument.
 
-**Resolution:** Verified in `src/valska_hera_beam/external_tools/bayeseor/cli_prepare.py` (argument defined with default resolution via runtime paths).
+**Resolution:** Verified in `src/valska/external_tools/bayeseor/cli_prepare.py` (argument defined with default resolution via runtime paths).
 
 **Priority:** Resolved.
 

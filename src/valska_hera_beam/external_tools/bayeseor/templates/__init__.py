@@ -1,31 +1,9 @@
-"""Access to bundled BayesEoR validation templates."""
+"""Compatibility wrapper for deprecated module `valska_hera_beam.external_tools.bayeseor.templates.__init__`."""
 
 from __future__ import annotations
 
-from importlib import resources
-from pathlib import Path
+from valska_hera_beam._compat import warn_import as _warn_import
 
+_warn_import(__name__, "valska.external_tools.bayeseor.templates")
 
-def list_templates() -> list[str]:
-    """List shipped BayesEoR validation templates bundled with the package."""
-    pkg = __package__  # valska_hera_beam.external_tools.bayeseor.templates
-    return sorted(
-        [
-            p.name
-            for p in resources.files(pkg).iterdir()
-            if Path(p.name).suffix in {".yaml", ".yml"}
-        ]
-    )
-
-
-def get_template_path(name: str) -> Path:
-    """
-    Return a filesystem Path to a shipped template.
-
-    Uses importlib.resources so this works both from a source checkout and from
-    an installed wheel.
-    """
-    pkg = __package__
-    candidate = resources.files(pkg) / name
-    with resources.as_file(candidate) as p:
-        return Path(p)
+from valska.external_tools.bayeseor.templates import *  # noqa: F401,F403

@@ -19,14 +19,14 @@ fi
 
 if command -v conda >/dev/null 2>&1; then
     if conda run -n "$VALSKA_CONDA_ENV" python -m \
-        valska_hera_beam.external_tools.bayeseor.cli_resume "$@"; then
+        valska.external_tools.bayeseor.cli_resume "$@"; then
         exit 0
     fi
 fi
 
 if command -v python >/dev/null 2>&1 && [[ -d "src" ]]; then
     exec env PYTHONPATH=src python -m \
-        valska_hera_beam.external_tools.bayeseor.cli_resume "$@"
+        valska.external_tools.bayeseor.cli_resume "$@"
 fi
 
 echo "Error: could not find valska-bayeseor-resume, conda fallback, or local module fallback." >&2

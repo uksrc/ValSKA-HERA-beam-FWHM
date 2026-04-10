@@ -12,6 +12,10 @@ The focus of this repository is **validation tooling**: enabling controlled, ins
 
 This repository is developed as part of the UK Square Kilometre Array Regional Centre (UKSRC) science-validation effort.
 
+For Python imports, use `valska` as the canonical package name. The legacy
+`valska_hera_beam` import path is still supported temporarily as a deprecated
+compatibility shim while downstream code migrates.
+
 ---
 
 ## Features

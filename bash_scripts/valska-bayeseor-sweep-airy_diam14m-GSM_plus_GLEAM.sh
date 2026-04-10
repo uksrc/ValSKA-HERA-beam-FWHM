@@ -22,7 +22,7 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 BEAM="airy_diam14m"
 SKY="GSM_plus_GLEAM"
-DATA="/home/ps550/ValSKA/UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/diam14m/gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5"
+DATA="gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5"
 TEMPLATE="validation_airy_diam14m.yaml"
 RUN_ID="sweep_airy_init"
 POL="xx"

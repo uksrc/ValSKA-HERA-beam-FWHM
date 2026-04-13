@@ -54,9 +54,11 @@ GSM_FgOnly_+2e0pp:  v5d0/GSM_FgOnly_+2e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dP
 GSM_FgOnly_+5e0pp:  v5d0/GSM_FgOnly_+5e0pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 GSM_FgOnly_+1e1pp:  v5d0/GSM_FgOnly_+1e1pp/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 
+
 ## GLEAM paths (older single-run config)
 GLEAM_FgEoR: v6d0/GL_FgEoR/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
 GLEAM_FgOnly: v6d0/GL_FgOnly/MN-23-23-38-2-2.63-2.82-6.2E-03-lp-dPS-v1/
+
 
 # -----------------------------------------------------------------------------
 # GSM + GLEAM v7d0 paths (EoR+Foregrounds) - negative perturbations
@@ -85,3 +87,38 @@ GL_FgOnly_1.0e-01pp:  v7d0/GL_FgOnly_1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-
 GL_FgOnly_1.0e00pp:   v7d0/GL_FgOnly_1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
 GL_FgOnly_1.0e01pp:   v7d0/GL_FgOnly_1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
 GL_FgOnly_5.0e00pp:   v7d0/GL_FgOnly_5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+
+# -----------------------------------------------------------------------------
+# GSM + GLEAM OSKAR-Matlab_v1d0 paths (EoR+Foregrounds) - negative perturbations
+# -----------------------------------------------------------------------------
+GSM_GLEAM_FgEoR_-1.0e-01pp: OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_-1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgEoR_-1.0e00pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_-1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgEoR_-1.0e01pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_-1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgEoR_-5.0e00pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_-5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM + GLEAM OSKAR-Matlab_v1d0 paths (EoR+Foregrounds) - positive perturbations
+GSM_GLEAM_FgEoR_1.0e-01pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgEoR_1.0e00pp:   OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgEoR_1.0e01pp:   OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgEoR_5.0e00pp:   OSKAR-Matlab_v1d0/GSM_GLEAM_FgEoR_5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# -----------------------------------------------------------------------------
+# GSM + GLEAM OSKAR-Matlab_v1d0 paths (Foregrounds only) - negative perturbations
+# -----------------------------------------------------------------------------
+GSM_GLEAM_FgOnly_-1.0e-01pp: OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_-1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgOnly_-1.0e00pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_-1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgOnly_-1.0e01pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_-1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgOnly_-5.0e00pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_-5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+# GSM + GLEAM OSKAR-Matlab_v1d0 paths (Foregrounds only) - positive perturbations
+GSM_GLEAM_FgOnly_1.0e-01pp:  OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_1.0e-01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgOnly_1.0e00pp:   OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_1.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgOnly_1.0e01pp:   OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_1.0e01pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+GSM_GLEAM_FgOnly_5.0e00pp:   OSKAR-Matlab_v1d0/GSM_GLEAM_FgOnly_5.0e00pp/MN-23-23-38-2-ffm-2.63-2.82-6.2E-03-lp-dPS-v1/
+
+
+
+
+
+

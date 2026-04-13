@@ -20,3 +20,5 @@ Contents
    contributing
    testing
    api
+   workflows
+   design

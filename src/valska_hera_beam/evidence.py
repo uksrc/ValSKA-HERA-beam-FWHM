@@ -66,7 +66,7 @@ def interpret_bayes_factor(log_bf: float) -> str:  # noqa: PLR0911
     Returns
     -------
     str
-        Human-readable description of evidence strength, based on
+        Readable description of evidence strength, based on
         commonly used (Jeffreys-like) thresholds.
     """
     if log_bf > 5:  # noqa: PLR2004
@@ -127,7 +127,7 @@ def calculate_bayes_factor(
         - ``'log_evidence_1'``: float or ``None``, log-evidence of model 1
         - ``'log_evidence_2'``: float or ``None``, log-evidence of model 2
         - ``'log_bayes_factor'``: float or ``None``, ln(Z1/Z2).
-        - ``'interpretation'``: str, human-readable interpretation.
+        - ``'interpretation'``: str, readable interpretation.
         - ``'success'``: bool, True if computation succeeded.
         - ``'error'``: str or ``None``, error message if failed.
     """
@@ -200,7 +200,7 @@ class ChainPair:
 
     perturbation: str
     fgeor_root: Path  # directory that directly contains data-*
-    fgonly_root: Path
+    fgonly_root: Path  # directory that directly contains data-*
 
 
 ChainPairMap = dict[str, ChainPair]
@@ -218,8 +218,7 @@ def _find_single_mn_subdir(root: Path) -> Path:
         raise RuntimeError(f"No subdirectories found under {root}")
     if len(subdirs) > 1:
         raise RuntimeError(
-            f"Multiple subdirectories under {root}: "
-            f"{[p.name for p in subdirs]}"
+            f"Multiple subdirectories under {root}: {[p.name for p in subdirs]}"
         )
     return subdirs[0]
 
@@ -244,12 +243,12 @@ def find_chain_pairs(  # noqa: PLR0912
     """
     Discover matched FgEoR / FgOnly chain pairs under a base directory.
 
-    This is meant to work with layouts like:
+    This is meant to work with layouts like::
 
         ``base_dir / "GL_FgEoR_1.0e00pp"/MN-23-23-38-2-ffm-.../data-``
         ``base_dir / "GL_FgOnly_1.0e00pp"/MN-23-23-38-2-ffm-.../data-``
 
-    or v5-style directories such as:
+    or v5-style directories such as::
 
         ``base_dir / "GSM_FgEoR_-5e0pp"/MN-23-23-38-2-.../data-``
         ``base_dir / "GSM_FgOnly_-5e0pp"/MN-23-23-38-2-.../data-``
@@ -525,7 +524,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
         If ``True``, print detailed numerical results per successful
         perturbation.
     verbose :
-        If ``True``, print human-readable progress and summary messages.
+        If ``True``, print readable progress and summary messages.
     show_progress :
         If ``True`` and multiple perturbation levels are analyzed, display
         a ``tqdm`` progress bar (if available).
@@ -588,8 +587,12 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
         )
         all_results.append(result)
 
-        if show_progress and hasattr(perturbation_iterator, "set_description"):
-            perturbation_iterator.set_description(f"Analyzing: {pert_label}")
+        if show_progress:
+            set_description = getattr(
+                perturbation_iterator, "set_description", None
+            )
+            if callable(set_description):
+                set_description(f"Analyzing: {pert_label}")
 
     # Summary table
     print("\n" + "=" * 80)
@@ -611,8 +614,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
 
         if validation == "ERROR":
             print(
-                f"{pert:<20} {'ERROR':<10} {'❌ ERROR':<15} "
-                f"{'Analysis failed'}"
+                f"{pert:<20} {'ERROR':<10} {'❌ ERROR':<15} {'Analysis failed'}"
             )
             error_count += 1
         else:
@@ -681,16 +683,14 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
         for detailed_result in successful_results:
             print(f"Perturbation: {detailed_result['perturbation']}")
             print(
-                "  FgEoR Evidence: "
-                f"{detailed_result['log_evidence_fgeor']:.6f}"
+                f"  FgEoR Evidence: {detailed_result['log_evidence_fgeor']:.6f}"
             )
             print(
                 f"  FgOnly Evidence: "
                 f"{detailed_result['log_evidence_fgonly']:.6f}"
             )
             print(
-                "  Log Bayes Factor: "
-                f"{detailed_result['log_bayes_factor']:.6f}"
+                f"  Log Bayes Factor: {detailed_result['log_bayes_factor']:.6f}"
             )
             print(f"  Validation: {detailed_result['validation']}")
             print(f"  Interpretation: {detailed_result['interpretation']}")

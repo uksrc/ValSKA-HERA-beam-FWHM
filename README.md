@@ -43,14 +43,14 @@ ValSKA-HERA-beam-FWHM includes:
 General guidance:
 
 - Clone the repository
-- All dependencies can be installed with `conda` using the included `valska_env_base.yaml` and `valska_env_gpu.yaml` files via (but see below first):
+- All dependencies can be installed with `conda` using the included `valska_env_base.yaml` and `valska_env_gpu.yaml` files
+- In `valska_env_gpu.yaml`, select `cuda` or `cudatoolkit` depending on your system (e.g. Azimuth vs Galahad).
 ```
 conda env create -f valska_env_base.yaml
 conda activate valska
 conda env update -f valska_env_gpu.yaml
 ```
- - in `valska_env_gpu.yaml`, select `cuda` or `cudatoolkit` depending on your system (e.g. Azimuth vs Galahad).
-
+ 
 **Note:**
 This repository provides *validation tooling and job orchestration*.
 It does **not** automatically create conda environments, clone BayesEoR, or manage HPC accounts.

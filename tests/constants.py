@@ -2,12 +2,18 @@
 Variables and util functions for testing
 """
 
+import tempfile
 from pathlib import Path
 
-BASE_DIR = Path("/dummy/base/dir/")
-CHAINS_DIR = Path("/dummy/chains/dir/")
-DATA_DIR = Path("/dummy/data/dir/")
-RESULTS_DIR = Path("/dummy/results/dir/")
+# Use an ephemeral, writable temp directory for tests (not checked into VCS)
+BASE_DIR = Path(tempfile.mkdtemp(prefix="valska_tests_")).resolve()
+CHAINS_DIR = BASE_DIR / "chains"
+DATA_DIR = BASE_DIR / "data"
+RESULTS_DIR = BASE_DIR / "results"
+
+# Ensure required subdirs exist
+for d in (CHAINS_DIR, DATA_DIR, RESULTS_DIR):
+    d.mkdir(parents=True, exist_ok=True)
 
 EOR_PS = 214777.66068216303  # mK^2 Mpc^3
 NOISE_RATIO = 0.5
@@ -94,8 +100,8 @@ class MockLegend:
         self._fontsize = 1
         self.texts = [MockText("A"), MockText("B"), MockText("Expected")]
         self.ncol = None
-        self.frameon = None
-        self.framealpha = None
+        self.frameon = True
+        self.framealpha = 1.0
 
     def get_texts(self):
         """Return texts"""

@@ -1,4 +1,4 @@
-"""Plotting functions"""
+"""Plotting helpers for ValSKA-HERA-beam-FWHM analysis outputs."""
 
 from pathlib import Path
 from typing import Any
@@ -10,7 +10,7 @@ import numpy as np
 from bayeseor.analyze.analyze import DataContainer
 from matplotlib.figure import Figure
 
-from .utils import load_paths
+from .utils import get_default_path_manager, load_paths
 
 
 class BeamAnalysisPlotter:
@@ -50,10 +50,13 @@ class BeamAnalysisPlotter:
             If None, uses noise_ps.
         """
         if base_chains_dir is None:
-            self.cwd = Path("/home/psims/share/test/BayesEoR/notebooks/")
-            self.dir_prefix = self.cwd / Path("../chains/")
+            self.dir_prefix = Path(get_default_path_manager().chains_dir)
         else:
             self.dir_prefix = Path(base_chains_dir)
+
+        # Backwards-compatibility: some callers/tests expect attribute
+        # `base_chains_dir`. Expose it as an alias to dir_prefix.
+        self.base_chains_dir = self.dir_prefix
 
         # Define paths to different analysis directories
         # Load paths from file if not provided directly
@@ -256,7 +259,12 @@ class BeamAnalysisPlotter:
             legend = ax.get_legend()
             if legend is not None:
                 # Get all the line handles and texts
-                handles, texts = legend.legendHandles, legend.get_texts()
+                handles = getattr(legend, "legendHandles", None)
+                if handles is None:
+                    handles = getattr(legend, "legend_handles", None)
+                if handles is None:
+                    handles, _ = ax.get_legend_handles_labels()
+                texts = legend.get_texts()
 
                 # Create a mapping of single letter labels to full labels
                 letter_to_label = {}
@@ -291,13 +299,14 @@ class BeamAnalysisPlotter:
                         int(np.sqrt(n_items) + 0.5), 4
                     )  # Cap at 4 columns max
 
-                # Create a new legend with the updated texts and multiple
-                # columns
+                # Create a new legend with the updated texts and multiple columns
+                legend_loc = getattr(legend, "_loc", None)
+                legend_fontsize = getattr(legend, "_fontsize", None)
                 ax.legend(
                     handles=handles,
                     labels=[text.get_text() for text in texts],
-                    loc=legend._loc,
-                    fontsize=legend._fontsize,
+                    loc=legend_loc,
+                    fontsize=legend_fontsize,
                     ncol=ncol,  # Use multiple columns
                     frameon=True,  # Add a frame around the legend
                     framealpha=0.8,  # Make the frame slightly transparent

@@ -17,7 +17,7 @@ The project uses ``pyproject.toml`` to manage the devlopment dependencies. These
 - ``ruff`` - Code formatting and linting
 - ``mypy`` - Type checking
 
-The recommended way to install the dependencies is via the conda environment specification in ``valska_env.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
+The recommended way to install the dependencies is via the conda environment specification in ``valska_env_base.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
 
  
 Unit Tests

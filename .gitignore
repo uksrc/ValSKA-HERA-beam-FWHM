@@ -189,7 +189,18 @@ cython_debug/
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 #  and can be added to the global gitignore or merged into this file. However, if you prefer,
 #  you could uncomment the following to ignore the entire vscode folder
-# .vscode/
+.vscode/
+
+# macOS Finder metadata
+.DS_Store
+
+# Local AI / agent tooling state
+.codex
+.claude
+.cursor
+.aider*
+.avante
+.continue
 
 # Ruff stuff:
 .ruff_cache/
@@ -211,7 +222,21 @@ __marimo__/
 
 
 
+# Project-specific ignores
 # temp dir for testing
 temp/
 chains/
 old/
+Old/
+*.egg-info/
+src/valska_hera_beam/_version.py
+file_structure.txt
+config/runtime_paths.yaml
+validation_results/*
+validation_results
+*.py.backup
+UKSRC_val_mock_vis
+*.sh.swp
+*.sh.swo
+docs/source/generated/
+uksrc-st_memos/drafts

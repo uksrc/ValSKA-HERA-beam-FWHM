@@ -1,0 +1,56 @@
+# ---
+# Base level dependencies (non-GPU)
+# see valska_env_gpu.yaml for GPU specific additions
+# Basic usage:
+# conda env create -f valska_env_base.yaml
+# conda activate valska
+# or
+# mamba env create -f valska_env_base.yaml
+# mamba activate valska
+# ---
+name: valska
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+
+  # Core numerics
+  - numpy>=1.26
+  - scipy>=1.17.1
+  - pandas>=2.2,<2.4
+
+  # Astronomy / domain
+  - astropy>=7.2.0
+  - astropy-healpix>=1.1.3
+  - pyuvdata>=3.2.5
+
+  # Inference / pipeline
+  - anesthetic>=2.13
+  - pymultinest>=2.12
+
+  # IO + utils
+  - h5py>=3.16.0
+  - pyyaml>=6.0.3
+  - ruamel.yaml>=0.19.1
+  - jsonargparse>=4.40.2
+
+  # Plotting / UX
+  - matplotlib>=3.10.8
+  - rich>=14.3.3
+  - tqdm>=4.67.3
+
+  # Performance helpers
+  - threadpoolctl>=3.6.0
+
+  # Build/runtime
+  - pip
+  - setuptools
+  - setuptools_scm>=9.2.2
+
+  # MPI (keep, but note below)
+  - mpi4py>=4.1.1
+
+  - pip:
+      - bayeseor@git+https://github.com/PSims/BayesEoR.git@main
+      # - bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure
+      - -e .[dev,docs] # editable-installs valska and all deps from pyproject.toml

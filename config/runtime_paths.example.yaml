@@ -1,0 +1,104 @@
+# Example site/user-specific runtime configuration for ValSKA.
+# Copy this file to config/runtime_paths.yaml and edit paths for your system.
+# (config/runtime_paths.yaml should typically be gitignored.)
+
+# Where ValSKA should write all results (BayesEoR outputs, validation plots/tables, etc.)
+results_root: ~/UKSRC/ValSKA/results
+
+
+# Default location for input datasets.
+# If a CLI argument like --data is given as a *relative* path, ValSKA will resolve it as:
+#   <data.root>/<relative-path>
+# Absolute paths are used as-is.
+data:
+  root:  ~/path/to/data/dir
+
+bayeseor:
+  # Path to a local clone of BayesEoR used to locate scripts/run-analysis.py
+  repo_path: /path/to/BayesEoR
+
+  # Conda settings used inside SLURM scripts (non-interactive shells)
+  # Example (miniconda):
+  conda_sh: "source /path/to/miniconda3/etc/profile.d/conda.sh"
+  # Example (anaconda):
+  # conda_sh: "source /path/to/anaconda3/etc/profile.d/conda.sh"
+  conda_env: bayeseor
+
+  # Default shipped template to use if --template is not provided
+  default_template: validation_v1d0_template.yaml
+
+  # Whether to enforce unique output directories by default
+  unique_by_default: false
+
+  # Submission defaults (used by valska-bayeseor-submit)
+  submit:
+    # SLURM submission executable; override if your site wraps sbatch
+    sbatch_exe: sbatch
+
+    # Where job submission metadata is recorded (relative to results_root or CWD,
+    # depending on how the CLI is invoked).
+    record: jobs.json
+
+    # If true, refuse to submit when record already exists and contains jobs.
+    refuse_if_jobs_exist: true
+
+  # Backwards-compatible single-profile defaults
+  # (fallback if slurm_defaults_cpu / slurm_defaults_gpu are not set)
+  slurm_defaults:
+    # partition: <partition_name>     # optional (omit on constraint-based sites)
+    # constraint: <constraint_name>   # optional
+    time: "1-00:00:00"               # DD-HH:MM:SS (string recommended)
+    mem: 64G
+    cpus_per_task: 16
+    job_name_prefix: "bayeseor"
+    ntasks: 1
+    nodes: 1
+    ntasks_per_node: 1
+    mpi: pmi2
+
+    # Additional SBATCH flags (each entry is passed verbatim)
+    # extra_sbatch:
+    #   - "--account=<account>"
+    #   - "--qos=<qos>"
+    #   - "--mail-type=FAIL"
+    #   - "--mail-user=<you@domain>"
+
+  # Preferred: stage-specific SLURM defaults (CPU stages)
+  slurm_defaults_cpu:
+    # partition: cpu                  # optional
+    # constraint: <constraint_name>   # optional
+    time: "1-11:00:00"
+    mem: 64G
+    cpus_per_task: 16
+    job_name_prefix: "cpu_test1"
+    ntasks: 1
+    nodes: 1
+    ntasks_per_node: 1
+    mpi: pmi2
+    # extra_sbatch:
+    #   - "--account=<account>"
+
+  # Preferred: stage-specific SLURM defaults (GPU stages)
+  slurm_defaults_gpu:
+    # partition: a100_gpu             # optional
+    # constraint: <constraint_name>   # optional
+    time: "1-11:00:00"
+    mem: 64G
+    cpus_per_task: 8
+    job_name_prefix: "gpu_test1"
+    ntasks: 1
+    nodes: 2
+    ntasks_per_node: 2
+    mpi: pmi2
+    # Most sites also require an explicit GPU request for GPU jobs.
+    # Choose the syntax your site supports and uncomment or replace as needed.
+    gpus_per_task: 1
+    # extra_sbatch:
+    #   - "--gpus-per-node=1"
+    #   - "--gres=gpu:1"
+    #   - "--account=<account>"
+
+  # Sweep configuration for valska-bayeseor-sweep
+  sweep:
+    # Fractional beam FWHM perturbations for the sweep (e.g., -0.10 = -10%)
+    fwhm_fracs: [-0.10, -0.05, -0.02, -0.01, 0.0, 0.01, 0.02, 0.05, 0.10]

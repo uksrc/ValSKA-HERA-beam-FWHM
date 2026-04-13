@@ -1,7 +1,10 @@
-name: ValSKA CI/CD Pipeline
+name: CI Pipeline
 
 on: 
-  pull_request
+  pull_request:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read

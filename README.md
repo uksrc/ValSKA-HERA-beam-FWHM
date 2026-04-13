@@ -1,24 +1,9 @@
 # ValSKA-HERA-beam-FWHM
 
-<p align="center">
-  <a href="https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions">
-    <img src="https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/ci.yml/badge.svg" alt="CI">
-  </a>
-  <a href="https://ValSKA-HERA-beam-FWHM.readthedocs.io/">
-    <img src="https://readthedocs.org/projects/ValSKA-HERA-beam-FWHM/badge/?version=latest" alt="Docs">
-  </a>
-  <a href="https://codecov.io/gh/uksrc/ValSKA-HERA-beam-FWHM">
-    <img src="https://codecov.io/gh/uksrc/ValSKA-HERA-beam-FWHM/branch/main/graph/badge.svg" alt="Coverage">
-  </a>
-</p>
-
 [![CI/CD Pipeline](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml/badge.svg)](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml)
 
 [![Docs Status](https://readthedocs.org/projects/ValSKA-HERA-beam-FWHM/badge/?version=latest)](https://ValSKA-HERA-beam-FWHM.readthedocs.io/)
 
-[![codecov](https://codecov.io/gh/uksrc/ValSKA-HERA-beam-FWHM/branch/main/graph/badge.svg)](https://codecov.io/gh/uksrc/ValSKA-HERA-beam-FWHM)
-
-[![Coverage Status](https://coveralls.io/repos/github/uksrc/ValSKA-HERA-beam-FWHM/badge.svg)](https://coveralls.io/github/uksrc/ValSKA-HERA-beam-FWHM)
 
 **An open-source, reproducible, flexible, and extensible package for validating the sensitivity of 21-cm power-spectrum inference to imperfect knowledge of the interferometric primary-beam FWHM.**
 

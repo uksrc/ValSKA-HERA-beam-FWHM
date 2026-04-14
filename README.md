@@ -1,5 +1,10 @@
 # ValSKA-HERA-beam-FWHM
 
+[![CI Pipeline](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml/badge.svg)](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml)
+
+[![Docs Status](https://readthedocs.org/projects/ValSKA-HERA-beam-FWHM/badge/?version=latest)](https://ValSKA-HERA-beam-FWHM.readthedocs.io/)
+
+
 **An open-source, reproducible, flexible, and extensible package for validating the sensitivity of 21-cm power-spectrum inference to imperfect knowledge of the interferometric primary-beam FWHM.**
 
 ---

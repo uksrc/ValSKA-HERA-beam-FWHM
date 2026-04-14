@@ -6,21 +6,17 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-        cache: "pip"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+    - uses: ./.github/actions/setup-conda
     - name: Pre-commit
       run: pre-commit run --all-files
     - name: Upload Lint Results
@@ -36,21 +32,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-        cache: "pip"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+    - uses: ./.github/actions/setup-conda
     - name: Test with pytest
       run: |
         make python-test
-    - name: Test notebooks
-      run: |
-        make notebook-test
+    # Temporarily disable notebook tests until test data is available
+    #- name: Test notebooks
+    #  run: |
+    #    make notebook-test
 
   docs:
     runs-on: ubuntu-latest
@@ -58,15 +47,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-        cache: "pip"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+    - uses: ./.github/actions/setup-conda
     - name: Build docs
       run: |
         sphinx-build -W -b html docs/source/ docs/_build/html

@@ -17,7 +17,7 @@ The project uses ``pyproject.toml`` to manage the devlopment dependencies. These
 - ``ruff`` - Code formatting and linting
 - ``mypy`` - Type checking
 
-The recommended way to install the dependencies is via the conda environment specification in ``valska_env.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
+The recommended way to install the dependencies is via the conda environment specification in ``valska_env_base.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
 
  
 Unit Tests
@@ -62,7 +62,10 @@ Jupyter notebooks can be tested (end-to-end) using ``nbmake``. This is set up in
 - Excludes ``.py`` files automatically
 - Validates that notebooks run end-to-end successfully
 
-It won't work where user input is required, or paths need to be set up - for example, the cells which actually make the plots and read the data will not be tested. These cells can be excluded from the test by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to add the "skip-execution" tag:
+It won't work where user input is required, or paths need to be set up - for example, the cells which
+actually make the plots and read the data will not be tested. These cells can be excluded from the test
+by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to
+add the "skip-execution" tag:
 
 .. code-block:: bash
 
@@ -78,6 +81,9 @@ It won't work where user input is required, or paths need to be set up - for exa
    "source": [...],
    }
 
+.. note::
+
+   Notebook tests are temporarily disabled in the CI pipeline until test data are available.
 
 
 Linting and Formatting
@@ -182,7 +188,8 @@ and running the following steps:
 2. Testing
 
    - Run ``make python-test`` (unit tests)
-   - Run ``make notebook-test`` (notebook validation)
+
+..   - Run ``make notebook-test`` (notebook validation)
 
 3. Documentation
 
@@ -192,9 +199,10 @@ The CI pipeline runs on every push to validate that:
 
 - Formatting and linting rules have been followed
 - All unit tests pass
-- All notebooks execute without errors
 - Code coverage is maintained
 - Documentation builds without errors or warnings
+
+.. - All notebooks execute without errors
 
 **Viewing CI Results:**
 

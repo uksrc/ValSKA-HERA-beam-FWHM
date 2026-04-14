@@ -47,13 +47,14 @@ ValSKA currently includes:
 General guidance:
 
 - Clone the repository
-- Install dependencies using `conda` or `mamba` with the supplied environment file:
-
-    conda env create -f valska_env.yaml
-
-- `valska_env.yaml` is configured for **Galahad** by default
-  For **Azimuth**, comment out `cudatoolkit` and uncomment `cuda` in the environment file
-
+- All dependencies can be installed with `conda` using the included `valska_env_base.yaml` and `valska_env_gpu.yaml` files
+- In `valska_env_gpu.yaml`, select `cuda` or `cudatoolkit` depending on your system (e.g. Azimuth vs Galahad).
+```
+conda env create -f valska_env_base.yaml
+conda activate valska
+conda env update -f valska_env_gpu.yaml
+```
+ 
 **Note:**
 This repository provides *validation tooling and job orchestration*.
 It does **not** automatically create conda environments, clone BayesEoR, or manage HPC accounts.

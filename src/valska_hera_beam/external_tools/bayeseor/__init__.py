@@ -1,30 +1,9 @@
-"""
-BayesEoR integration helpers.
+"""Compatibility wrapper for deprecated module `valska_hera_beam.external_tools.bayeseor.__init__`."""
 
-Primary entry points:
-- prepare_bayeseor_run: render a BayesEoR config + SLURM submit script into a ValSKA results dir.
-- submit_bayeseor_run: submit a prepared BayesEoR run directory to SLURM.
-- get_template_path: access shipped validation templates.
-"""
+from __future__ import annotations
 
-from .constants import TOOL_NAME
-from .report import generate_sweep_report
-from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
-from .setup import prepare_bayeseor_run
-from .submit import SubmissionError, submit_bayeseor_run
-from .sweep_health import inspect_sweep_health
-from .templates import get_template_path, list_templates
+from valska_hera_beam._compat import warn_import as _warn_import
 
-__all__ = [
-    "prepare_bayeseor_run",
-    "submit_bayeseor_run",
-    "generate_sweep_report",
-    "inspect_sweep_health",
-    "SubmissionError",
-    "get_template_path",
-    "list_templates",
-    "BayesEoRInstall",
-    "CondaRunner",
-    "ContainerRunner",
-    "TOOL_NAME",
-]
+_warn_import(__name__, "valska.external_tools.bayeseor")
+
+from valska.external_tools.bayeseor import *  # noqa: F401,F403

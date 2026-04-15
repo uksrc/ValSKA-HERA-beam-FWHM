@@ -21,8 +21,8 @@ Notes
 
 def test_version_exposed():
     """The package should expose a non-empty ``__version__`` string."""
-    import valska_hera_beam
+    import valska
 
-    assert hasattr(valska_hera_beam, "__version__")
-    assert isinstance(valska_hera_beam.__version__, str)
-    assert valska_hera_beam.__version__.strip() != ""
+    assert hasattr(valska, "__version__")
+    assert isinstance(valska.__version__, str)
+    assert valska.__version__.strip() != ""

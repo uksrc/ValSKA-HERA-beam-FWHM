@@ -8,7 +8,7 @@ from unittest.mock import patch
 import numpy
 import pytest
 
-from valska_hera_beam import plotting
+from valska import plotting
 
 from .constants import (
     # CHAINS_DIR,
@@ -104,7 +104,7 @@ def test_add_analysis_path(beam_analysis):
         ),
     ],
 )
-@patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
+@patch("valska.plotting.DataContainer", MockDataContainer)
 def test_get_data_container(
     beam_analysis, analysis_keys, labels, expected_ps, expected_results
 ):
@@ -209,7 +209,7 @@ def test_get_data_container(
         ),
     ],
 )
-@patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
+@patch("valska.plotting.DataContainer", MockDataContainer)
 def test_plot_analysis_results(beam_analysis, input_args, expected_results):
     """
     Test analysis plot method
@@ -347,7 +347,7 @@ def test_plot_analysis_results(beam_analysis, input_args, expected_results):
         ),
     ],
 )
-@patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
+@patch("valska.plotting.DataContainer", MockDataContainer)
 def test_create_comparison_plot(beam_analysis, input_args, expected_results):
     """
     Test create_comparison_plot
@@ -372,7 +372,7 @@ def test_create_comparison_plot(beam_analysis, input_args, expected_results):
     assert fig.axes[0].leg.texts[2].text == expected_results["texts"][2]
 
 
-@patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
+@patch("valska.plotting.DataContainer", MockDataContainer)
 def test_plot_gleam_analysis(path_manager):
     """
     Test plot_gleam_analysis
@@ -397,7 +397,7 @@ def test_plot_gleam_analysis(path_manager):
     assert fig.axes[0].leg.texts[2].text == "Noise level"
 
 
-@patch("valska_hera_beam.plotting.DataContainer", MockDataContainer)
+@patch("valska.plotting.DataContainer", MockDataContainer)
 def test_plot_gsm_comparison(path_manager):
     """
     Test plot_gsm_comparison

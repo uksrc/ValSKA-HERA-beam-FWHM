@@ -1,6 +1,9 @@
 # ValSKA
 
 **An open-source, reproducible, flexible, and extensible validation toolkit for SKA and precursor science workflows, including 21-cm power-spectrum studies and primary-beam perturbation analyses.**
+[![CI Pipeline](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml/badge.svg)](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml)
+
+[![Docs Status](https://readthedocs.org/projects/ValSKA-HERA-beam-FWHM/badge/?version=latest)](https://ValSKA-HERA-beam-FWHM.readthedocs.io/)
 
 ---
 

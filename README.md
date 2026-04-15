@@ -3,7 +3,7 @@
 **An open-source, reproducible, flexible, and extensible validation toolkit for SKA and precursor science workflows, including 21-cm power-spectrum studies and primary-beam perturbation analyses.**
 [![CI Pipeline](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml/badge.svg)](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml)
 
-[![Docs Status](https://readthedocs.org/projects/ValSKA-HERA-beam-FWHM/badge/?version=latest)](https://ValSKA-HERA-beam-FWHM.readthedocs.io/)
+[![Docs Status](https://readthedocs.org/projects/valska-hera-beam-fwhm/badge/?version=latest)](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/)
 
 ---
 
@@ -81,13 +81,13 @@ For post-processing, `valska-bayeseor-report` can be run on any existing sweep d
 
 ## Documentation
 
-Documentation is hosted on [ReadTheDocs](https://valska.readthedocs.io/en/latest/).
+Documentation is hosted on [ReadTheDocs](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/).
 
 Detailed command-line examples and workflow patterns are provided in:
 
-- [BayesEoR CLI examples](https://valska.readthedocs.io/en/latest/workflows/bayeseor_cli_examples.html)
-- [BayesEoR reporting workflows](https://valska.readthedocs.io/en/latest/workflows/bayeseor_reporting.html)
-- [BayesEoR operations CLI](https://valska.readthedocs.io/en/latest/workflows/bayeseor_operations.html)
+- [BayesEoR CLI examples](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_cli_examples.html)
+- [BayesEoR reporting workflows](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_reporting.html)
+- [BayesEoR operations CLI](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/workflows/bayeseor_operations.html)
 
 That document is the primary reference for:
 - Preparing validation sweeps
@@ -98,7 +98,7 @@ That document is the primary reference for:
 
 ## Testing
 
-For comprehensive testing instructions, see the [Testing Guide](https://valska.readthedocs.io/en/latest/testing.html).
+For comprehensive testing instructions, see the [Testing Guide](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html).
 
 
 ## Contributing
@@ -115,7 +115,7 @@ In order to enforce CI checks on pull requests, branch protection rules are in p
 - Require status checks to pass before merging
 - Require pull request reviews before merging
 
-We use pre-commit hooks to ensure code quality and consistency - please see the [Guide to Contributing](https://valska.readthedocs.io/en/latest/contributing.html) for further information about setting up and using pre-commit.
+We use pre-commit hooks to ensure code quality and consistency - please see the [Guide to Contributing](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/contributing.html) for further information about setting up and using pre-commit.
 
 
 For any additional questions or comments, please contact one of the UKSRC science validation tooling team:

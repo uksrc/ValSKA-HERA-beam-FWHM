@@ -1,7 +1,7 @@
 # BayesEoR validation workflow (ValSKA)
 
 This document describes the **BayesEoR validation workflow** implemented in
-`ValSKA-HERA-beam-FWHM`, with an emphasis on reproducibility, resumability, and
+`ValSKA`, with an emphasis on reproducibility, resumability, and
 high-performance computing (HPC) best practices.
 
 It is intended to complement the project README by providing additional

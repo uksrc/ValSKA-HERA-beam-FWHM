@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-help.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/valska-bayeseor-help.sh
 #
 # Wrapper for valska-bayeseor-help.
 #

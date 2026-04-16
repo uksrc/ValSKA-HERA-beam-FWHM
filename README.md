@@ -1,14 +1,17 @@
-# ValSKA-HERA-beam-FWHM
+# ValSKA
 
-**An open-source, reproducible, flexible, and extensible package for validating the sensitivity of 21-cm power-spectrum inference to imperfect knowledge of the interferometric primary-beam FWHM.**
+**An open-source, reproducible, flexible, and extensible validation toolkit for SKA and precursor science workflows, including 21-cm power-spectrum studies and primary-beam perturbation analyses.**
+[![CI Pipeline](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml/badge.svg)](https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions/workflows/valska-actions.yml)
+
+[![Docs Status](https://readthedocs.org/projects/valska-hera-beam-fwhm/badge/?version=latest)](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/)
 
 ---
 
 ## Overview
 
-ValSKA-HERA-beam-FWHM provides a Bayesian science-validation case study for the Hydrogen Epoch of Reionization Array (HERA), using the **BayesEoR** modelling framework.
+ValSKA provides science-validation tooling for SKA and precursor instrument workflows, including Bayesian case studies built around the Hydrogen Epoch of Reionization Array (HERA) and the **BayesEoR** modelling framework.
 
-The focus of this repository is **validation tooling**: enabling controlled, inspectable, and reproducible studies of how modelling assumptions — here, uncertainty in the primary-beam full width at half maximum (FWHM) — propagate through a full 21-cm power-spectrum inference pipeline.
+The focus of this repository is **validation tooling**: enabling controlled, inspectable, and reproducible studies of how modelling assumptions propagate through end-to-end science pipelines. The current flagship workflow studies how uncertainty in the primary-beam full width at half maximum (FWHM) affects 21-cm power-spectrum inference.
 
 This repository is developed as part of the UK Square Kilometre Array Regional Centre (UKSRC) science-validation effort.
 
@@ -29,7 +32,7 @@ This repository is developed as part of the UK Square Kilometre Array Regional C
 
 ## Contents
 
-ValSKA-HERA-beam-FWHM includes:
+ValSKA currently includes:
 
 - Validation results from **BaNTER** (Bayesian Null-Test Evidence Ratio) analyses
 - BayesEoR chain files from mock HERA foreground-only and foreground-plus-signal datasets
@@ -43,13 +46,14 @@ ValSKA-HERA-beam-FWHM includes:
 General guidance:
 
 - Clone the repository
-- Install dependencies using `conda` or `mamba` with the supplied environment file:
-
-    conda env create -f valska_env.yaml
-
-- `valska_env.yaml` is configured for **Galahad** by default
-  For **Azimuth**, comment out `cudatoolkit` and uncomment `cuda` in the environment file
-
+- All dependencies can be installed with `conda` using the included `valska_env_base.yaml` and `valska_env_gpu.yaml` files
+- In `valska_env_gpu.yaml`, select `cuda` or `cudatoolkit` depending on your system (e.g. Azimuth vs Galahad).
+```
+conda env create -f valska_env_base.yaml
+conda activate valska
+conda env update -f valska_env_gpu.yaml
+```
+ 
 **Note:**
 This repository provides *validation tooling and job orchestration*.
 It does **not** automatically create conda environments, clone BayesEoR, or manage HPC accounts.
@@ -58,7 +62,7 @@ It does **not** automatically create conda environments, clone BayesEoR, or mana
 
 ## BayesEoR validation workflow (high-level)
 
-This repository supports **reproducible, sweep-based validation studies** in which BayesEoR analyses are repeated across multiple controlled FWHM perturbations.
+This repository supports **reproducible, sweep-based validation studies** in which BayesEoR analyses are repeated across multiple controlled FWHM perturbations as one of the current ValSKA workflows.
 
 At a high level, the workflow is:
 
@@ -99,7 +103,7 @@ For comprehensive testing instructions, see the [Testing Guide](https://valska-h
 
 ## Contributing
 
-ValSKA-HERA-beam-FWHM is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request.
+ValSKA is an open source project and contributions to this package in any form are very welcome (e.g. new features, feature requests, bug reports, documentation fixes). Please make such contributions in the form of an issue and/or pull request.
 
 When creating a pull request, please use the provided pull request template which includes a checklist to ensure:
 - Self-review of code

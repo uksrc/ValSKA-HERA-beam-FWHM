@@ -16,8 +16,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="valska-beam-validate",
         description=(
-            "ValSKA-HERA-beam-FWHM: validation utilities for assessing sensitivity of "
-            "21-cm power spectrum forward-modelling pipelines to primary beam FWHM uncertainties."
+            "ValSKA: validation tooling for SKA and precursor science "
+            "workflows, including 21-cm power-spectrum studies of primary beam "
+            "FWHM uncertainties."
         ),
     )
 
@@ -54,7 +55,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_doctor()
 
     console.print(
-        "[bold]ValSKA-HERA-beam-FWHM[/bold] is installed and ready.\n"
+        "[bold]ValSKA[/bold] is installed and ready.\n"
         "Use the notebooks for full validation workflows, or extend this CLI with subcommands.",
         highlight=False,
     )

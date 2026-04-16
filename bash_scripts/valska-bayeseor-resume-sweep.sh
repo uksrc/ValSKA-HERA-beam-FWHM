@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-bayeseor-resume-sweep.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/valska-bayeseor-resume-sweep.sh
 #
 # Wrapper for valska-bayeseor-resume.
 #

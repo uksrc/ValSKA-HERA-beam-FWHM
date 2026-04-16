@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/ps550/ValSKA-HERA-beam-FWHM/bash_scripts/valska-list-sweeps.sh
+# filepath: /home/ps550/ValSKA/bash_scripts/valska-list-sweeps.sh
 #
 # Wrapper for the Python CLI that lists ValSKA BayesEoR sweep directories.
 #

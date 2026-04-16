@@ -37,7 +37,7 @@ def _check_pymultinest() -> tuple[bool, str]:
 
 def run_doctor() -> int:
     """Run environment checks and return an exit code."""
-    console.print("[bold]ValSKA-HERA-beam-FWHM environment check[/bold]\n")
+    console.print("[bold]ValSKA environment check[/bold]\n")
 
     table = Table(show_header=True, header_style="bold")
     table.add_column("Check")
@@ -50,7 +50,7 @@ def run_doctor() -> int:
     table.add_row("Python", "OK", sys.version.split()[0])
 
     # Package version
-    table.add_row("valska-hera-beam-fwhm", "OK", __version__)
+    table.add_row("valska", "OK", __version__)
 
     # Core imports
     for mod in ["numpy", "scipy", "pyuvdata"]:

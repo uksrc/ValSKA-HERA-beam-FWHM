@@ -1,4 +1,4 @@
-"""Plotting helpers for ValSKA-HERA-beam-FWHM analysis outputs."""
+"""Plotting helpers for ValSKA analysis outputs."""
 
 from pathlib import Path
 from typing import Any
@@ -15,7 +15,7 @@ from .utils import get_default_path_manager, load_paths
 
 class BeamAnalysisPlotter:
     """
-    Class for plotting beam analysis results for HERA FWHM validation studies.
+    Plot beam-analysis results for HERA-focused workflows within ValSKA.
     """
 
     def __init__(  # noqa: PLR0913

@@ -1,5 +1,5 @@
 """
-Evidence evaluation module for ValSKA-HERA-beam-FWHM project.
+Evidence evaluation module for the ValSKA project.
 
 This module provides functions to calculate and interpret Bayes factors
 between models in the BayesEoR analysis of HERA beam perturbations.

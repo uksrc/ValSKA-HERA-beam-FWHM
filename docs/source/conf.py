@@ -17,7 +17,7 @@ sys.path.insert(
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "ValSKA-HERA-beam-FWHM"
+project = "ValSKA"
 copyright = "2025, P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov"
 author = "P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov"
 

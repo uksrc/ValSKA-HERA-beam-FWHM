@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from valska_hera_beam.external_tools.bayeseor import cli_report
 from valska_hera_beam.external_tools.bayeseor.report import (
     generate_sweep_report,
@@ -120,6 +122,53 @@ def test_generate_sweep_report_writes_outputs(tmp_path: Path) -> None:
     first = payload["points"][0]
     assert first["status"] == "ok"
     assert first["delta_log_evidence"] is not None
+
+
+@pytest.mark.parametrize(
+    ("legacy_key", "expected_parameter"),
+    [
+        ("fwhm_perturb_frac", "fwhm_deg"),
+        ("antenna_diameter_perturb_frac", "antenna_diameter"),
+    ],
+)
+def test_generate_sweep_report_supports_legacy_perturbation_fields(
+    tmp_path: Path,
+    legacy_key: str,
+    expected_parameter: str,
+) -> None:
+    sweep_dir = tmp_path / "_sweeps" / "legacy_sweep"
+    point = sweep_dir / "validation" / "legacy_1.0e-02"
+    _mk_point(point, signal_ns=12.0, no_signal_ns=10.0)
+
+    manifest = {
+        "points": [
+            {
+                legacy_key: 0.01,
+                "run_label": "legacy_1.0e-02",
+                "run_dir": str(point),
+            }
+        ]
+    }
+    sweep_dir.mkdir(parents=True, exist_ok=True)
+    (sweep_dir / "sweep_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+
+    result = generate_sweep_report(
+        sweep_dir=sweep_dir,
+        out_dir=None,
+        evidence_source="ins",
+        make_plots=False,
+    )
+
+    assert result.rows_total == 1
+    assert result.rows_complete == 1
+
+    payload = json.loads(result.summary_json.read_text(encoding="utf-8"))
+    row = payload["points"][0]
+    assert row["status"] == "ok"
+    assert row["perturb_parameter"] == expected_parameter
+    assert row["perturb_frac"] == 0.01
 
 
 def test_cli_report_json_output(tmp_path: Path, capsys) -> None:

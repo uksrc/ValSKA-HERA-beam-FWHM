@@ -200,6 +200,92 @@ def test_cli_report_json_output(tmp_path: Path, capsys) -> None:
     assert payload["rows_complete"] == 1
 
 
+@pytest.mark.parametrize(
+    ("style", "expected", "unexpected"),
+    [
+        ("emoji", "✅ PASS", None),
+        ("plain", "PASS", "✅ PASS"),
+    ],
+)
+def test_cli_report_prints_complete_analysis_table(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+    style: str,
+    expected: str,
+    unexpected: str | None,
+) -> None:
+    def fake_generate_sweep_report(**kwargs):
+        assert kwargs["include_complete_analysis_table"] is True
+        return cli_report.SweepReportResult(
+            sweep_dir=tmp_path,
+            out_dir=tmp_path / "report",
+            evidence_source="ins",
+            rows_total=1,
+            rows_complete=1,
+            summary_csv=tmp_path / "report" / "sweep_report_summary.csv",
+            summary_json=tmp_path / "report" / "sweep_report_summary.json",
+            delta_plot_png=None,
+            evidence_plot_png=None,
+            plot_analysis_results_png=None,
+            complete_analysis_json=tmp_path
+            / "report"
+            / "complete_analysis_results.json",
+            complete_analysis_csv=tmp_path
+            / "report"
+            / "complete_analysis_successful.csv",
+            complete_analysis_rows=[
+                {
+                    "perturbation": "antdiam_1.0e-01",
+                    "log_bayes_factor": 3.0,
+                    "validation": "FAIL",
+                    "interpretation": "Strong evidence for model 1",
+                },
+                {
+                    "perturbation": "antdiam_1.0e-02",
+                    "log_bayes_factor": -2.5,
+                    "validation": "PASS",
+                    "interpretation": "Strong evidence for model 2",
+                },
+            ],
+        )
+
+    monkeypatch.setattr(
+        cli_report, "generate_sweep_report", fake_generate_sweep_report
+    )
+
+    code = cli_report.main(
+        [
+            str(tmp_path),
+            "--print-complete-analysis-table",
+            "--complete-analysis-table-style",
+            style,
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Complete BayesEoR Perturbation Analysis Summary" in out
+    assert "ΔD/D = +1.00%" in out
+    assert out.index("ΔD/D = +1.00%") < out.index("ΔD/D = +10.00%")
+    assert expected in out
+    assert "Unbiased inferences recovered" in out
+    if unexpected is not None:
+        assert unexpected not in out
+
+
+def test_cli_report_rejects_print_table_with_json(
+    tmp_path: Path, capsys
+) -> None:
+    code = cli_report.main(
+        [str(tmp_path), "--json", "--print-complete-analysis-table"]
+    )
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "cannot be combined with --json" in err
+
+
 def test_generate_sweep_report_marks_incomplete_when_chain_file_missing(
     tmp_path: Path,
 ) -> None:

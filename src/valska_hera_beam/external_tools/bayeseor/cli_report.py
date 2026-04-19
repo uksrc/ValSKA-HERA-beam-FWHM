@@ -13,6 +13,8 @@ from valska_hera_beam.external_tools.bayeseor.report import (
     generate_sweep_report,
 )
 
+_ProgressMode = str
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI parser for ``valska-bayeseor-report``."""
@@ -73,7 +75,24 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print report result payload as JSON.",
     )
+    parser.add_argument(
+        "--progress",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help=(
+            "Show Rich progress output for long-running report steps. "
+            "Default: auto (enabled only for interactive stderr)."
+        ),
+    )
     return parser
+
+
+def _show_progress(mode: _ProgressMode, *, json_out: bool) -> bool:
+    if json_out or mode == "never":
+        return False
+    if mode == "always":
+        return True
+    return bool(sys.stderr.isatty())
 
 
 def _print_summary(result: SweepReportResult) -> None:
@@ -112,6 +131,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             include_complete_analysis_table=bool(
                 args.include_complete_analysis_table
+            ),
+            show_progress=_show_progress(
+                str(args.progress), json_out=bool(args.json_out)
             ),
         )
     except Exception as exc:

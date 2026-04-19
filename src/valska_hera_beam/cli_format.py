@@ -6,19 +6,21 @@ import os
 import sys
 from typing import Literal, TextIO
 
+from rich.console import Console
+from rich.text import Text
+
 ColorMode = Literal["auto", "always", "never"]
 
 _STYLES = {
-    "bold_cyan": "\033[1;36m",
-    "dim": "\033[2m",
-    "green": "\033[32m",
-    "yellow": "\033[33m",
+    "bold_cyan": "bold cyan",
+    "dim": "dim",
+    "green": "green",
+    "yellow": "yellow",
 }
-_RESET = "\033[0m"
 
 
 class CliColors:
-    """Apply ANSI styles when color is enabled for a terminal stream."""
+    """Apply Rich terminal styles when color is enabled for a stream."""
 
     def __init__(
         self,
@@ -30,6 +32,12 @@ class CliColors:
         self.mode = mode
         self.stream = stream if stream is not None else sys.stdout
         self.enabled = enabled and self._should_enable()
+        self.console = Console(
+            force_terminal=self.enabled,
+            color_system="standard" if self.enabled else None,
+            no_color=not self.enabled,
+            file=self.stream,
+        )
 
     def _should_enable(self) -> bool:
         if self.mode == "never":
@@ -44,10 +52,13 @@ class CliColors:
         value = str(text)
         if not self.enabled:
             return value
-        prefix = _STYLES.get(style_name)
-        if prefix is None:
+        rich_style = _STYLES.get(style_name)
+        if rich_style is None:
             return value
-        return f"{prefix}{value}{_RESET}"
+        styled = Text(value, style=rich_style)
+        with self.console.capture() as capture:
+            self.console.print(styled, end="")
+        return capture.get()
 
     def heading(self, text: object) -> str:
         return self.style(text, "bold_cyan")

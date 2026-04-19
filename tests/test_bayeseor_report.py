@@ -151,6 +151,86 @@ def test_cli_report_json_output(tmp_path: Path, capsys) -> None:
     assert payload["rows_complete"] == 1
 
 
+def test_cli_report_progress_always_is_passed_to_report(
+    tmp_path: Path, monkeypatch
+) -> None:
+    calls = {}
+
+    def fake_generate_sweep_report(**kwargs):
+        calls.update(kwargs)
+        return cli_report.SweepReportResult(
+            sweep_dir=tmp_path,
+            out_dir=tmp_path / "report",
+            evidence_source="ins",
+            rows_total=1,
+            rows_complete=1,
+            summary_csv=tmp_path / "report" / "summary.csv",
+            summary_json=tmp_path / "report" / "summary.json",
+            delta_plot_png=None,
+            evidence_plot_png=None,
+            plot_analysis_results_png=None,
+            complete_analysis_json=None,
+            complete_analysis_csv=None,
+        )
+
+    monkeypatch.setattr(
+        cli_report, "generate_sweep_report", fake_generate_sweep_report
+    )
+
+    code = cli_report.main(
+        [
+            str(tmp_path),
+            "--include-complete-analysis-table",
+            "--progress",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    assert calls["show_progress"] is True
+
+
+def test_cli_report_json_disables_progress(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    calls = {}
+
+    def fake_generate_sweep_report(**kwargs):
+        calls.update(kwargs)
+        return cli_report.SweepReportResult(
+            sweep_dir=tmp_path,
+            out_dir=tmp_path / "report",
+            evidence_source="ins",
+            rows_total=1,
+            rows_complete=1,
+            summary_csv=tmp_path / "report" / "summary.csv",
+            summary_json=tmp_path / "report" / "summary.json",
+            delta_plot_png=None,
+            evidence_plot_png=None,
+            plot_analysis_results_png=None,
+            complete_analysis_json=None,
+            complete_analysis_csv=None,
+        )
+
+    monkeypatch.setattr(
+        cli_report, "generate_sweep_report", fake_generate_sweep_report
+    )
+
+    code = cli_report.main(
+        [
+            str(tmp_path),
+            "--include-complete-analysis-table",
+            "--progress",
+            "always",
+            "--json",
+        ]
+    )
+
+    assert code == 0
+    assert calls["show_progress"] is False
+    json.loads(capsys.readouterr().out)
+
+
 def test_generate_sweep_report_marks_incomplete_when_chain_file_missing(
     tmp_path: Path,
 ) -> None:

@@ -17,7 +17,7 @@ set -euo pipefail
 # Configuration (edit these as needed)
 # -----------------------------------------------------------------------------
 BEAM="achromatic_Gaussian"
-SKY="GLEAM"
+SKY="GSM_plus_GLEAM"
 DATA="gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5"
 RUN_ID="sweep"
 TEMPLATE="validation_achromatic_Gaussian.yaml"

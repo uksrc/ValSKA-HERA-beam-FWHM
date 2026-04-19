@@ -11,6 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
 from valska_hera_beam.utils import get_default_path_manager
 
 from .cli_list_sweeps import discover_sweeps
@@ -233,40 +238,58 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON payload.",
     )
+    add_color_argument(parser)
     return parser
 
 
-def _print_text(payload: dict[str, Any]) -> None:
+def _format_status(status: object, *, colors: CliColors) -> str:
+    text = str(status)
+    if text in ("planned", "moved", "deleted"):
+        return colors.success(text)
+    if text == "skipped":
+        return colors.warning(text)
+    if text == "error":
+        return colors.error(text)
+    return text
+
+
+def _print_text(payload: dict[str, Any], *, colors: CliColors) -> None:
     summary = payload["summary"]
-    print("Sweep cleanup summary:")
+    print(colors.heading("Sweep cleanup summary:"))
+    mode = "execute" if payload["execute"] else "dry-run"
     print(
-        f"  mode:              {'execute' if payload['execute'] else 'dry-run'}"
+        "  mode:              "
+        f"{colors.warning(mode) if payload['execute'] else colors.success(mode)}"
     )
-    print(f"  results_root:      {payload['results_root']}")
+    print(f"  results_root:      {colors.path(payload['results_root'])}")
     print(f"  sweeps_discovered: {summary['sweeps_discovered']}")
     print(f"  sweeps_targeted:   {summary['sweeps_targeted']}")
     print(f"  candidates_total:  {summary['candidates_total']}")
-    print(f"  planned:           {summary['planned_count']}")
-    print(f"  moved:             {summary['moved_count']}")
-    print(f"  deleted:           {summary['deleted_count']}")
-    print(f"  skipped:           {summary['skipped_count']}")
-    print(f"  errors:            {summary['error_count']}")
+    print(f"  planned:           {colors.success(summary['planned_count'])}")
+    print(f"  moved:             {colors.success(summary['moved_count'])}")
+    print(f"  deleted:           {colors.success(summary['deleted_count'])}")
+    print(f"  skipped:           {colors.warning(summary['skipped_count'])}")
+    print(f"  errors:            {colors.error(summary['error_count'])}")
 
     if payload.get("trash_root") is not None:
-        print(f"  trash_root:        {payload['trash_root']}")
+        print(f"  trash_root:        {colors.path(payload['trash_root'])}")
 
-    print("\nActions:")
+    print("\n" + colors.heading("Actions:"))
     if not payload["actions"]:
         print("  (none)")
         return
 
     for row in payload["actions"]:
-        line = f"  - {row['scope']}: {row['status']} -> {row['path']}"
+        line = (
+            f"  - {row['scope']}: "
+            f"{_format_status(row['status'], colors=colors)} "
+            f"-> {colors.path(row['path'])}"
+        )
         if row.get("target_path"):
-            line += f" -> {row['target_path']}"
+            line += f" -> {colors.path(row['target_path'])}"
         print(line)
         if row.get("reason"):
-            print(f"      reason: {row['reason']}")
+            print(f"      reason: {colors.warning(row['reason'])}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -532,7 +555,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         print(json.dumps(payload, indent=2))
     else:
-        _print_text(payload)
+        colors = CliColors(
+            resolve_color_mode(args.color), enabled=not bool(args.json_out)
+        )
+        _print_text(payload, colors=colors)
 
     if bool(args.fail_on_error) and errors > 0:
         return 1

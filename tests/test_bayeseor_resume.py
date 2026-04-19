@@ -129,6 +129,19 @@ def test_cli_resume_stage_cpu_only(tmp_path: Path, capsys) -> None:
     ]
 
 
+def test_cli_resume_color_always(tmp_path: Path, capsys, monkeypatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    sweep_dir = _mk_sweep(tmp_path)
+
+    code = cli_resume.main([str(sweep_dir), "--color", "always"])
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep resume suggestions:" in out
+    assert "valska-bayeseor-submit" in out
+
+
 def test_cli_resume_missing_manifest_returns_2(tmp_path: Path, capsys) -> None:
     code = cli_resume.main([str(tmp_path / "missing")])
     assert code == 2

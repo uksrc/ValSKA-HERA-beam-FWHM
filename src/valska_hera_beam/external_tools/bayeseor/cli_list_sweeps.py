@@ -9,6 +9,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
 from valska_hera_beam.utils import get_default_path_manager
 
 
@@ -153,18 +158,21 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON payload.",
     )
+    add_color_argument(parser)
     return parser
 
 
-def _print_text(results_root: Path, entries: list[dict[str, Any]]) -> None:
-    print(f"Results root: {results_root}")
-    print("Sweep directories:")
+def _print_text(
+    results_root: Path, entries: list[dict[str, Any]], *, colors: CliColors
+) -> None:
+    print(f"{colors.heading('Results root:')} {colors.path(results_root)}")
+    print(colors.heading("Sweep directories:"))
     if not entries:
         print("  (none found)")
         return
 
     for item in entries:
-        print(f"  - {item['sweep_dir']}")
+        print(f"  - {colors.path(item['sweep_dir'])}")
         print(f"      run_id: {item.get('run_id')}")
         if item.get("beam_model") is not None:
             print(f"      beam: {item['beam_model']}")
@@ -214,7 +222,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2))
         return 0
 
-    _print_text(results_root, filtered)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
+    _print_text(results_root, filtered, colors=colors)
     return 0
 
 

@@ -7,18 +7,23 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import cast
 
 from rich import box
 from rich.table import Table
 
-from valska_hera_beam.cli_format import CliColors, ColorMode
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    add_progress_argument,
+    resolve_color_mode,
+    resolve_progress_mode,
+    show_progress,
+)
 from valska_hera_beam.external_tools.bayeseor.report import (
     SweepReportResult,
     generate_sweep_report,
 )
 
-_ProgressMode = str
 _TableStyle = str
 
 
@@ -98,33 +103,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print report result payload as JSON.",
     )
-    parser.add_argument(
-        "--progress",
-        choices=["auto", "always", "never"],
-        default="auto",
-        help=(
-            "Show Rich progress output for long-running report steps. "
-            "Default: auto (enabled only for interactive stderr)."
-        ),
-    )
-    parser.add_argument(
-        "--color",
-        choices=["auto", "always", "never"],
-        default="auto",
-        help=(
-            "Colorize human-readable terminal output. "
-            "Default: auto (enabled only for TTY output and disabled by NO_COLOR)."
-        ),
-    )
+    add_progress_argument(parser)
+    add_color_argument(parser)
     return parser
-
-
-def _show_progress(mode: _ProgressMode, *, json_out: bool) -> bool:
-    if json_out or mode == "never":
-        return False
-    if mode == "always":
-        return True
-    return bool(sys.stderr.isatty())
 
 
 def _format_perturbation_label(raw_label: object) -> str:
@@ -324,8 +305,9 @@ def main(argv: list[str] | None = None) -> int:
                 args.include_complete_analysis_table
                 or args.print_complete_analysis_table
             ),
-            show_progress=_show_progress(
-                str(args.progress), json_out=bool(args.json_out)
+            show_progress=show_progress(
+                resolve_progress_mode(args.progress),
+                json_out=bool(args.json_out),
             ),
         )
     except Exception as exc:
@@ -362,7 +344,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     colors = CliColors(
-        cast(ColorMode, args.color), enabled=not bool(args.json_out)
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
     )
     _print_summary(result, colors=colors)
     if args.print_complete_analysis_table:

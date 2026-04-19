@@ -8,7 +8,11 @@ import sys
 from pathlib import Path
 from typing import Any, Literal
 
-from valska_hera_beam.cli_format import CliColors
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
 from valska_hera_beam.external_tools.bayeseor import (
     BayesEoRInstall,
     CondaRunner,
@@ -567,15 +571,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the full sweep result object as JSON.",
     )
-    p.add_argument(
-        "--color",
-        choices=["auto", "always", "never"],
-        default="auto",
-        help=(
-            "Colorize human-readable terminal output. "
-            "Default: auto (enabled only for TTY output and disabled by NO_COLOR)."
-        ),
-    )
+    add_color_argument(p)
 
     return p
 
@@ -784,7 +780,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.dry_run:
-        colors = CliColors(args.color, enabled=not bool(args.json_out))
+        colors = CliColors(
+            resolve_color_mode(args.color), enabled=not bool(args.json_out)
+        )
         sd = sweep_root(results_root, beam_model, sky_model, args.run_id)
         print("\n" + colors.heading("[DRY RUN] Sweep would be executed with:"))
         print(

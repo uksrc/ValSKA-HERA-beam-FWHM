@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Literal, TextIO
+from argparse import ArgumentParser
+from typing import Literal, TextIO, cast
 
 from rich.console import Console
 from rich.text import Text
 
 ColorMode = Literal["auto", "always", "never"]
+ProgressMode = Literal["auto", "always", "never"]
 
 _STYLES = {
     "bold_cyan": "bold cyan",
@@ -78,3 +80,55 @@ class CliColors:
 
     def warning(self, text: object) -> str:
         return self.style(text, "yellow")
+
+
+def add_color_argument(parser: ArgumentParser) -> None:
+    """Add the standard ValSKA color-mode option to a CLI parser."""
+    parser.add_argument(
+        "--color",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help=(
+            "Colorize human-readable terminal output. "
+            "Default: auto (enabled only for TTY output and disabled by NO_COLOR)."
+        ),
+    )
+
+
+def add_progress_argument(parser: ArgumentParser) -> None:
+    """Add the standard ValSKA progress-mode option to a CLI parser."""
+    parser.add_argument(
+        "--progress",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help=(
+            "Show Rich progress output for long-running CLI steps. "
+            "Default: auto (enabled only for interactive stderr)."
+        ),
+    )
+
+
+def resolve_color_mode(raw: object) -> ColorMode:
+    """Return a validated color mode from argparse output."""
+    if raw in ("auto", "always", "never"):
+        return cast(ColorMode, raw)
+    return "auto"
+
+
+def resolve_progress_mode(raw: object) -> ProgressMode:
+    """Return a validated progress mode from argparse output."""
+    if raw in ("auto", "always", "never"):
+        return cast(ProgressMode, raw)
+    return "auto"
+
+
+def show_progress(
+    mode: ProgressMode, *, json_out: bool, stream: TextIO | None = None
+) -> bool:
+    """Return whether progress output should be displayed."""
+    if json_out or mode == "never":
+        return False
+    if mode == "always":
+        return True
+    progress_stream = stream if stream is not None else sys.stderr
+    return bool(getattr(progress_stream, "isatty", lambda: False)())

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any, Literal
 
+from valska_hera_beam.cli_format import CliColors
 from valska_hera_beam.external_tools.bayeseor import (
     BayesEoRInstall,
     CondaRunner,
@@ -566,6 +567,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the full sweep result object as JSON.",
     )
+    p.add_argument(
+        "--color",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help=(
+            "Colorize human-readable terminal output. "
+            "Default: auto (enabled only for TTY output and disabled by NO_COLOR)."
+        ),
+    )
 
     return p
 
@@ -774,28 +784,38 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.dry_run:
+        colors = CliColors(args.color, enabled=not bool(args.json_out))
         sd = sweep_root(results_root, beam_model, sky_model, args.run_id)
-        print("\n[DRY RUN] Sweep would be executed with:")
-        print(f"  results_root: {results_root} [{results_root_src}]")
-        print(f"  beam_model:   {beam_model} [{beam_sky_src}]")
-        print(f"  sky_model:    {sky_model} [{beam_sky_src}]")
+        print("\n" + colors.heading("[DRY RUN] Sweep would be executed with:"))
+        print(
+            f"  results_root: {colors.path(results_root)} "
+            f"{colors.source(results_root_src)}"
+        )
+        print(f"  beam_model:   {beam_model} {colors.source(beam_sky_src)}")
+        print(f"  sky_model:    {sky_model} {colors.source(beam_sky_src)}")
         print(f"  run_id:       {args.run_id}")
-        print(f"  sweep_dir:    {sd}")
-        print(f"  template:     {template_yaml} [{template_src}]")
-        print(f"  variant:      {variant} [{variant_src}]")
-        print(f"  data:         {data_resolved} [{data_src}]")
+        print(f"  sweep_dir:    {colors.path(sd)}")
+        print(
+            f"  template:     {colors.path(template_yaml)} "
+            f"{colors.source(template_src)}"
+        )
+        print(f"  variant:      {variant} {colors.source(variant_src)}")
+        print(
+            f"  data:         {colors.path(data_resolved)} "
+            f"{colors.source(data_src)}"
+        )
         print(f"  perturb_parameter:  {perturb_parameter}")
         if perturb_parameter == "fwhm_deg":
             print(
                 "  fwhm_fracs:   "
                 f"{fracs if fracs is not None else '(built-in default 9-point set)'} "
-                f"[{fracs_src}]"
+                f"{colors.source(fracs_src)}"
             )
         else:
             print(
                 "  antenna_diameter_fracs:   "
                 f"{fracs if fracs is not None else '(built-in default 9-point set)'} "
-                f"[{fracs_src}]"
+                f"{colors.source(fracs_src)}"
             )
         print(f"  unique:       {bool(args.unique)}")
         print(f"  submit:       {args.submit}")
@@ -810,7 +830,7 @@ def main(argv: list[str] | None = None) -> int:
         fracs_to_show = (
             fracs if fracs is not None else sweep_mod._default_fwhm_fracs()
         )
-        print("\n[DRY RUN] Points:")
+        print("\n" + colors.heading("[DRY RUN] Points:"))
         for frac in fracs_to_show:
             run_label = sweep_mod._format_run_label(
                 perturb_parameter=perturb_parameter, frac=float(frac)
@@ -824,9 +844,17 @@ def main(argv: list[str] | None = None) -> int:
                 run_label=run_label,
             )
             run_dir = base / "<UTCSTAMP>" if args.unique else base
-            print(f"  {float(frac):+0.3f}  {run_label}  ->  {run_dir}")
+            print(
+                f"  {float(frac):+0.3f}  {run_label}  ->  "
+                f"{colors.path(run_dir)}"
+            )
 
-        print("\n[DRY RUN] No files or jobs will be created/submitted.")
+        print(
+            "\n"
+            + colors.success(
+                "[DRY RUN] No files or jobs will be created/submitted."
+            )
+        )
         return 0
 
     install = BayesEoRInstall(repo_path=Path(str(repo_path)).expanduser())

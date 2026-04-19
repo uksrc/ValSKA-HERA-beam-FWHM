@@ -92,6 +92,7 @@ class SweepReportResult:
     plot_analysis_results_png: Path | None
     complete_analysis_json: Path | None
     complete_analysis_csv: Path | None
+    complete_analysis_rows: list[dict[str, Any]]
 
 
 def _parse_float_or_none(raw: str) -> float | None:
@@ -498,6 +499,7 @@ def generate_sweep_report(
 
     complete_analysis_json: Path | None = None
     complete_analysis_csv: Path | None = None
+    complete_analysis_rows: list[dict[str, Any]] = []
     if include_complete_analysis_table and chain_pairs:
         buffer = io.StringIO()
         if show_progress:
@@ -539,16 +541,19 @@ def generate_sweep_report(
         )
 
         successful_rows = complete_res.get("successful_results", [])
+        complete_analysis_rows = (
+            list(successful_rows) if isinstance(successful_rows, list) else []
+        )
         complete_analysis_csv = report_dir / "complete_analysis_successful.csv"
-        if successful_rows:
-            headers = list(successful_rows[0].keys())
+        if complete_analysis_rows:
+            headers = list(complete_analysis_rows[0].keys())
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
             ) as handle:
                 dict_writer = csv.DictWriter(handle, fieldnames=headers)
                 dict_writer.writeheader()
-                for row in successful_rows:
-                    dict_writer.writerow(row)
+                for complete_row in complete_analysis_rows:
+                    dict_writer.writerow(complete_row)
         else:
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
@@ -595,4 +600,5 @@ def generate_sweep_report(
             if complete_analysis_csv and complete_analysis_csv.exists()
             else None
         ),
+        complete_analysis_rows=complete_analysis_rows,
     )

@@ -171,6 +171,7 @@ def test_cli_report_progress_always_is_passed_to_report(
             plot_analysis_results_png=None,
             complete_analysis_json=None,
             complete_analysis_csv=None,
+            complete_analysis_rows=[],
         )
 
     monkeypatch.setattr(
@@ -210,6 +211,7 @@ def test_cli_report_json_disables_progress(
             plot_analysis_results_png=None,
             complete_analysis_json=None,
             complete_analysis_csv=None,
+            complete_analysis_rows=[],
         )
 
     monkeypatch.setattr(
@@ -229,6 +231,129 @@ def test_cli_report_json_disables_progress(
     assert code == 0
     assert calls["show_progress"] is False
     json.loads(capsys.readouterr().out)
+
+
+def test_cli_report_prints_color_complete_analysis_table(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    def fake_generate_sweep_report(**kwargs):
+        assert kwargs["include_complete_analysis_table"] is True
+        return cli_report.SweepReportResult(
+            sweep_dir=tmp_path,
+            out_dir=tmp_path / "report",
+            evidence_source="ins",
+            rows_total=2,
+            rows_complete=2,
+            summary_csv=tmp_path / "report" / "summary.csv",
+            summary_json=tmp_path / "report" / "summary.json",
+            delta_plot_png=None,
+            evidence_plot_png=None,
+            plot_analysis_results_png=None,
+            complete_analysis_json=tmp_path
+            / "report"
+            / "complete_analysis_results.json",
+            complete_analysis_csv=tmp_path
+            / "report"
+            / "complete_analysis_successful.csv",
+            complete_analysis_rows=[
+                {
+                    "perturbation": "antdiam_1.0e-01",
+                    "log_bayes_factor": 3.0,
+                    "validation": "FAIL",
+                    "interpretation": "Strong evidence for model 1",
+                },
+                {
+                    "perturbation": "antdiam_1.0e-02",
+                    "log_bayes_factor": -2.5,
+                    "validation": "PASS",
+                    "interpretation": "Strong evidence for model 2",
+                },
+            ],
+        )
+
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setattr(
+        cli_report, "generate_sweep_report", fake_generate_sweep_report
+    )
+
+    code = cli_report.main(
+        [
+            str(tmp_path),
+            "--print-complete-analysis-table",
+            "--color",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Complete BayesEoR Perturbation Analysis Summary" in out
+    assert "ΔD/D = +1.00%" in out
+    assert out.index("ΔD/D = +1.00%") < out.index("ΔD/D = +10.00%")
+    assert "✅ PASS" in out
+    assert "❌ FAIL" in out
+
+
+def test_cli_report_prints_plain_complete_analysis_table(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    def fake_generate_sweep_report(**kwargs):
+        assert kwargs["include_complete_analysis_table"] is True
+        return cli_report.SweepReportResult(
+            sweep_dir=tmp_path,
+            out_dir=tmp_path / "report",
+            evidence_source="ins",
+            rows_total=1,
+            rows_complete=1,
+            summary_csv=tmp_path / "report" / "summary.csv",
+            summary_json=tmp_path / "report" / "summary.json",
+            delta_plot_png=None,
+            evidence_plot_png=None,
+            plot_analysis_results_png=None,
+            complete_analysis_json=None,
+            complete_analysis_csv=None,
+            complete_analysis_rows=[
+                {
+                    "perturbation": "antdiam_1.0e-02",
+                    "log_bayes_factor": -2.5,
+                    "validation": "PASS",
+                    "interpretation": "Strong evidence for model 2",
+                }
+            ],
+        )
+
+    monkeypatch.setattr(
+        cli_report, "generate_sweep_report", fake_generate_sweep_report
+    )
+
+    code = cli_report.main(
+        [
+            str(tmp_path),
+            "--print-complete-analysis-table",
+            "--complete-analysis-table-style",
+            "plain",
+            "--color",
+            "never",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" not in out
+    assert "PASS" in out
+    assert "✅ PASS" not in out
+
+
+def test_cli_report_rejects_print_table_with_json(
+    tmp_path: Path, capsys
+) -> None:
+    code = cli_report.main(
+        [str(tmp_path), "--json", "--print-complete-analysis-table"]
+    )
+
+    assert code == 2
+    assert "cannot be combined with --json" in capsys.readouterr().err
 
 
 def test_generate_sweep_report_marks_incomplete_when_chain_file_missing(

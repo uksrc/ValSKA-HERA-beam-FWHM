@@ -15,6 +15,7 @@ _STYLES = {
     "bold_cyan": "bold cyan",
     "dim": "dim",
     "green": "green",
+    "red": "red",
     "yellow": "yellow",
 }
 
@@ -71,6 +72,9 @@ class CliColors:
 
     def success(self, text: object) -> str:
         return self.style(text, "green")
+
+    def error(self, text: object) -> str:
+        return self.style(text, "red")
 
     def warning(self, text: object) -> str:
         return self.style(text, "yellow")

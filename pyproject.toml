@@ -115,6 +115,8 @@ fallback_version = "0.1.0"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
+extend-exclude = ["src/valska_hera_beam/_version.py"]
+force-exclude = true
 
 [tool.ruff.lint]
 # E/F = Flake8, I = Isort, UP = Pyupgrade

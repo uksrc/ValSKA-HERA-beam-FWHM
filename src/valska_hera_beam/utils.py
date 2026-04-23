@@ -1,4 +1,4 @@
-"""Utility functions for the ValSKA-HERA-beam-FWHM package.
+"""Utility functions for the ValSKA package.
 
 This module provides:
 
@@ -193,7 +193,7 @@ def _default_results_root(base_dir: Path) -> Path:
 
 
 class PathManager:
-    """Manages paths for the ValSKA-HERA-beam-FWHM package."""
+    """Manage paths for ValSKA workflows and generated outputs."""
 
     def __init__(
         self,

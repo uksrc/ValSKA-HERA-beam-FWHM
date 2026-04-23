@@ -1,7 +1,7 @@
 Testing Guide for Developers
 ============================
 
-This document provides comprehensive instructions for running tests in the ValSKA-HERA-beam-FWHM project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
+This document provides comprehensive instructions for running tests in the ValSKA project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
 
 Development Dependencies
 ------------------------
@@ -206,7 +206,7 @@ The CI pipeline runs on every push to validate that:
 
 **Viewing CI Results:**
 
-- Go to the `Actions tab <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_ on GitHub
+- Go to the `Actions tab <https://github.com/uksrc/ValSKA/actions>`_ on GitHub
 - Click on a workflow run to see detailed logs
 - Download test artifacts (coverage reports, etc.) from completed runs
 
@@ -309,8 +309,8 @@ Getting Help
 
 If you encounter issues not covered here:
 
-1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues>`_
-2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_
+1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA/issues>`_
+2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA/actions>`_
 3. Contact the UKSRC Science Validation team:
 
    - Peter Sims (PO) - ps550 [at] cam.ac.uk

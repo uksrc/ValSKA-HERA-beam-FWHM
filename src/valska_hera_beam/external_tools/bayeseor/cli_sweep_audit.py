@@ -9,6 +9,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
 from valska_hera_beam.utils import get_default_path_manager
 
 from .cli_list_sweeps import discover_sweeps
@@ -133,6 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON output.",
     )
+    add_color_argument(parser)
     return parser
 
 
@@ -212,48 +218,72 @@ def _build_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _print_text(results_root: Path, rows: list[dict[str, Any]]) -> None:
+def _format_status(status: object, *, colors: CliColors) -> str:
+    text = str(status)
+    if text == "ok":
+        return colors.success(text)
+    if text == "partial":
+        return colors.warning(text)
+    if text in ("missing", "invalid", "error"):
+        return colors.error(text)
+    return text
+
+
+def _format_validation(exit_code: object, *, colors: CliColors) -> str:
+    text = str(exit_code)
+    return colors.success(text) if text == "0" else colors.error(text)
+
+
+def _print_text(
+    results_root: Path, rows: list[dict[str, Any]], *, colors: CliColors
+) -> None:
     summary = _build_summary(rows)
-    print("Sweep audit summary:")
-    print(f"  results_root: {results_root}")
+    print(colors.heading("Sweep audit summary:"))
+    print(f"  results_root: {colors.path(results_root)}")
     print(f"  sweeps:       {summary['count']}")
     print(
         "  status:       "
-        f"ok={summary['status_counts'].get('ok', 0)}, "
-        f"partial={summary['status_counts'].get('partial', 0)}, "
-        f"missing={summary['status_counts'].get('missing', 0)}, "
-        f"error={summary['status_counts'].get('error', 0)}"
+        f"ok={colors.success(summary['status_counts'].get('ok', 0))}, "
+        f"partial={colors.warning(summary['status_counts'].get('partial', 0))}, "
+        f"missing={colors.error(summary['status_counts'].get('missing', 0))}, "
+        f"error={colors.error(summary['status_counts'].get('error', 0))}"
     )
-    print(f"  invalid:      {summary['invalid_count']}")
+    print(f"  invalid:      {colors.error(summary['invalid_count'])}")
 
-    print("\nPer-sweep:")
+    print("\n" + colors.heading("Per-sweep:"))
     if not rows:
         print("  (none)")
         return
 
     for row in rows:
+        status = _format_status(row.get("sweep_status"), colors=colors)
+        validation = _format_validation(
+            row.get("validation_exit_code"), colors=colors
+        )
         print(
             "  - "
             f"{row.get('run_id') or '(unknown)'} "
             f"[{row.get('beam_model')}/{row.get('sky_model')}] "
-            f"=> {row.get('sweep_status')} "
-            f"(validate={row.get('validation_exit_code')})"
+            f"=> {status} "
+            f"(validate={validation})"
         )
         print(
             "      points: "
             f"total={row.get('points_total')}, "
-            f"ok={row.get('points_ok')}, "
-            f"partial={row.get('points_partial')}, "
-            f"missing={row.get('points_missing')}"
+            f"ok={colors.success(row.get('points_ok'))}, "
+            f"partial={colors.warning(row.get('points_partial'))}, "
+            f"missing={colors.error(row.get('points_missing'))}"
         )
         if row.get("validation_failures"):
             print(
                 "      failures: "
-                + "; ".join(str(x) for x in row["validation_failures"])
+                + colors.error(
+                    "; ".join(str(x) for x in row["validation_failures"])
+                )
             )
         if row.get("error"):
-            print(f"      error: {row['error']}")
-        print(f"      dir: {row.get('sweep_dir')}")
+            print(f"      error: {colors.error(row['error'])}")
+        print(f"      dir: {colors.path(row.get('sweep_dir'))}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -310,7 +340,10 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     else:
-        _print_text(results_root, rows)
+        colors = CliColors(
+            resolve_color_mode(args.color), enabled=not bool(args.json_out)
+        )
+        _print_text(results_root, rows, colors=colors)
 
     if args.fail_on_invalid and int(summary["invalid_count"]) > 0:
         return 1

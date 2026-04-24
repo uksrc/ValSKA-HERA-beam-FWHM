@@ -6,7 +6,9 @@ import csv
 import io
 import json
 import math
+import os
 import re
+from collections.abc import Mapping
 from contextlib import redirect_stdout
 from dataclasses import asdict, dataclass
 from os.path import commonpath
@@ -14,6 +16,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 import matplotlib.pyplot as plt
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
 from valska_hera_beam.evidence import ChainPair, run_complete_bayeseor_analysis
 from valska_hera_beam.plotting import BeamAnalysisPlotter
@@ -31,6 +40,12 @@ _TICK_LABEL_FONTSIZE = 11
 _TITLE_FONTSIZE = 14
 _LEGEND_FONTSIZE = 10
 _PLOT_DPI = 300
+
+
+_LEGACY_PERTURBATION_FIELDS = {
+    "fwhm_perturb_frac": "fwhm_deg",
+    "antenna_diameter_perturb_frac": "antenna_diameter",
+}
 
 
 @dataclass(frozen=True)
@@ -84,6 +99,7 @@ class SweepReportResult:
     plot_analysis_results_png: Path | None
     complete_analysis_json: Path | None
     complete_analysis_csv: Path | None
+    complete_analysis_rows: list[dict[str, Any]]
 
 
 def _parse_float_or_none(raw: str) -> float | None:
@@ -338,6 +354,28 @@ def _write_summary_json(
     )
 
 
+def _read_point_perturbation(point: Mapping[str, Any]) -> tuple[str, float]:
+    """Read perturbation metadata from current or legacy sweep manifests."""
+    perturb_parameter = point.get("perturb_parameter")
+
+    perturb_frac = point.get("perturb_frac")
+    if perturb_frac is not None:
+        return str(perturb_parameter or "unknown"), float(perturb_frac)
+
+    for field, default_parameter in _LEGACY_PERTURBATION_FIELDS.items():
+        perturb_frac = point.get(field)
+        if perturb_frac is not None:
+            return str(perturb_parameter or default_parameter), float(
+                perturb_frac
+            )
+
+    raise ValueError(
+        "Sweep point is missing perturbation fraction metadata; expected "
+        "'perturb_frac' or one of "
+        f"{sorted(_LEGACY_PERTURBATION_FIELDS)}."
+    )
+
+
 def generate_sweep_report(
     *,
     sweep_dir: Path,
@@ -346,6 +384,7 @@ def generate_sweep_report(
     make_plots: bool = True,
     include_plot_analysis_results: bool = False,
     include_complete_analysis_table: bool = False,
+    show_progress: bool = False,
 ) -> SweepReportResult:
     """Generate summary table(s) and plots for an existing sweep directory."""
     sweep_dir = Path(sweep_dir).expanduser().resolve()
@@ -372,8 +411,7 @@ def generate_sweep_report(
     signal_chain_roots: list[tuple[str, Path]] = []
     chain_pairs: dict[str, ChainPair] = {}
     for point in points:
-        perturb_parameter = str(point.get("perturb_parameter", "unknown"))
-        perturb_frac = float(point.get("perturb_frac"))
+        perturb_parameter, perturb_frac = _read_point_perturbation(point)
         run_label = str(point.get("run_label", ""))
         run_dir = Path(str(point.get("run_dir", ""))).expanduser().resolve()
 
@@ -489,15 +527,40 @@ def generate_sweep_report(
 
     complete_analysis_json: Path | None = None
     complete_analysis_csv: Path | None = None
+    complete_analysis_rows: list[dict[str, Any]] = []
     if include_complete_analysis_table and chain_pairs:
         buffer = io.StringIO()
-        with redirect_stdout(buffer):
-            complete_res = run_complete_bayeseor_analysis(
-                chain_pairs=chain_pairs,
-                create_plots=False,
-                verbose=False,
-                show_progress=False,
+        if show_progress:
+            progress_console = Console(
+                stderr=True,
+                force_terminal=True,
+                no_color=os.environ.get("NO_COLOR") is not None,
             )
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                TimeElapsedColumn(),
+                console=progress_console,
+                transient=True,
+            ) as progress:
+                progress.add_task(
+                    "Running complete BayesEoR analysis", total=None
+                )
+                with redirect_stdout(buffer):
+                    complete_res = run_complete_bayeseor_analysis(
+                        chain_pairs=chain_pairs,
+                        create_plots=False,
+                        verbose=False,
+                        show_progress=False,
+                    )
+        else:
+            with redirect_stdout(buffer):
+                complete_res = run_complete_bayeseor_analysis(
+                    chain_pairs=chain_pairs,
+                    create_plots=False,
+                    verbose=False,
+                    show_progress=False,
+                )
 
         complete_analysis_json = report_dir / "complete_analysis_results.json"
         complete_analysis_json.write_text(
@@ -506,16 +569,19 @@ def generate_sweep_report(
         )
 
         successful_rows = complete_res.get("successful_results", [])
+        complete_analysis_rows = (
+            list(successful_rows) if isinstance(successful_rows, list) else []
+        )
         complete_analysis_csv = report_dir / "complete_analysis_successful.csv"
-        if successful_rows:
-            headers = list(successful_rows[0].keys())
+        if complete_analysis_rows:
+            headers = list(complete_analysis_rows[0].keys())
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
             ) as handle:
                 dict_writer = csv.DictWriter(handle, fieldnames=headers)
                 dict_writer.writeheader()
-                for row in successful_rows:
-                    dict_writer.writerow(row)
+                for complete_row in complete_analysis_rows:
+                    dict_writer.writerow(complete_row)
         else:
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
@@ -562,4 +628,5 @@ def generate_sweep_report(
             if complete_analysis_csv and complete_analysis_csv.exists()
             else None
         ),
+        complete_analysis_rows=complete_analysis_rows,
     )

@@ -9,6 +9,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    add_progress_argument,
+    resolve_color_mode,
+    resolve_progress_mode,
+    show_progress,
+)
 from valska_hera_beam.utils import get_default_path_manager
 
 from .cli_list_sweeps import discover_sweeps
@@ -186,6 +194,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON output.",
     )
+    add_progress_argument(parser)
+    add_color_argument(parser)
     return parser
 
 
@@ -213,38 +223,51 @@ def _result_to_payload(result: SweepReportResult) -> dict[str, Any]:
         "complete_analysis_csv": str(result.complete_analysis_csv)
         if result.complete_analysis_csv is not None
         else None,
+        "complete_analysis_rows": result.complete_analysis_rows,
     }
 
 
-def _print_text(payload: dict[str, Any]) -> None:
+def _format_status(status: object, *, colors: CliColors) -> str:
+    text = str(status)
+    if text == "generated":
+        return colors.success(text)
+    if text == "skipped":
+        return colors.warning(text)
+    if text == "error":
+        return colors.error(text)
+    return text
+
+
+def _print_text(payload: dict[str, Any], *, colors: CliColors) -> None:
     summary = payload["summary"]
-    print("Sweep batch report summary:")
-    print(f"  results_root: {payload['results_root']}")
+    print(colors.heading("Sweep batch report summary:"))
+    print(f"  results_root: {colors.path(payload['results_root'])}")
     print(f"  discovered:   {summary['count_discovered']}")
     print(f"  targeted:     {summary['count_targeted']}")
-    print(f"  generated:    {summary['count_generated']}")
-    print(f"  skipped:      {summary['count_skipped']}")
-    print(f"  errors:       {summary['count_errors']}")
+    print(f"  generated:    {colors.success(summary['count_generated'])}")
+    print(f"  skipped:      {colors.warning(summary['count_skipped'])}")
+    print(f"  errors:       {colors.error(summary['count_errors'])}")
 
-    print("\nPer-sweep:")
+    print("\n" + colors.heading("Per-sweep:"))
     if not payload["sweeps"]:
         print("  (none)")
         return
 
     for row in payload["sweeps"]:
+        status = _format_status(row["status"], colors=colors)
         print(
             "  - "
             f"{row.get('run_id') or '(unknown)'} "
             f"[{row.get('beam_model')}/{row.get('sky_model')}] "
-            f"=> {row['status']}"
+            f"=> {status}"
         )
-        print(f"      dir: {row['sweep_dir']}")
+        print(f"      dir: {colors.path(row['sweep_dir'])}")
         if row.get("out_dir") is not None:
-            print(f"      out: {row['out_dir']}")
+            print(f"      out: {colors.path(row['out_dir'])}")
         if row.get("summary_json") is not None:
-            print(f"      summary_json: {row['summary_json']}")
+            print(f"      summary_json: {colors.path(row['summary_json'])}")
         if row.get("error") is not None:
-            print(f"      error: {row['error']}")
+            print(f"      error: {colors.error(row['error'])}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -328,6 +351,10 @@ def main(argv: list[str] | None = None) -> int:
                 include_complete_analysis_table=bool(
                     args.include_complete_analysis_table
                 ),
+                show_progress=show_progress(
+                    resolve_progress_mode(args.progress),
+                    json_out=bool(args.json_out),
+                ),
             )
             row["status"] = "generated"
             row["out_dir"] = str(result.out_dir)
@@ -373,7 +400,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         print(json.dumps(payload, indent=2))
     else:
-        _print_text(payload)
+        colors = CliColors(
+            resolve_color_mode(args.color), enabled=not bool(args.json_out)
+        )
+        _print_text(payload, colors=colors)
 
     if bool(args.fail_on_error) and errors > 0:
         return 1

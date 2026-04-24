@@ -130,6 +130,186 @@ def test_cli_sweep_antenna_mode_dry_run_returns_0():
     assert code == 0
 
 
+def test_cli_sweep_dry_run_uses_named_data_root(tmp_path, monkeypatch, capsys):
+    """sweep dry-run should resolve relative --data via --data-root-key."""
+
+    runtime_yaml = tmp_path / "runtime_paths.yaml"
+    runtime_yaml.write_text(
+        "\n".join(
+            [
+                f"results_root: {tmp_path / 'results'}",
+                "data:",
+                "  named_roots:",
+                f"    default: {tmp_path / 'default-data'}",
+                f"    gaussian: {tmp_path / 'gaussian-data'}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("VALSKA_RUNTIME_PATHS_FILE", str(runtime_yaml))
+
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data-root-key",
+            "gaussian",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--fwhm-fracs",
+            "0.0",
+            "--dry-run",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert str((tmp_path / "gaussian-data" / "input.uvh5").resolve()) in out
+    assert "[runtime_paths.yaml:data.named_roots.gaussian]" in out
+
+
+def test_cli_prepare_dry_run_uses_named_data_root(
+    tmp_path, monkeypatch, capsys
+):
+    """prepare dry-run should resolve relative --data via --data-root-key."""
+
+    runtime_yaml = tmp_path / "runtime_paths.yaml"
+    runtime_yaml.write_text(
+        "\n".join(
+            [
+                f"results_root: {tmp_path / 'results'}",
+                "data:",
+                "  named_roots:",
+                f"    airy_diam14m: {tmp_path / 'airy-data'}",
+                "bayeseor:",
+                f"  repo_path: {tmp_path / 'BayesEoR'}",
+                '  conda_sh: "source /tmp/conda.sh"',
+                "  conda_env: bayeseor",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("VALSKA_RUNTIME_PATHS_FILE", str(runtime_yaml))
+
+    code = cli_prepare.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data-root-key",
+            "airy_diam14m",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--dry-run",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert str((tmp_path / "airy-data" / "input.uvh5").resolve()) in out
+    assert "[runtime_paths.yaml:data.named_roots.airy_diam14m]" in out
+
+
+def test_cli_prepare_manifest_records_named_data_root(
+    tmp_path, monkeypatch, capsys
+):
+    """A real prepare should record named data-root provenance."""
+
+    runtime_yaml = tmp_path / "runtime_paths.yaml"
+    runtime_yaml.write_text(
+        "\n".join(
+            [
+                f"results_root: {tmp_path / 'results'}",
+                "data:",
+                "  named_roots:",
+                f"    airy_diam14m: {tmp_path / 'airy-data'}",
+                "bayeseor:",
+                f"  repo_path: {tmp_path / 'BayesEoR'}",
+                '  conda_sh: "source /tmp/conda.sh"',
+                "  conda_env: bayeseor",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("VALSKA_RUNTIME_PATHS_FILE", str(runtime_yaml))
+
+    code = cli_prepare.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data-root-key",
+            "airy_diam14m",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+        ]
+    )
+
+    assert code == 0
+    capsys.readouterr()
+    manifests = sorted((tmp_path / "results").rglob("manifest.json"))
+    assert len(manifests) == 1
+    manifest = json.loads(manifests[0].read_text(encoding="utf-8"))
+    assert manifest["data_path"] == str(
+        (tmp_path / "airy-data" / "input.uvh5").resolve()
+    )
+    assert manifest["data_path_source"] == (
+        "runtime_paths.yaml:data.named_roots.airy_diam14m"
+    )
+    assert manifest["data_root_key"] == "airy_diam14m"
+
+
+def test_cli_sweep_missing_named_data_root_returns_2(
+    tmp_path, monkeypatch, capsys
+):
+    """A missing --data-root-key should fail before dry-run output."""
+
+    runtime_yaml = tmp_path / "runtime_paths.yaml"
+    runtime_yaml.write_text(
+        "\n".join(
+            [
+                f"results_root: {tmp_path / 'results'}",
+                "data:",
+                "  named_roots:",
+                f"    gaussian: {tmp_path / 'gaussian-data'}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("VALSKA_RUNTIME_PATHS_FILE", str(runtime_yaml))
+
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data-root-key",
+            "missing",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--dry-run",
+        ]
+    )
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "data root key 'missing' not found" in err
+    assert "Available keys: gaussian" in err
+
+
 def test_cli_sweep_rejects_mismatched_perturbation_flags():
     """
     sweep should reject fwhm-only flags when perturb_parameter is antenna_diameter.

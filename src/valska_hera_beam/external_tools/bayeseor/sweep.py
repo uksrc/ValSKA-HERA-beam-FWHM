@@ -139,6 +139,8 @@ class SweepResult:
     run_id: str
     perturb_parameter: _PERT
     data_path: Path
+    data_path_source: str | None
+    data_root_key: str | None
     created_utc: str
     sweep_dir: Path
     sweep_manifest_json: Path
@@ -159,6 +161,8 @@ def write_sweep_manifest(
     template_yaml: Path,
     sweep_dir: Path,
     points: list[SweepPoint],
+    data_path_source: str | None = None,
+    data_root_key: str | None = None,
     submit_results: list[dict[str, Any]] | None = None,
 ) -> Path:
     """
@@ -195,6 +199,8 @@ def write_sweep_manifest(
         "run_id": run_id,
         "perturb_parameter": perturb_parameter,
         "data_path": str(data_path),
+        "data_path_source": data_path_source,
+        "data_root_key": data_root_key,
         "template_yaml": str(template_yaml),
         "created_utc": _utc_now_iso(),
         "sweep_dir": str(sweep_dir),
@@ -238,6 +244,8 @@ def run_fwhm_sweep(
     variant: str,
     run_id: str,
     data_path: Path,
+    data_path_source: str | None = None,
+    data_root_key: str | None = None,
     slurm_cpu: dict[str, object] | None = None,
     slurm_gpu: dict[str, object] | None = None,
     overrides: dict[str, str] | None = None,
@@ -400,6 +408,8 @@ def run_fwhm_sweep(
             run_id=run_id,
             perturb_parameter=perturb_parameter,
             data_path=data_path,
+            data_path_source=data_path_source,
+            data_root_key=data_root_key,
             created_utc=_utc_now_iso(),
             sweep_dir=sweep_dir,
             sweep_manifest_json=sweep_manifest_path,
@@ -440,6 +450,8 @@ def run_fwhm_sweep(
             run_dir=run_dir,  # explicit: sweep layout
             unique=False,  # unique already handled above (if desired)
             data_path=data_path,
+            data_path_source=data_path_source,
+            data_root_key=data_root_key,
             overrides=overrides or {},
             slurm_cpu=slurm_cpu or {},
             slurm_gpu=slurm_gpu or {},
@@ -533,6 +545,8 @@ def run_fwhm_sweep(
         run_id=run_id,
         perturb_parameter=perturb_parameter,
         data_path=data_path,
+        data_path_source=data_path_source,
+        data_root_key=data_root_key,
         template_yaml=template_yaml,
         sweep_dir=sweep_dir,
         points=points,
@@ -547,6 +561,8 @@ def run_fwhm_sweep(
         run_id=run_id,
         perturb_parameter=perturb_parameter,
         data_path=data_path,
+        data_path_source=data_path_source,
+        data_root_key=data_root_key,
         created_utc=_utc_now_iso(),
         sweep_dir=sweep_dir,
         sweep_manifest_json=sweep_manifest_path,

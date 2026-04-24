@@ -13,7 +13,10 @@ from valska_hera_beam.external_tools.bayeseor import (
     CondaRunner,
     get_template_path,
 )
-from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
+from valska_hera_beam.utils import (
+    get_default_path_manager,
+    resolve_data_path_info,
+)
 
 from . import sweep as sweep_mod  # for DRY helpers (run_label + point dirs)
 from .cli_prepare import _get_nested, _slurm_defaults
@@ -44,6 +47,7 @@ def _build_rerunnable_sweep_cmd(
     beam_model: str,
     sky_model: str,
     data_arg: Path,
+    data_root_key: str | None,
     run_id: str,
     perturb_parameter: _PERT,
     fwhm_fracs: list[float] | None,
@@ -78,6 +82,8 @@ def _build_rerunnable_sweep_cmd(
     parts += ["--sky", _shell_quote(sky_model)]
 
     parts += ["--data", _shell_quote(str(data_arg))]
+    if data_root_key is not None:
+        parts += ["--data-root-key", _shell_quote(data_root_key)]
     parts += ["--run-id", _shell_quote(run_id)]
     parts += ["--perturb-parameter", _shell_quote(perturb_parameter)]
 
@@ -359,7 +365,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p.add_argument(
-        "--data", type=Path, required=True, help="Path to the UVH5 dataset."
+        "--data",
+        type=Path,
+        required=True,
+        help=(
+            "Path to the UVH5 dataset. Relative paths may be resolved via "
+            "runtime_paths.yaml:data.named_roots.<key>, "
+            "data.named_roots.default, or data.root."
+        ),
+    )
+    p.add_argument(
+        "--data-root-key",
+        type=str,
+        default=None,
+        help=(
+            "Named root under runtime_paths.yaml:data.named_roots used to "
+            "resolve relative --data paths."
+        ),
     )
 
     # New preferred axes
@@ -597,13 +619,16 @@ def main(argv: list[str] | None = None) -> int:
             else "env/default"
         )
 
-    # Resolve data path (supports runtime_paths.yaml:data.root)
+    # Resolve data path (supports data.named_roots.<key>, default, and legacy data.root)
     try:
-        data_resolved = resolve_data_path(args.data, runtime)
-        data_src = "runtime_paths.yaml:data.root"
-    except Exception:
-        data_resolved = Path(args.data).expanduser()
-        data_src = "CLI"
+        data_info = resolve_data_path_info(
+            args.data, runtime, data_root_key=args.data_root_key
+        )
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    data_resolved = data_info.path
+    data_src = data_info.source
 
     # repo_path
     repo_path = args.bayeseor_repo
@@ -842,6 +867,8 @@ def main(argv: list[str] | None = None) -> int:
         variant=variant,
         run_id=args.run_id,
         data_path=Path(data_resolved).expanduser(),
+        data_path_source=data_src,
+        data_root_key=data_info.data_root_key,
         overrides=overrides_dict,
         perturb_parameter=perturb_parameter,
         perturb_fracs=fracs,
@@ -868,6 +895,8 @@ def main(argv: list[str] | None = None) -> int:
             "run_id": sweep_res.run_id,
             "perturb_parameter": sweep_res.perturb_parameter,
             "data_path": str(sweep_res.data_path),
+            "data_path_source": sweep_res.data_path_source,
+            "data_root_key": sweep_res.data_root_key,
             "created_utc": sweep_res.created_utc,
             "sweep_dir": str(sweep_res.sweep_dir),
             "sweep_manifest_json": str(sweep_res.sweep_manifest_json),
@@ -940,6 +969,7 @@ def main(argv: list[str] | None = None) -> int:
         beam_model=beam_model,
         sky_model=sky_model,
         data_arg=args.data,
+        data_root_key=args.data_root_key,
         run_id=args.run_id,
         perturb_parameter=perturb_parameter,
         fwhm_fracs=fracs,
@@ -966,6 +996,7 @@ def main(argv: list[str] | None = None) -> int:
         beam_model=beam_model,
         sky_model=sky_model,
         data_arg=args.data,
+        data_root_key=args.data_root_key,
         run_id=args.run_id,
         perturb_parameter=perturb_parameter,
         fwhm_fracs=fracs,
@@ -992,6 +1023,7 @@ def main(argv: list[str] | None = None) -> int:
         beam_model=beam_model,
         sky_model=sky_model,
         data_arg=args.data,
+        data_root_key=args.data_root_key,
         run_id=args.run_id,
         perturb_parameter=perturb_parameter,
         fwhm_fracs=fracs,

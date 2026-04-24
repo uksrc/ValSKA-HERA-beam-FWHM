@@ -23,6 +23,7 @@ set -euo pipefail
 BEAM="airy_diam14m"
 SKY="GSM_plus_GLEAM"
 DATA="gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5"
+DATA_ROOT_KEY="airy_diam14m"
 TEMPLATE="validation_airy_diam14m.yaml"
 RUN_ID="sweep_airy_init"
 POL="xx"
@@ -88,6 +89,7 @@ fi
 echo "Starting ValSKA BayesEoR airy sweep..."
 echo "  Beam:                $BEAM"
 echo "  Sky:                 $SKY"
+echo "  Data root key:       $DATA_ROOT_KEY"
 echo "  Data:                $DATA"
 echo "  Template:            $TEMPLATE"
 echo "  Polarization:        $POL"
@@ -104,6 +106,7 @@ cmd=(
     valska-bayeseor-sweep
     --beam "$BEAM"
     --sky "$SKY"
+    --data-root-key "$DATA_ROOT_KEY"
     --data "$DATA"
     --template "$TEMPLATE"
     --run-id "$RUN_ID"
@@ -125,6 +128,7 @@ if [[ "$RUN_REPORT" == "true" ]]; then
         --sky "$SKY" \
         --run-id "$RUN_ID" \
         --template "$TEMPLATE" \
+        --data-root-key "$DATA_ROOT_KEY" \
         --data "$DATA" \
         --override "pol=$POL" \
         --perturb-parameter antenna_diameter \

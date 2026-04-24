@@ -20,6 +20,7 @@ BEAM="achromatic_Gaussian"
 SKY="GLEAM"
 # DATA="gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5"
 DATA="gleam-158.30-167.10-MHz-nf-38-pld-mean-2.82-std-0.19-fov-19.4deg-circ-field-1_quentin.uvh5"
+DATA_ROOT_KEY="gaussian"
 RUN_ID="sweep"
 TEMPLATE="validation_achromatic_Gaussian.yaml"
 
@@ -59,6 +60,7 @@ fi
 echo "Starting ValSKA BayesEoR sweep..."
 echo "  Beam:     $BEAM"
 echo "  Sky:      $SKY"
+echo "  Data root key: $DATA_ROOT_KEY"
 echo "  Template: $TEMPLATE"
 echo "  Run ID:   $RUN_ID"
 echo "  Submit:   $SUBMIT_MODE"
@@ -67,6 +69,7 @@ echo ""
 valska-bayeseor-sweep \
   --beam "$BEAM" \
   --sky "$SKY" \
+  --data-root-key "$DATA_ROOT_KEY" \
   --data "$DATA" \
   --template "$TEMPLATE" \
   --run-id "$RUN_ID" \

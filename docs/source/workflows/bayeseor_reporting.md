@@ -28,7 +28,9 @@ Given a sweep directory containing `sweep_manifest.json`, it can generate:
 
 By default, output files are written under:
 
-    <sweep_dir>/report/
+```text
+<sweep_dir>/report/
+```
 
 Plot styling conventions (for publication-quality readability):
 
@@ -44,37 +46,51 @@ Plot styling conventions (for publication-quality readability):
 
 Basic run (tables + default evidence plots):
 
-    valska-bayeseor-report /path/to/_sweeps/<run_id>
+```bash
+valska-bayeseor-report /path/to/_sweeps/<run_id>
+```
 
 Airy sweep helper can trigger this automatically after sweep preparation/submission:
 
-  bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+```bash
+bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+```
 
 Use `--report-no-plots` on the helper for table-only reporting.
 
 JSON summary payload:
 
-    valska-bayeseor-report /path/to/_sweeps/<run_id> --json
+```bash
+valska-bayeseor-report /path/to/_sweeps/<run_id> --json
+```
 
 Skip evidence plots (tables only):
 
-    valska-bayeseor-report /path/to/_sweeps/<run_id> --no-plots
+```bash
+valska-bayeseor-report /path/to/_sweeps/<run_id> --no-plots
+```
 
 Choose evidence estimator used for ΔlnZ/Bayes factor:
 
-    valska-bayeseor-report /path/to/_sweeps/<run_id> --evidence-source ns
-    valska-bayeseor-report /path/to/_sweeps/<run_id> --evidence-source ins
+```bash
+valska-bayeseor-report /path/to/_sweeps/<run_id> --evidence-source ns
+valska-bayeseor-report /path/to/_sweeps/<run_id> --evidence-source ins
+```
 
 Enable extended outputs:
 
-    valska-bayeseor-report /path/to/_sweeps/<run_id> \
-      --include-plot-analysis-results \
-      --include-complete-analysis-table
+```bash
+valska-bayeseor-report /path/to/_sweeps/<run_id> \
+  --include-plot-analysis-results \
+  --include-complete-analysis-table
+```
 
 Custom output directory:
 
-    valska-bayeseor-report /path/to/_sweeps/<run_id> \
-      --out-dir /path/to/custom_report_dir
+```bash
+valska-bayeseor-report /path/to/_sweeps/<run_id> \
+  --out-dir /path/to/custom_report_dir
+```
 
 ---
 
@@ -82,30 +98,42 @@ Custom output directory:
 
 ValSKA also provides a convenience wrapper:
 
-    bash_scripts/valska-bayeseor-report-sweep.sh --sweep-dir /path/to/_sweeps/<run_id>
+```bash
+bash_scripts/valska-bayeseor-report-sweep.sh --sweep-dir /path/to/_sweeps/<run_id>
+```
 
 To discover available sweep directories quickly, use:
 
-  valska-bayeseor-list-sweeps
+```bash
+valska-bayeseor-list-sweeps
+```
 
 JSON output mode (for scripting):
 
-  valska-bayeseor-list-sweeps --json
+```bash
+valska-bayeseor-list-sweeps --json
+```
 
 Filter examples:
 
-  valska-bayeseor-list-sweeps --beam airy --sky GSM_plus_GLEAM
-  valska-bayeseor-list-sweeps --run-id sweep_airy_init --latest
+```bash
+valska-bayeseor-list-sweeps --beam airy_diam14m --sky GSM_plus_GLEAM
+valska-bayeseor-list-sweeps --run-id sweep_airy_init --latest
+```
 
 Shell helper equivalent:
 
-  bash_scripts/valska-list-sweeps.sh
+```bash
+bash_scripts/valska-list-sweeps.sh
+```
 
 The shell helper is a thin wrapper around `valska-bayeseor-list-sweeps`.
 
 JSON output mode (for scripting):
 
-  bash_scripts/valska-list-sweeps.sh --json
+```bash
+bash_scripts/valska-list-sweeps.sh --json
+```
 
 ---
 
@@ -113,46 +141,66 @@ JSON output mode (for scripting):
 
 For quick, command-local usage examples, run:
 
-  valska-bayeseor-list-sweeps --help
-  valska-bayeseor-sweep-status --help
-  valska-bayeseor-validate-sweep --help
-  valska-bayeseor-sweep-audit --help
+```bash
+valska-bayeseor-list-sweeps --help
+valska-bayeseor-sweep-status --help
+valska-bayeseor-validate-sweep --help
+valska-bayeseor-sweep-audit --help
+```
 
 Check per-point output completeness for a sweep:
 
-  valska-bayeseor-sweep-status /path/to/_sweeps/<run_id>
+```bash
+valska-bayeseor-sweep-status /path/to/_sweeps/<run_id>
+```
 
 Machine-readable status payload:
 
-  valska-bayeseor-sweep-status /path/to/_sweeps/<run_id> --json
+```bash
+valska-bayeseor-sweep-status /path/to/_sweeps/<run_id> --json
+```
 
 Validate sweep integrity with exit-code semantics:
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id>
+```bash
+valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id>
+```
 
 Allow partial sweeps (at least one complete point):
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --allow-partial
+```bash
+valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --allow-partial
+```
 
 Require `jobs.json` for every point:
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --require-jobs-json
+```bash
+valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --require-jobs-json
+```
 
 JSON validation payload (includes `exit_code` and `failures`):
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --json
+```bash
+valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --json
+```
 
 Aggregate audit across discovered sweeps (list + status + validate):
 
-  valska-bayeseor-sweep-audit
+```bash
+valska-bayeseor-sweep-audit
+```
 
 Filter and machine-readable output:
 
-  valska-bayeseor-sweep-audit --beam airy --sky GSM_plus_GLEAM --json
+```bash
+valska-bayeseor-sweep-audit --beam airy_diam14m --sky GSM_plus_GLEAM --json
+```
 
 Fail non-zero when any audited sweep is invalid:
 
-  valska-bayeseor-sweep-audit --fail-on-invalid
+```bash
+valska-bayeseor-sweep-audit --fail-on-invalid
+```
 
 ### Wrapper defaults
 
@@ -164,16 +212,20 @@ The wrapper now enables by default:
 
 Opt out of extended outputs if needed:
 
-    bash_scripts/valska-bayeseor-report-sweep.sh \
-      --sweep-dir /path/to/_sweeps/<run_id> \
-      --no-plot-analysis-results \
-      --no-complete-analysis-table
+```bash
+bash_scripts/valska-bayeseor-report-sweep.sh \
+  --sweep-dir /path/to/_sweeps/<run_id> \
+  --no-plot-analysis-results \
+  --no-complete-analysis-table
+```
 
 Skip all plotting:
 
-    bash_scripts/valska-bayeseor-report-sweep.sh \
-      --sweep-dir /path/to/_sweeps/<run_id> \
-      --no-plots
+```bash
+bash_scripts/valska-bayeseor-report-sweep.sh \
+  --sweep-dir /path/to/_sweeps/<run_id> \
+  --no-plots
+```
 
 ### Environment fallback behavior
 
@@ -184,7 +236,9 @@ The wrapper will:
 
 Set the conda env name with:
 
-    export VALSKA_CONDA_ENV=valska
+```bash
+export VALSKA_CONDA_ENV=valska
+```
 
 ---
 

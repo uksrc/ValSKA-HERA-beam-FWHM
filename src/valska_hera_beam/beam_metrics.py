@@ -136,12 +136,12 @@ def beam_width_vs_frequency(
 
     print("Fitted Gaussian and Airy:")
     print(
-        f"   mean Gaussian χ²: {numpy.mean(chi2_gauss_vs_freq):.3f} "
-        f"({numpy.std(chi2_gauss_vs_freq):.3f})"
+        f"   mean Gaussian χ²: {numpy.mean(chi2_gauss_vs_freq):.3g} "
+        f"({numpy.std(chi2_gauss_vs_freq):.3g})"
     )
     print(
-        f"   mean Airy χ²: {numpy.mean(chi2_airy_vs_freq):.3f} "
-        f"({numpy.std(chi2_airy_vs_freq):.3f})"
+        f"   mean Airy χ²: {numpy.mean(chi2_airy_vs_freq):.3g} "
+        f"({numpy.std(chi2_airy_vs_freq):.3g})"
     )
 
     return gauss_fwhm_vs_freq, params_gauss_mid, params_airy_mid
@@ -368,7 +368,7 @@ def check_beam(uvd: UVData, latitude: float, exp_sigma_rad: float) -> None:
         )
         print(
             f"Gaussian at {mid_freq / 1e6} MHz "
-            f"FWHM = {gauss_fwhm_vs_freq[f_mid_idx]:.3f} deg; "
+            f"FWHM = {gauss_fwhm_vs_freq[f_mid_idx]} deg; "
             f"sigma = {gauss_fwhm_vs_freq[f_mid_idx] / 2.35482}"
         )
         print(

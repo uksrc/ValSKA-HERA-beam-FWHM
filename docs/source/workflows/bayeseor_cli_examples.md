@@ -67,7 +67,8 @@ Runtime configuration in your ValSKA checkout:
 - copy `config/runtime_paths.example.yaml` to `config/runtime_paths.yaml` in your ValSKA repository
 - edit `config/runtime_paths.yaml` for your system:
   - set `results_root`
-  - set `data.root` if you want relative `--data` paths to resolve automatically
+  - set `data.named_roots.default` if you want relative `--data` paths to resolve automatically
+  - optionally set extra `data.named_roots.<name>` entries and pass `--data-root-key <name>` when different dataset families live under different directories
   - set `bayeseor.repo_path` to your local BayesEoR clone
   - set `bayeseor.conda_sh` and `bayeseor.conda_env`
   - set CPU and GPU SLURM defaults for your site

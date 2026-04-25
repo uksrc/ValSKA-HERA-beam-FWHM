@@ -8,6 +8,7 @@ API
    valska_hera_beam.notebook_helpers
    valska_hera_beam.plotting
    valska_hera_beam.utils
+   valska_hera_beam.external_tools.bayeseor.analysis_plot
    valska_hera_beam.external_tools.bayeseor.cli_cleanup
    valska_hera_beam.external_tools.bayeseor.cli_compare_sweeps
    valska_hera_beam.external_tools.bayeseor.cli_help
@@ -23,6 +24,7 @@ API
    valska_hera_beam.external_tools.bayeseor.cli_validate_sweep
    valska_hera_beam.external_tools.bayeseor.constants
    valska_hera_beam.external_tools.bayeseor.report
+   valska_hera_beam.external_tools.bayeseor.plot_configs
    valska_hera_beam.external_tools.bayeseor.runner
    valska_hera_beam.external_tools.bayeseor.setup
    valska_hera_beam.external_tools.bayeseor.slurm

@@ -378,7 +378,7 @@ def analyze_chain_pair(  # noqa: PLR0912
     verbose: bool = True,
 ) -> PerturbationResult:
     """
-    Analyze a single FgEoR/FgOnly chain pair using BaNTER-style validation.
+    Analyse a single FgEoR/FgOnly chain pair using BaNTER-style validation.
 
     Parameters
     ----------
@@ -511,7 +511,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
         Mapping of perturbation keys to :class:`ChainPair` objects, typically
         created by :func:`find_chain_pairs`.
     perturbation_levels :
-        Optional iterable of perturbation keys to analyze. If ``None``,
+        Optional iterable of perturbation keys to analyse. If ``None``,
         all keys in ``chain_pairs`` are used.
     dir_prefix :
         Optional directory prefix for :func:`analyze_chain_pair`. If ``None``,
@@ -526,7 +526,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
     verbose :
         If ``True``, print readable progress and summary messages.
     show_progress :
-        If ``True`` and multiple perturbation levels are analyzed, display
+        If ``True`` and multiple perturbation levels are analysed, display
         a ``tqdm`` progress bar (if available).
 
     Returns
@@ -547,7 +547,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
 
     if verbose:
         print("=== Complete BayesEoR Analysis (pair-based) ===")
-        print(f"Analyzing {total_cases} perturbation levels...")
+        print(f"Analysing {total_cases} perturbation levels...")
         print("Perturbation levels:", labels)
         if create_plots:
             print("Note: Plots will be generated for each perturbation")
@@ -559,7 +559,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
         try:
             perturbation_iterator: Iterable[str] = tqdm.tqdm(
                 labels,
-                desc="Analyzing perturbations",
+                desc="Analysing perturbations",
                 unit="case",
                 ncols=80,
                 bar_format=(
@@ -592,7 +592,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
                 perturbation_iterator, "set_description", None
             )
             if callable(set_description):
-                set_description(f"Analyzing: {pert_label}")
+                set_description(f"Analysing: {pert_label}")
 
     # Summary table
     print("\n" + "=" * 80)
@@ -697,7 +697,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
             print()
 
         print(
-            f"Successfully analyzed {len(successful_results)} "
+            f"Successfully analysed {len(successful_results)} "
             f"out of {len(all_results)} perturbations"
         )
 

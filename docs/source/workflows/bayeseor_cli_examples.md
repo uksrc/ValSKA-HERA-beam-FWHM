@@ -688,13 +688,13 @@ Skip plot generation when auto-reporting:
 bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report-no-plots
 ```
 
-For full reporting options and failure-handling behavior, see:
+For full reporting options and failure-handling behaviour, see:
 
 - [BayesEoR reporting workflows](./bayeseor_reporting.md)
 
 ### K) Sweep health/status checks
 
-Inspect a sweep and summarize point completeness:
+Inspect a sweep and summarise point completeness:
 
 ```bash
 valska-bayeseor-sweep-status /path/to/_sweeps/SWEEP_ID

@@ -79,7 +79,7 @@ Machine-readable output:
 valska-bayeseor-resume /path/to/_sweeps/<run_id> --json
 ```
 
-Key behavior:
+Key behaviour:
 
 - skips already-complete points
 - emits minimal command set needed per point
@@ -130,7 +130,7 @@ valska-bayeseor-report-all --json
 valska-bayeseor-report-all --fail-on-error
 ```
 
-Key behavior:
+Key behaviour:
 
 - preserves per-sweep report structure and output files
 - records generated/skipped/error counts in summary payload
@@ -258,7 +258,7 @@ Filtering options mirror sweep discovery tools:
 
 - `--run-id`, `--beam`, `--sky`, `--latest`, `--max-results`
 
-CI-friendly behavior:
+CI-friendly behaviour:
 
 ```bash
 valska-bayeseor-cleanup --prune-logs --execute --fail-on-error

@@ -11,7 +11,9 @@ from typing import Any
 
 from valska_hera_beam.utils import get_default_path_manager
 
+from .analysis_plot import BayesEoRPlotConfig
 from .cli_list_sweeps import discover_sweeps
+from .plot_configs import resolve_analysis_plot_config_path
 from .report import SweepReportResult, generate_sweep_report
 
 
@@ -164,7 +166,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Also generate a BeamAnalysisPlotter.plot_analysis_results figure "
-            "for all complete signal_fit points."
+            "and a ValSKA-rendered figure for complete points."
+        ),
+    )
+    parser.add_argument(
+        "--plot-config",
+        type=Path,
+        default=None,
+        help=(
+            "Optional YAML config for ValSKA-rendered BayesEoR analysis plots "
+            "(used with --include-plot-analysis-results). If omitted, "
+            "ValSKA uses ./plot.yaml when present, then the packaged "
+            "plot_configs/plot.yaml if available."
         ),
     )
     parser.add_argument(
@@ -207,6 +220,9 @@ def _result_to_payload(result: SweepReportResult) -> dict[str, Any]:
         "plot_analysis_results_png": str(result.plot_analysis_results_png)
         if result.plot_analysis_results_png is not None
         else None,
+        "valska_plot_analysis_results_pngs": [
+            str(path) for path in result.valska_plot_analysis_results_pngs
+        ],
         "complete_analysis_json": str(result.complete_analysis_json)
         if result.complete_analysis_json is not None
         else None,
@@ -249,6 +265,17 @@ def _print_text(payload: dict[str, Any]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    try:
+        plot_config_path = None
+        plot_config = None
+        if bool(args.include_plot_analysis_results):
+            plot_config_path = resolve_analysis_plot_config_path(
+                args.plot_config
+            )
+            plot_config = BayesEoRPlotConfig.from_yaml(plot_config_path)
+    except Exception as exc:
+        print(f"ERROR: failed to load plot config: {exc}", file=sys.stderr)
+        return 2
 
     try:
         results_root = (
@@ -328,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
                 include_complete_analysis_table=bool(
                     args.include_complete_analysis_table
                 ),
+                plot_config=plot_config,
             )
             row["status"] = "generated"
             row["out_dir"] = str(result.out_dir)
@@ -363,6 +391,9 @@ def main(argv: list[str] | None = None) -> int:
             "include_plot_analysis_results": bool(
                 args.include_plot_analysis_results
             ),
+            "plot_config": str(plot_config_path)
+            if plot_config_path is not None
+            else None,
             "include_complete_analysis_table": bool(
                 args.include_complete_analysis_table
             ),

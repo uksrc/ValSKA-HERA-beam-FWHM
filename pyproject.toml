@@ -103,6 +103,7 @@ include-package-data = true
 valska_hera_beam = [
   "config/*.yaml",
   "external_tools/bayeseor/templates/*.yaml",
+  "external_tools/bayeseor/plot_configs/*.yaml",
 ]
 
 [tool.setuptools.packages.find]

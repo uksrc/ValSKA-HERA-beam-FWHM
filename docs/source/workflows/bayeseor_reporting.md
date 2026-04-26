@@ -54,7 +54,7 @@ valska-bayeseor-report /path/to/_sweeps/<run_id>
 Airy sweep helper can trigger this automatically after sweep preparation/submission:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report
 ```
 
 Use `--report-no-plots` on the helper for table-only reporting.

@@ -679,13 +679,13 @@ bash_scripts/valska-bayeseor-report-sweep.sh --sweep-dir /path/to/_sweeps/<run_i
 Airy helper convenience (prepare/submit sweep and auto-run reporting at the end):
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report
 ```
 
 Skip plot generation when auto-reporting:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report-no-plots
+bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report-no-plots
 ```
 
 For full reporting options and failure-handling behaviour, see:
@@ -792,4 +792,4 @@ Ambiguous older patterns like `GLEAM_beam` are rejected to prevent silent misrou
 - `src/valska_hera_beam/external_tools/bayeseor/sweep.py`
 - `src/valska_hera_beam/external_tools/bayeseor/submit.py`
 - `config/runtime_paths.yaml`
-- `bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh`
+- `bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh`

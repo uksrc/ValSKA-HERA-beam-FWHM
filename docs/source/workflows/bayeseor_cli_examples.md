@@ -36,12 +36,13 @@ If you are new, start with **Quick Start**. If you are iterating on a validation
   - [E) Submit CPU+GPU together (fresh sweep)](#e-submit-cpugpu-together-fresh-sweep)
   - [F) Submit CPU across sweep points](#f-submit-cpu-across-sweep-points)
   - [G) Submit GPU across sweep points (after CPU)](#g-submit-gpu-across-sweep-points-after-cpu)
-  - [H) Advanced: per-point submission with valska-bayeseor-submit](#h-advanced-per-point-submission-with-valska-bayeseor-submit)
-  - [I) Monitoring jobs](#i-monitoring-jobs)
-  - [J) Post-processing reports (tables + plots)](#j-post-processing-reports-tables--plots)
-  - [K) Sweep health/status checks](#k-sweep-healthstatus-checks)
-  - [L) Aggregate sweep audit](#l-aggregate-sweep-audit)
-  - [M) Backwards compatibility: deprecated --scenario](#m-backwards-compatibility-deprecated---scenario)
+  - [H) Slurm array submission for sweep campaigns](#h-slurm-array-submission-for-sweep-campaigns)
+  - [I) Advanced: per-point submission with valska-bayeseor-submit](#i-advanced-per-point-submission-with-valska-bayeseor-submit)
+  - [J) Monitoring jobs](#j-monitoring-jobs)
+  - [K) Post-processing reports (tables + plots)](#k-post-processing-reports-tables--plots)
+  - [L) Sweep health/status checks](#l-sweep-healthstatus-checks)
+  - [M) Aggregate sweep audit](#m-aggregate-sweep-audit)
+  - [N) Backwards compatibility: deprecated --scenario](#n-backwards-compatibility-deprecated---scenario)
 
 ---
 
@@ -618,7 +619,162 @@ sbatch --dependency=afterok:<CPU_JOBID> .../submit_signal_fit_gpu_run.sh
 sbatch --dependency=afterok:<CPU_JOBID> .../submit_no_signal_gpu_run.sh
 ```
 
-### H) Advanced: per-point submission with valska-bayeseor-submit
+### H) Slurm array submission for sweep campaigns
+
+By default, `valska-bayeseor-sweep` submits one CPU job and one or two GPU jobs
+per sweep point. This per-point submission mode is useful for debugging, but it
+can create many scheduler jobs for a full campaign.
+
+Use Slurm array mode when you want the same sweep represented by one CPU array
+job plus one or two GPU array jobs:
+
+```bash
+--submit-mode array
+```
+
+The array-mode concurrency limits are controlled independently for CPU and GPU
+tasks:
+
+```bash
+--array-max-cpu 4
+--array-max-gpu 2
+```
+
+For example, a sweep with 11 perturbation points and `--array-max-gpu 2`
+generates GPU array scripts containing:
+
+```text
+#SBATCH --array=0-10%2
+```
+
+This means Slurm can run at most two GPU array tasks from that array at once.
+Choose these limits according to the allocation and usage policy of the cluster
+being used.
+
+Before submitting real jobs on a new cluster, run a submit dry-run into a
+scratch or test output root:
+
+```bash
+RUN_ID="sweep_v3_array_smoke_$(date -u +%Y%m%dT%H%M%SZ)"
+RESULTS_ROOT="/path/to/scratch/valska-array-smoke-${RUN_ID}"
+
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit all \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2 \
+  --submit-dry-run
+```
+
+`--submit-dry-run` prepares the sweep directory, writes the Slurm array scripts,
+prints the `sbatch` commands, and records dry-run metadata without submitting
+jobs. The output should report:
+
+```text
+submit:              all (ok)
+submit_mode:         array
+job_id(cpu_precompute_array): DRY_RUN_CPU_ARRAY_JOB_ID
+dependency(gpu_array): afterok:DRY_RUN_CPU_ARRAY_JOB_ID
+```
+
+Inspect the generated artefacts before the real submission:
+
+```bash
+find "$RESULTS_ROOT" \
+  -name jobs.json \
+  -o -name array_tasks.json \
+  -o -name 'submit_*_array.sh'
+
+grep -R "#SBATCH --array" "$RESULTS_ROOT"
+grep -R "afterok:DRY_RUN_CPU_ARRAY_JOB_ID" "$RESULTS_ROOT"
+```
+
+The sweep-level array files are written under:
+
+```text
+<results_root>/bayeseor/<beam>/<sky>/_sweeps/<run_id>/
+```
+
+Important files include:
+
+- `array_tasks.json`: maps Slurm array indices to per-point run directories and
+  config files
+- `submit_cpu_precompute_array.sh`: CPU precompute array script
+- `submit_signal_fit_gpu_array.sh`: signal-fit GPU array script
+- `submit_no_signal_gpu_array.sh`: no-signal GPU array script
+- `jobs.json`: sweep-level submission record containing array job IDs,
+  dependencies, commands, and dry-run placeholders when applicable
+
+If the dry-run output looks correct, submit the same sweep for real by
+removing `--submit-dry-run`:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit all \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2
+```
+
+In real array submission mode, ValSKA submits the CPU array first, records its
+Slurm job ID in sweep-level `jobs.json`, then submits the GPU array job(s) with:
+
+```text
+--dependency=afterok:<cpu_array_job_id>
+```
+
+To split submission into two steps, submit CPU first:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit cpu \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2
+```
+
+Then submit GPU arrays after the CPU array job has been recorded:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit gpu \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2
+```
+
+Alternatively, pass an explicit CPU dependency if the CPU array job was
+submitted outside the current `jobs.json` record:
+
+```bash
+valska-bayeseor-sweep \
+  --beam achromatic_Gaussian \
+  --sky GSM \
+  --data-root-key gaussian \
+  --data gsm-nside256-158.3-167.1MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --template validation_achromatic_Gaussian.yaml \
+  --submit gpu \
+  --submit-mode array \
+  --array-max-gpu 2 \
+  --depend-afterok <CPU_ARRAY_JOB_ID>
+```
+
+Array submission changes how jobs are grouped in Slurm; it does not change the
+per-point output layout. Each perturbation point still has its own run
+directory beneath the sweep directory, so the same reporting and sweep-health
+commands can be used after the jobs complete.
+
+### I) Advanced: per-point submission with valska-bayeseor-submit
 
 Sometimes you only want to submit a subset of points or a single point, especially when testing.
 
@@ -641,7 +797,7 @@ Or, if you know the run_dir explicitly:
 valska-bayeseor-submit /share/.../_sweeps/sweep_test2/validation_achromatic_Gaussian/fwhm_1.0e-02 --stage gpu
 ```
 
-### I) Monitoring jobs
+### J) Monitoring jobs
 Common SLURM checks:
 
 ```bash
@@ -654,7 +810,7 @@ ValSKA also records submission information into:
 - per-point `jobs.json`
 - sweep-level `sweep_manifest.json` (including submit results)
 
-### J) Post-processing reports (tables + plots)
+### K) Post-processing reports (tables + plots)
 
 After sweep jobs complete (or partially complete), generate report artefacts with:
 
@@ -692,7 +848,7 @@ For full reporting options and failure-handling behaviour, see:
 
 - [BayesEoR reporting workflows](./bayeseor_reporting.md)
 
-### K) Sweep health/status checks
+### L) Sweep health/status checks
 
 Inspect a sweep and summarise point completeness:
 
@@ -724,7 +880,7 @@ If you also require `jobs.json` per point:
 valska-bayeseor-validate-sweep /path/to/_sweeps/SWEEP_ID --require-jobs-json
 ```
 
-### L) Aggregate sweep audit
+### M) Aggregate sweep audit
 
 Run one command that discovers sweeps and evaluates status + validation:
 
@@ -744,7 +900,7 @@ Use non-zero exit if any audited sweep is invalid:
 valska-bayeseor-sweep-audit --fail-on-invalid
 ```
 
-### M) Backwards compatibility: deprecated --scenario
+### N) Backwards compatibility: deprecated --scenario
 
 Older scripts used `--scenario` as a single label that mixed multiple concepts.
 

@@ -8,8 +8,10 @@ import json
 import math
 import os
 import re
+import shutil
 from contextlib import redirect_stdout
 from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime
 from os.path import commonpath
 from pathlib import Path
 from typing import Any, Literal
@@ -103,6 +105,16 @@ class SweepReportResult:
     complete_analysis_json: Path | None
     complete_analysis_csv: Path | None
     complete_analysis_rows: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class ReportArtefactExportResult:
+    """Summary of report artefacts copied into a documentation asset directory."""
+
+    assets_dir: Path
+    manifest_json: Path
+    artefact_paths: list[Path]
+    manifest: dict[str, Any]
 
 
 def _parse_float_or_none(raw: str) -> float | None:
@@ -694,3 +706,89 @@ def _plot_config_for_hypothesis(
 
 def _hypothesis_display_label(hypothesis: _Hyp) -> str:
     return hypothesis.replace("_", " ")
+
+
+def _report_artefact_sources(
+    result: SweepReportResult,
+) -> list[tuple[str, Path | None]]:
+    artefacts: list[tuple[str, Path | None]] = [
+        ("sweep_summary_csv", result.summary_csv),
+        ("sweep_summary_json", result.summary_json),
+        ("delta_log_evidence_plot", result.delta_plot_png),
+        ("log_evidence_by_model_plot", result.evidence_plot_png),
+        ("legacy_analysis_plot", result.plot_analysis_results_png),
+    ]
+    artefacts.extend(
+        ("valska_analysis_plot", path)
+        for path in result.valska_plot_analysis_results_pngs
+    )
+    artefacts.extend(
+        [
+            ("complete_analysis_json", result.complete_analysis_json),
+            ("complete_analysis_csv", result.complete_analysis_csv),
+        ]
+    )
+    return artefacts
+
+
+def export_report_artefacts(
+    result: SweepReportResult,
+    assets_dir: Path,
+    *,
+    overwrite: bool = True,
+) -> ReportArtefactExportResult:
+    """Copy generated report artefacts into a documentation asset directory.
+
+    Normal BayesEoR report generation keeps the canonical outputs under the
+    sweep report directory. This helper creates an explicit snapshot for
+    narrative validation reports that need stable figure/table paths.
+    """
+    assets_dir = Path(assets_dir).expanduser().resolve()
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    copied_paths: list[Path] = []
+    manifest_artefacts: list[dict[str, str]] = []
+    for role, source in _report_artefact_sources(result):
+        if source is None:
+            continue
+        source = Path(source).expanduser().resolve()
+        if not source.exists():
+            continue
+
+        target = assets_dir / source.name
+        if target.exists() and not overwrite:
+            raise FileExistsError(f"Report artefact already exists: {target}")
+
+        shutil.copy2(source, target)
+        copied_paths.append(target)
+        manifest_artefacts.append(
+            {
+                "role": role,
+                "name": source.name,
+                "source_path": str(source),
+                "copied_path": str(target),
+            }
+        )
+
+    manifest: dict[str, Any] = {
+        "created_utc": datetime.now(UTC).isoformat(),
+        "sweep_dir": str(result.sweep_dir),
+        "report_dir": str(result.out_dir),
+        "assets_dir": str(assets_dir),
+        "evidence_source": result.evidence_source,
+        "rows_total": result.rows_total,
+        "rows_complete": result.rows_complete,
+        "artefacts": manifest_artefacts,
+    }
+    manifest_json = assets_dir / "artefact_manifest.json"
+    manifest_json.write_text(
+        json.dumps(manifest, indent=2),
+        encoding="utf-8",
+    )
+
+    return ReportArtefactExportResult(
+        assets_dir=assets_dir,
+        manifest_json=manifest_json,
+        artefact_paths=copied_paths,
+        manifest=manifest,
+    )

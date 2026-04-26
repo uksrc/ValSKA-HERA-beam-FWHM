@@ -11,11 +11,23 @@ from typing import Any, Literal
 
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
-from .submit import SubmissionError, submit_bayeseor_run
+from .slurm import render_array_submit_script
+from .submit import (
+    InvalidArgumentError,
+    MissingDependencyError,
+    SubmissionError,
+    _run_sbatch,
+    submit_bayeseor_run,
+)
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
 _PERT = Literal["fwhm_deg", "antenna_diameter"]
+_SUBMIT_MODE = Literal["per-point", "array"]
+
+_DRY_RUN_CPU_ARRAY_JOB_ID = "DRY_RUN_CPU_ARRAY_JOB_ID"
+_DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID = "DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID"
+_DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID = "DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID"
 
 
 def _utc_now_iso() -> str:
@@ -96,6 +108,10 @@ def _jobs_path(run_dir: Path) -> Path:
     return run_dir / "jobs.json"
 
 
+def _sweep_jobs_path(sweep_dir: Path) -> Path:
+    return sweep_dir / "jobs.json"
+
+
 def archive_jobs_json(run_dir: Path) -> Path | None:
     """
     Archive run_dir/jobs.json -> run_dir/jobs_<UTCSTAMP>.json
@@ -108,6 +124,391 @@ def archive_jobs_json(run_dir: Path) -> Path | None:
     archived = run_dir / f"jobs_{_utc_now_compact()}.json"
     jp.rename(archived)
     return archived
+
+
+def archive_sweep_jobs_json(sweep_dir: Path) -> Path | None:
+    """Archive sweep_dir/jobs.json -> sweep_dir/jobs_<UTCSTAMP>.json."""
+    jp = _sweep_jobs_path(sweep_dir)
+    if not jp.exists():
+        return None
+    archived = sweep_dir / f"jobs_{_utc_now_compact()}.json"
+    jp.rename(archived)
+    return archived
+
+
+def _load_json_dict(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else None
+
+
+def _write_json_dict(path: Path, payload: dict[str, Any]) -> Path:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return path
+
+
+def _array_spec(task_count: int, max_parallel: int | None) -> str:
+    if task_count <= 0:
+        raise ValueError("task_count must be positive for array submission")
+    if max_parallel is not None and max_parallel <= 0:
+        raise ValueError("array throttle must be a positive integer")
+    spec = f"0-{task_count - 1}"
+    if max_parallel is not None:
+        spec += f"%{max_parallel}"
+    return spec
+
+
+def _extract_cpu_array_jobid(existing: dict[str, Any] | None) -> str | None:
+    if not isinstance(existing, dict):
+        return None
+    jobs = existing.get("jobs")
+    if not isinstance(jobs, dict):
+        return None
+    cpu = jobs.get("cpu_precompute_array")
+    if not isinstance(cpu, dict):
+        return None
+    job_id = cpu.get("job_id")
+    if job_id is None:
+        return None
+    job_id_str = str(job_id).strip()
+    return job_id_str if job_id_str.isdigit() else None
+
+
+def _is_real_job_id(job_id: Any) -> bool:
+    if job_id is None:
+        return False
+    return str(job_id).strip().isdigit()
+
+
+def _merge_sweep_jobs_record(
+    existing: dict[str, Any] | None,
+    new_result: dict[str, Any],
+) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    if isinstance(existing, dict):
+        merged.update(existing)
+
+    for key in (
+        "sweep_dir",
+        "manifest",
+        "submit_mode",
+        "array_tasks_json",
+        "scripts",
+        "array_throttles",
+        "array_max_cpu",
+        "array_max_gpu",
+    ):
+        if key in new_result:
+            merged[key] = new_result[key]
+
+    hist = merged.get("history")
+    if not isinstance(hist, list):
+        hist = []
+    hist.append({k: v for k, v in new_result.items() if k != "history"})
+    merged["history"] = hist
+
+    merged_jobs = merged.get("jobs")
+    if not isinstance(merged_jobs, dict):
+        merged_jobs = {}
+    new_jobs = new_result.get("jobs")
+    if isinstance(new_jobs, dict):
+        if isinstance(new_jobs.get("cpu_precompute_array"), dict):
+            merged_jobs["cpu_precompute_array"] = new_jobs[
+                "cpu_precompute_array"
+            ]
+        if isinstance(new_jobs.get("gpu_array"), dict):
+            merged_jobs["gpu_array"] = new_jobs["gpu_array"]
+    merged["jobs"] = merged_jobs
+
+    for key in (
+        "submitted_utc",
+        "stage",
+        "hypothesis",
+        "commands",
+        "dry_run",
+    ):
+        if key in new_result:
+            merged[key] = new_result[key]
+    return merged
+
+
+def _array_tasks_payload(points: list[SweepPoint]) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    for index, point in enumerate(points):
+        tasks.append(
+            {
+                "task_index": index,
+                "run_label": point.run_label,
+                "run_dir": str(point.run_dir),
+                "cpu_config": str(point.run_dir / "config_signal_fit.yaml"),
+                "signal_fit_config": str(
+                    point.run_dir / "config_signal_fit.yaml"
+                ),
+                "no_signal_config": str(
+                    point.run_dir / "config_no_signal.yaml"
+                ),
+            }
+        )
+    return tasks
+
+
+def _write_array_tasks_json(sweep_dir: Path, points: list[SweepPoint]) -> Path:
+    out_path = sweep_dir / "array_tasks.json"
+    payload = _array_tasks_payload(points)
+    _write_json_dict(out_path, {"tasks": payload})
+    return out_path
+
+
+def _render_and_write_array_scripts(
+    *,
+    sweep_dir: Path,
+    tasks_json: Path,
+    runner: CondaRunner | ContainerRunner,
+    install: BayesEoRInstall,
+    slurm_cpu: dict[str, object],
+    slurm_gpu: dict[str, object],
+    task_count: int,
+    array_max_cpu: int | None,
+    array_max_gpu: int | None,
+) -> dict[str, Path]:
+    cpu_script = sweep_dir / "submit_cpu_precompute_array.sh"
+    signal_script = sweep_dir / "submit_signal_fit_gpu_array.sh"
+    no_signal_script = sweep_dir / "submit_no_signal_gpu_array.sh"
+
+    slurm_cpu_array = dict(slurm_cpu)
+    slurm_cpu_array.setdefault("array", _array_spec(task_count, array_max_cpu))
+    slurm_cpu_array.setdefault(
+        "output", sweep_dir / "slurm-cpu-array-%A_%a.out"
+    )
+
+    slurm_gpu_array = dict(slurm_gpu)
+    slurm_gpu_array.setdefault("array", _array_spec(task_count, array_max_gpu))
+    slurm_gpu_array.setdefault(
+        "output", sweep_dir / "slurm-gpu-array-%A_%a.out"
+    )
+
+    cpu_script.write_text(
+        render_array_submit_script(
+            runner=runner,
+            install=install,
+            sweep_dir=sweep_dir,
+            tasks_json=tasks_json,
+            config_key="cpu_config",
+            slurm=slurm_cpu_array,
+            mode="cpu",
+        ),
+        encoding="utf-8",
+    )
+    signal_script.write_text(
+        render_array_submit_script(
+            runner=runner,
+            install=install,
+            sweep_dir=sweep_dir,
+            tasks_json=tasks_json,
+            config_key="signal_fit_config",
+            slurm=slurm_gpu_array,
+            mode="gpu_run",
+        ),
+        encoding="utf-8",
+    )
+    no_signal_script.write_text(
+        render_array_submit_script(
+            runner=runner,
+            install=install,
+            sweep_dir=sweep_dir,
+            tasks_json=tasks_json,
+            config_key="no_signal_config",
+            slurm=slurm_gpu_array,
+            mode="gpu_run",
+        ),
+        encoding="utf-8",
+    )
+    for script in (cpu_script, signal_script, no_signal_script):
+        script.chmod(0o750)
+
+    return {
+        "cpu": cpu_script,
+        "signal_fit": signal_script,
+        "no_signal": no_signal_script,
+    }
+
+
+def _submit_sweep_array(
+    *,
+    sweep_dir: Path,
+    sweep_manifest_path: Path,
+    scripts: dict[str, Path],
+    tasks_json: Path,
+    task_count: int,
+    submit: _STAGE,
+    hypothesis: _HYP,
+    depend_afterok: str | None,
+    sbatch_exe: str,
+    submit_dry_run: bool,
+    force: bool,
+    resubmit: bool,
+    array_max_cpu: int | None,
+    array_max_gpu: int | None,
+) -> dict[str, Any]:
+    existing = _load_json_dict(_sweep_jobs_path(sweep_dir))
+    cpu_dependency_from_existing = _extract_cpu_array_jobid(existing)
+    archived: Path | None = None
+
+    if existing is not None and not (force or resubmit):
+        jobs = existing.get("jobs") if isinstance(existing, dict) else None
+        if isinstance(jobs, dict):
+            if (
+                submit in ("cpu", "all")
+                and isinstance(jobs.get("cpu_precompute_array"), dict)
+                and _is_real_job_id(jobs["cpu_precompute_array"].get("job_id"))
+            ):
+                raise InvalidArgumentError(
+                    f"CPU array job already recorded in jobs.json for {sweep_dir}. "
+                    "Refusing to submit CPU again. Use --force or --resubmit."
+                )
+            if submit in ("gpu", "all") and isinstance(
+                jobs.get("gpu_array"), dict
+            ):
+                gpu = jobs["gpu_array"]
+                sf = gpu.get("signal_fit")
+                ns = gpu.get("no_signal")
+                if (
+                    isinstance(sf, dict) and _is_real_job_id(sf.get("job_id"))
+                ) or (
+                    isinstance(ns, dict) and _is_real_job_id(ns.get("job_id"))
+                ):
+                    raise InvalidArgumentError(
+                        f"GPU array jobs already recorded in jobs.json for {sweep_dir}. "
+                        "Refusing to submit GPU again. Use --force or --resubmit."
+                    )
+
+    if resubmit and not submit_dry_run:
+        archived = archive_sweep_jobs_json(sweep_dir)
+
+    result: dict[str, Any] = {
+        "sweep_dir": str(sweep_dir),
+        "manifest": str(sweep_manifest_path),
+        "jobs_json": str(_sweep_jobs_path(sweep_dir)),
+        "submit_mode": "array",
+        "submitted_utc": _utc_now_iso(),
+        "dry_run": bool(submit_dry_run),
+        "stage": submit,
+        "hypothesis": hypothesis,
+        "commands": [],
+        "jobs": {},
+        "array_tasks_json": str(tasks_json),
+        "scripts": {k: str(v) for k, v in scripts.items()},
+        "array_max_cpu": array_max_cpu,
+        "array_max_gpu": array_max_gpu,
+        "array_throttles": {
+            "cpu": array_max_cpu,
+            "gpu": array_max_gpu,
+            "task_count": task_count,
+        },
+    }
+
+    cpu_jobid: str | None = None
+    if submit in ("cpu", "all"):
+        cpu_jobid, cmd = _run_sbatch(
+            scripts["cpu"],
+            sbatch_exe=sbatch_exe,
+            cwd=sweep_dir,
+            dry_run=submit_dry_run,
+        )
+        if submit_dry_run and cpu_jobid is None:
+            cpu_jobid = _DRY_RUN_CPU_ARRAY_JOB_ID
+        result["commands"].append(cmd)
+        result["jobs"]["cpu_precompute_array"] = {
+            "script": str(scripts["cpu"]),
+            "command": cmd,
+            "job_id": cpu_jobid,
+            "job_id_is_placeholder": bool(submit_dry_run),
+            "array": _array_spec(task_count, array_max_cpu),
+            "task_count": task_count,
+            "task_file": str(tasks_json),
+            "dependency": None,
+        }
+
+    if submit in ("gpu", "all"):
+        dep: str | None = None
+        dependency_source: str | None = None
+        if cpu_jobid is not None:
+            dep = cpu_jobid
+            dependency_source = "same_invocation_cpu_array"
+        elif depend_afterok is not None:
+            dep = str(depend_afterok).strip()
+            if not dep.isdigit():
+                raise InvalidArgumentError(
+                    "--depend-afterok must be a numeric SLURM job id."
+                )
+            dependency_source = "explicit_depend_afterok"
+        elif cpu_dependency_from_existing is not None:
+            dep = cpu_dependency_from_existing
+            dependency_source = "sweep_jobs_json"
+        else:
+            raise MissingDependencyError(
+                "GPU array submission requested but no CPU array dependency is known. "
+                "Either submit CPU in the same invocation (--submit all --submit-mode array), "
+                "or rerun with --depend-afterok <JOBID>, "
+                "or ensure sweep-level jobs.json records a cpu_precompute_array.job_id."
+            )
+
+        gpu_jobs: dict[str, Any] = {
+            "dependency": f"afterok:{dep}",
+            "dependency_source": dependency_source,
+            "array": _array_spec(task_count, array_max_gpu),
+            "task_count": task_count,
+            "task_file": str(tasks_json),
+        }
+
+        if hypothesis in ("signal_fit", "both"):
+            jobid, cmd = _run_sbatch(
+                scripts["signal_fit"],
+                dependency_afterok=dep,
+                sbatch_exe=sbatch_exe,
+                cwd=sweep_dir,
+                dry_run=submit_dry_run,
+            )
+            if submit_dry_run and jobid is None:
+                jobid = _DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID
+            result["commands"].append(cmd)
+            gpu_jobs["signal_fit"] = {
+                "script": str(scripts["signal_fit"]),
+                "command": cmd,
+                "job_id": jobid,
+                "job_id_is_placeholder": bool(submit_dry_run),
+                "dependency": f"afterok:{dep}",
+            }
+
+        if hypothesis in ("no_signal", "both"):
+            jobid, cmd = _run_sbatch(
+                scripts["no_signal"],
+                dependency_afterok=dep,
+                sbatch_exe=sbatch_exe,
+                cwd=sweep_dir,
+                dry_run=submit_dry_run,
+            )
+            if submit_dry_run and jobid is None:
+                jobid = _DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID
+            result["commands"].append(cmd)
+            gpu_jobs["no_signal"] = {
+                "script": str(scripts["no_signal"]),
+                "command": cmd,
+                "job_id": jobid,
+                "job_id_is_placeholder": bool(submit_dry_run),
+                "dependency": f"afterok:{dep}",
+            }
+
+        result["jobs"]["gpu_array"] = gpu_jobs
+
+    if archived is not None:
+        result["archived_jobs_json"] = str(archived)
+
+    merged = _merge_sweep_jobs_record(existing, result)
+    _write_json_dict(_sweep_jobs_path(sweep_dir), merged)
+
+    return result
 
 
 @dataclass(frozen=True)
@@ -147,6 +548,9 @@ class SweepResult:
     template_yaml: Path
     points: list[SweepPoint]
     submit_results: list[dict[str, Any]]
+    submit_mode: _SUBMIT_MODE = "per-point"
+    sweep_jobs_json: Path | None = None
+    array_tasks_json: Path | None = None
 
 
 def write_sweep_manifest(
@@ -164,6 +568,10 @@ def write_sweep_manifest(
     data_path_source: str | None = None,
     data_root_key: str | None = None,
     submit_results: list[dict[str, Any]] | None = None,
+    submit_mode: _SUBMIT_MODE = "per-point",
+    array_tasks_json: Path | None = None,
+    sweep_jobs_json: Path | None = None,
+    submission: dict[str, Any] | None = None,
 ) -> Path:
     """
     Write sweep_manifest.json under the sweep directory.
@@ -202,6 +610,7 @@ def write_sweep_manifest(
         "data_path_source": data_path_source,
         "data_root_key": data_root_key,
         "template_yaml": str(template_yaml),
+        "submit_mode": submit_mode,
         "created_utc": _utc_now_iso(),
         "sweep_dir": str(sweep_dir),
         "points": [
@@ -227,6 +636,12 @@ def write_sweep_manifest(
 
     if submit_results is not None:
         payload["submit_results"] = submit_results
+    if array_tasks_json is not None:
+        payload["array_tasks_json"] = str(array_tasks_json)
+    if sweep_jobs_json is not None:
+        payload["sweep_jobs_json"] = str(sweep_jobs_json)
+    if submission is not None:
+        payload["submission"] = submission
 
     out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return out_path
@@ -262,6 +677,9 @@ def run_fwhm_sweep(
     force: bool = False,
     resubmit: bool = False,
     record: Literal["jobs.json", "manifest"] = "jobs.json",
+    submit_mode: _SUBMIT_MODE = "per-point",
+    array_max_cpu: int | None = None,
+    array_max_gpu: int | None = None,
     # Dry-run for the sweep as a whole (no prepare, no submit)
     dry_run: bool = False,
 ) -> SweepResult:
@@ -416,6 +834,7 @@ def run_fwhm_sweep(
             template_yaml=template_yaml,
             points=points,
             submit_results=[],
+            submit_mode=submit_mode,
         )
 
     # --------------------
@@ -480,59 +899,117 @@ def run_fwhm_sweep(
     # --------------------
     # Submit stage(s) per point if requested
     # --------------------
+    array_tasks_json: Path | None = None
+    sweep_jobs_json: Path | None = None
+
+    if submit_mode == "array":
+        sweep_dir.mkdir(parents=True, exist_ok=True)
+        array_tasks_json = _write_array_tasks_json(sweep_dir, points)
+        _render_and_write_array_scripts(
+            sweep_dir=sweep_dir,
+            tasks_json=array_tasks_json,
+            runner=runner,
+            install=install,
+            slurm_cpu=slurm_cpu or {},
+            slurm_gpu=slurm_gpu or {},
+            task_count=len(points),
+            array_max_cpu=array_max_cpu,
+            array_max_gpu=array_max_gpu,
+        )
+        sweep_jobs_json = _sweep_jobs_path(sweep_dir)
+
     if submit != "none":
-        for p in points:
-            archived: Path | None = None
-
-            # If resubmitting, archive per-run jobs.json first (unless submit_dry_run).
-            if resubmit and not submit_dry_run:
-                try:
-                    archived = archive_jobs_json(p.run_dir)
-                except Exception as e:
-                    submit_results.append(
-                        {
-                            "run_dir": str(p.run_dir),
-                            "error": f"Failed to archive jobs.json: {e}",
-                            "stage": submit,
-                            "hypothesis": hypothesis,
-                            "dry_run": bool(submit_dry_run),
-                        }
-                    )
-                    continue
-
+        if submit_mode == "array":
+            scripts = {
+                "cpu": sweep_dir / "submit_cpu_precompute_array.sh",
+                "signal_fit": sweep_dir / "submit_signal_fit_gpu_array.sh",
+                "no_signal": sweep_dir / "submit_no_signal_gpu_array.sh",
+            }
             try:
-                submit_force = bool(force or resubmit)
-
-                res = submit_bayeseor_run(
-                    p.run_dir,
-                    stage="all" if submit == "all" else submit,  # type: ignore[arg-type]
-                    hypothesis=hypothesis,
-                    depend_afterok=depend_afterok,
-                    sbatch_exe=sbatch_exe,
-                    dry_run=submit_dry_run,
-                    force=submit_force,
-                    record=record,
+                submit_results.append(
+                    _submit_sweep_array(
+                        sweep_dir=sweep_dir,
+                        sweep_manifest_path=sweep_manifest_path,
+                        scripts=scripts,
+                        tasks_json=array_tasks_json
+                        if array_tasks_json is not None
+                        else sweep_dir / "array_tasks.json",
+                        task_count=len(points),
+                        submit=submit,
+                        hypothesis=hypothesis,
+                        depend_afterok=depend_afterok,
+                        sbatch_exe=sbatch_exe,
+                        submit_dry_run=submit_dry_run,
+                        force=force,
+                        resubmit=resubmit,
+                        array_max_cpu=array_max_cpu,
+                        array_max_gpu=array_max_gpu,
+                    )
                 )
-
-                if archived is not None:
-                    res = dict(res)
-                    res["archived_jobs_json"] = str(archived)
-
-                submit_results.append(res)
-
             except SubmissionError as e:
                 submit_results.append(
                     {
-                        "run_dir": str(p.run_dir),
+                        "sweep_dir": str(sweep_dir),
                         "error": str(e),
                         "stage": submit,
                         "hypothesis": hypothesis,
                         "dry_run": bool(submit_dry_run),
-                        "archived_jobs_json": str(archived)
-                        if archived is not None
-                        else None,
+                        "submit_mode": submit_mode,
                     }
                 )
+        else:
+            for p in points:
+                archived: Path | None = None
+
+                # If resubmitting, archive per-run jobs.json first (unless submit_dry_run).
+                if resubmit and not submit_dry_run:
+                    try:
+                        archived = archive_jobs_json(p.run_dir)
+                    except Exception as e:
+                        submit_results.append(
+                            {
+                                "run_dir": str(p.run_dir),
+                                "error": f"Failed to archive jobs.json: {e}",
+                                "stage": submit,
+                                "hypothesis": hypothesis,
+                                "dry_run": bool(submit_dry_run),
+                            }
+                        )
+                        continue
+
+                try:
+                    submit_force = bool(force or resubmit)
+
+                    res = submit_bayeseor_run(
+                        p.run_dir,
+                        stage="all" if submit == "all" else submit,  # type: ignore[arg-type]
+                        hypothesis=hypothesis,
+                        depend_afterok=depend_afterok,
+                        sbatch_exe=sbatch_exe,
+                        dry_run=submit_dry_run,
+                        force=submit_force,
+                        record=record,
+                    )
+
+                    if archived is not None:
+                        res = dict(res)
+                        res["archived_jobs_json"] = str(archived)
+
+                    submit_results.append(res)
+
+                except SubmissionError as e:
+                    submit_results.append(
+                        {
+                            "run_dir": str(p.run_dir),
+                            "error": str(e),
+                            "stage": submit,
+                            "hypothesis": hypothesis,
+                            "dry_run": bool(submit_dry_run),
+                            "archived_jobs_json": str(archived)
+                            if archived is not None
+                            else None,
+                        }
+                    )
 
     # --------------------
     # Write sweep manifest
@@ -551,6 +1028,14 @@ def run_fwhm_sweep(
         sweep_dir=sweep_dir,
         points=points,
         submit_results=submit_results if submit_results else None,
+        submit_mode=submit_mode,
+        array_tasks_json=array_tasks_json,
+        sweep_jobs_json=sweep_jobs_json,
+        submission=(
+            submit_results[0]
+            if submit_mode == "array" and submit_results
+            else None
+        ),
     )
 
     return SweepResult(
@@ -569,4 +1054,7 @@ def run_fwhm_sweep(
         template_yaml=template_yaml,
         points=points,
         submit_results=submit_results,
+        submit_mode=submit_mode,
+        sweep_jobs_json=sweep_jobs_json,
+        array_tasks_json=array_tasks_json,
     )

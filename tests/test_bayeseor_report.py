@@ -13,6 +13,7 @@ from valska_hera_beam.external_tools.bayeseor.analysis_plot import (
 )
 from valska_hera_beam.external_tools.bayeseor.report import (
     _plot_config_for_hypothesis,
+    export_report_artefacts,
     generate_sweep_report,
     parse_data_stats_evidence,
 )
@@ -146,6 +147,47 @@ def test_generate_sweep_report_writes_outputs(tmp_path: Path) -> None:
     assert first["delta_log_evidence"] is not None
 
 
+def test_export_report_artefacts_copies_outputs_and_writes_manifest(
+    tmp_path: Path,
+) -> None:
+    sweep_dir = tmp_path / "_sweeps" / "sweep_test"
+    point = sweep_dir / "validation" / "antdiam_0.0e+00"
+    _mk_point(point, signal_ns=21.0, no_signal_ns=20.0)
+    manifest = {
+        "points": [
+            {
+                "perturb_parameter": "antenna_diameter",
+                "perturb_frac": 0.0,
+                "run_label": "antdiam_0.0e+00",
+                "run_dir": str(point),
+            }
+        ]
+    }
+    sweep_dir.mkdir(parents=True, exist_ok=True)
+    (sweep_dir / "sweep_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+
+    result = generate_sweep_report(
+        sweep_dir=sweep_dir,
+        out_dir=None,
+        evidence_source="ins",
+        make_plots=False,
+    )
+    export = export_report_artefacts(result, tmp_path / "report_assets")
+
+    assert export.manifest_json.exists()
+    assert (export.assets_dir / "sweep_report_summary.csv").exists()
+    assert (export.assets_dir / "sweep_report_summary.json").exists()
+    assert len(export.artefact_paths) == 2
+
+    payload = json.loads(export.manifest_json.read_text(encoding="utf-8"))
+    assert payload["sweep_dir"] == str(result.sweep_dir)
+    assert payload["rows_complete"] == 1
+    roles = {artefact["role"] for artefact in payload["artefacts"]}
+    assert roles == {"sweep_summary_csv", "sweep_summary_json"}
+
+
 def test_generate_sweep_report_infers_missing_perturb_frac_from_label(
     tmp_path: Path,
 ) -> None:
@@ -209,6 +251,47 @@ def test_cli_report_json_output(tmp_path: Path, capsys) -> None:
     assert payload["rows_complete"] == 1
     assert payload["valska_plot_analysis_results_pngs"] == []
     assert payload["complete_analysis_rows"] == []
+
+
+def test_cli_report_can_export_report_assets(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    sweep_dir = tmp_path / "_sweeps" / "sweep_test"
+    point = sweep_dir / "validation" / "antdiam_0.0e+00"
+    _mk_point(point, signal_ns=21.0, no_signal_ns=20.0)
+    manifest = {
+        "points": [
+            {
+                "perturb_parameter": "antenna_diameter",
+                "perturb_frac": 0.0,
+                "run_label": "antdiam_0.0e+00",
+                "run_dir": str(point),
+            }
+        ]
+    }
+    sweep_dir.mkdir(parents=True, exist_ok=True)
+    (sweep_dir / "sweep_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+    assets_dir = tmp_path / "docs" / "source" / "reports" / "assets"
+
+    code = cli_report.main(
+        [
+            str(sweep_dir),
+            "--json",
+            "--no-plots",
+            "--export-report-assets",
+            str(assets_dir),
+        ]
+    )
+    assert code == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["report_assets"]["assets_dir"] == str(assets_dir.resolve())
+    assert payload["report_assets"]["artefact_count"] == 2
+    assert (assets_dir / "artefact_manifest.json").exists()
+    assert (assets_dir / "sweep_report_summary.csv").exists()
 
 
 def test_default_hypothesis_plot_titles_use_display_labels() -> None:

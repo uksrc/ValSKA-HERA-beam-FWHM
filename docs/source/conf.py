@@ -51,6 +51,8 @@ autodoc_mock_imports = [
     "yaml",
     "tqdm",
     "numpy",
+    "scipy",
+    "scipy.stats",
     "ruamel",
     "ruamel.yaml",
     "rich",

@@ -59,6 +59,196 @@ bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all -
 
 Use `--report-no-plots` on the helper for table-only reporting.
 
+For the clean v2 rerun campaign, use the v3 sweep wrappers. They explicitly set
+the clean results root to:
+
+```text
+validation_results/UKSRC/v2
+```
+
+and pass the appropriate named data root (`gaussian` or `airy_diam14m`) to
+ValSKA. Activate the ValSKA environment first so the wrapper uses the current
+installed `valska-bayeseor-sweep` and `valska-bayeseor-report` entry points:
+
+```bash
+conda activate valska
+bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --dry-run
+```
+
+The wrappers default to prepare-only; pass `--submit all` when ready to submit
+both CPU and GPU stages:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all
+```
+
+Gaussian v3 wrappers are available for achromatic and chromatic beams with GSM,
+GLEAM, and GSM_plus_GLEAM skies:
+
+```text
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GLEAM_v3.sh
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_plus_GLEAM_v3.sh
+bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM_v3.sh
+bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GLEAM_v3.sh
+bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM_plus_GLEAM_v3.sh
+```
+
+### Slurm array submission for sweep campaigns
+
+By default, `valska-bayeseor-sweep` submits one CPU job and one or two GPU jobs
+per sweep point. This per-point submission mode is useful for debugging, but it
+can create many scheduler jobs for a full campaign.
+
+Use Slurm array mode when you want the same sweep represented by one CPU array
+job plus one or two GPU array jobs:
+
+```bash
+--submit-mode array
+```
+
+The array-mode concurrency limits are controlled independently for CPU and GPU
+tasks:
+
+```bash
+--array-max-cpu 4
+--array-max-gpu 2
+```
+
+For example, a sweep with 11 perturbation points and `--array-max-gpu 2`
+generates GPU array scripts containing:
+
+```text
+#SBATCH --array=0-10%2
+```
+
+This means Slurm can run at most two GPU array tasks from that array at once.
+Choose these limits according to the allocation and usage policy of the cluster
+being used.
+
+Before submitting real jobs on a new cluster, run a submit dry-run into a
+scratch or test output root:
+
+```bash
+RUN_ID="sweep_v3_array_smoke_$(date -u +%Y%m%dT%H%M%SZ)"
+RESULTS_ROOT="/path/to/scratch/valska-array-smoke-${RUN_ID}"
+
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit all \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2 \
+  --submit-dry-run
+```
+
+`--submit-dry-run` prepares the sweep directory, writes the Slurm array scripts,
+prints the `sbatch` commands, and records dry-run metadata without submitting
+jobs. The output should report:
+
+```text
+submit:              all (ok)
+submit_mode:         array
+job_id(cpu_precompute_array): DRY_RUN_CPU_ARRAY_JOB_ID
+dependency(gpu_array): afterok:DRY_RUN_CPU_ARRAY_JOB_ID
+```
+
+Inspect the generated artefacts before the real submission:
+
+```bash
+find "$RESULTS_ROOT" \
+  -name jobs.json \
+  -o -name array_tasks.json \
+  -o -name 'submit_*_array.sh'
+
+grep -R "#SBATCH --array" "$RESULTS_ROOT"
+grep -R "afterok:DRY_RUN_CPU_ARRAY_JOB_ID" "$RESULTS_ROOT"
+```
+
+The sweep-level array files are written under:
+
+```text
+<results_root>/bayeseor/<beam>/<sky>/_sweeps/<run_id>/
+```
+
+Important files include:
+
+- `array_tasks.json`: maps Slurm array indices to per-point run directories and
+  config files
+- `submit_cpu_precompute_array.sh`: CPU precompute array script
+- `submit_signal_fit_gpu_array.sh`: signal-fit GPU array script
+- `submit_no_signal_gpu_array.sh`: no-signal GPU array script
+- `jobs.json`: sweep-level submission record containing array job IDs,
+  dependencies, commands, and dry-run placeholders when applicable
+
+If the dry-run output looks correct, submit the same sweep for real by
+removing `--submit-dry-run`:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit all \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2
+```
+
+In real array submission mode, ValSKA submits the CPU array first, records its
+Slurm job ID in sweep-level `jobs.json`, then submits the GPU array job(s) with:
+
+```text
+--dependency=afterok:<cpu_array_job_id>
+```
+
+To split submission into two steps, submit CPU first:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit cpu \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2
+```
+
+Then submit GPU arrays after the CPU array job has been recorded:
+
+```bash
+bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --submit gpu \
+  --submit-mode array \
+  --array-max-cpu 4 \
+  --array-max-gpu 2
+```
+
+Alternatively, pass an explicit CPU dependency if the CPU array job was
+submitted outside the current `jobs.json` record:
+
+```bash
+valska-bayeseor-sweep \
+  --beam achromatic_Gaussian \
+  --sky GSM \
+  --data-root-key gaussian \
+  --data gsm-nside256-158.3-167.1MHz-nf-38-fov-19.4deg-circ-field-1_quentin.uvh5 \
+  --run-id "$RUN_ID" \
+  --results-root "$RESULTS_ROOT" \
+  --template validation_achromatic_Gaussian.yaml \
+  --submit gpu \
+  --submit-mode array \
+  --array-max-gpu 2 \
+  --depend-afterok <CPU_ARRAY_JOB_ID>
+```
+
+Array submission changes how jobs are grouped in Slurm; it does not change the
+per-point output layout. Each perturbation point still has its own run
+directory beneath the sweep directory, so the same reporting and sweep-health
+commands can be used after the jobs complete.
+
 JSON summary:
 
 ```bash
@@ -100,6 +290,22 @@ This writes the ValSKA-rendered analysis figure to:
 ```text
 validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init/report/plot_analysis_results_signal_fit_valska.png
 ```
+
+Refresh a documentation report's local figure/table assets at the same time:
+
+```bash
+valska-bayeseor-report \
+  validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init \
+  --include-plot-analysis-results \
+  --include-complete-analysis-table \
+  --export-report-assets \
+  docs/source/reports/assets/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init
+```
+
+This copies the generated report artefacts into the chosen asset directory and
+writes `artefact_manifest.json` there. The canonical generated outputs still
+live under `<sweep_dir>/report/`; the copied assets are a documentation snapshot
+for figures, CSV tables, and reviewable report evidence.
 
 Print the colourised complete-analysis summary table in the terminal:
 

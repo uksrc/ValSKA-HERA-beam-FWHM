@@ -1,0 +1,12 @@
+perturbation,log_evidence_fgeor,log_evidence_fgonly,log_bayes_factor,validation,interpretation
+antdiam_-1.0e-01,693867275357.0393,693867275218.883,138.15625,FAIL,Very strong evidence for model 1
+antdiam_-1.0e-02,693867277029.9042,693867277035.9951,-6.0909423828125,PASS,Very strong evidence for model 2
+antdiam_-2.0e-01,693867270210.2225,693867269334.5413,875.6812744140625,FAIL,Very strong evidence for model 1
+antdiam_-2.0e-02,693867276962.228,693867276968.3032,-6.0751953125,PASS,Very strong evidence for model 2
+antdiam_-5.0e-02,693867276577.2938,693867276570.1647,7.129150390625,FAIL,Very strong evidence for model 1
+antdiam_0.0e+00,693867277072.8606,693867277079.2853,-6.4246826171875,PASS,Very strong evidence for model 2
+antdiam_1.0e-01,693867276126.3354,693867276012.417,113.91845703125,FAIL,Very strong evidence for model 1
+antdiam_1.0e-02,693867277089.4965,693867277096.1809,-6.6844482421875,PASS,Very strong evidence for model 2
+antdiam_2.0e-01,693867273426.8114,693867273064.6135,362.1978759765625,FAIL,Very strong evidence for model 1
+antdiam_2.0e-02,693867277078.9972,693867277085.5626,-6.5654296875,PASS,Very strong evidence for model 2
+antdiam_5.0e-02,693867276889.7618,693867276883.6838,6.0780029296875,FAIL,Very strong evidence for model 1

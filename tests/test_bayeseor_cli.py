@@ -130,6 +130,108 @@ def test_cli_sweep_antenna_mode_dry_run_returns_0():
     assert code == 0
 
 
+def test_cli_sweep_parses_array_submit_options() -> None:
+    parser = cli_sweep.build_parser()
+
+    args = parser.parse_args(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--dry-run",
+            "--submit-mode",
+            "array",
+            "--array-max-cpu",
+            "4",
+            "--array-max-gpu",
+            "2",
+        ]
+    )
+
+    assert args.submit_mode == "array"
+    assert args.array_max_cpu == 4
+    assert args.array_max_gpu == 2
+
+
+def test_cli_sweep_defaults_to_per_point_submit_mode() -> None:
+    parser = cli_sweep.build_parser()
+
+    args = parser.parse_args(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--dry-run",
+        ]
+    )
+
+    assert args.submit_mode == "per-point"
+    assert args.array_max_cpu is None
+    assert args.array_max_gpu is None
+
+
+def test_cli_sweep_print_submit_results_handles_array_summary(capsys):
+    cli_sweep._print_submit_results(
+        [
+            {
+                "sweep_dir": "/tmp/results/bayeseor/beam/sky/_sweeps/sweep_v3",
+                "jobs_json": "/tmp/results/bayeseor/beam/sky/_sweeps/sweep_v3/jobs.json",
+                "submit_mode": "array",
+                "stage": "all",
+                "hypothesis": "both",
+                "array_tasks_json": "/tmp/results/bayeseor/beam/sky/_sweeps/sweep_v3/array_tasks.json",
+                "array_max_cpu": 4,
+                "array_max_gpu": 2,
+                "jobs": {
+                    "cpu_precompute_array": {
+                        "job_id": "DRY_RUN_CPU_ARRAY_JOB_ID"
+                    },
+                    "gpu_array": {
+                        "dependency": "afterok:DRY_RUN_CPU_ARRAY_JOB_ID",
+                        "signal_fit": {
+                            "job_id": "DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID"
+                        },
+                        "no_signal": {
+                            "job_id": "DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID"
+                        },
+                    },
+                },
+                "commands": ["sbatch submit_cpu_precompute_array.sh"],
+            }
+        ]
+    )
+
+    out = capsys.readouterr().out
+    assert "<unknown run_dir>" not in out
+    assert "submit_mode=array" in out
+    assert "array_max_cpu: 4" in out
+    assert "array_max_gpu: 2" in out
+    assert (
+        "jobs_json: /tmp/results/bayeseor/beam/sky/_sweeps/sweep_v3/jobs.json"
+        in out
+    )
+    assert "job_id(cpu_precompute_array): DRY_RUN_CPU_ARRAY_JOB_ID" in out
+    assert "dependency(gpu_array): afterok:DRY_RUN_CPU_ARRAY_JOB_ID" in out
+    assert (
+        "job_id(gpu_array:signal_fit): DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID"
+        in out
+    )
+    assert (
+        "job_id(gpu_array:no_signal): DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID"
+        in out
+    )
+
+
 def test_cli_sweep_dry_run_uses_named_data_root(tmp_path, monkeypatch, capsys):
     """sweep dry-run should resolve relative --data via --data-root-key."""
 

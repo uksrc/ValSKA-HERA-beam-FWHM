@@ -26,7 +26,9 @@ from valska_hera_beam.external_tools.bayeseor.plot_configs import (
     resolve_analysis_plot_config_path,
 )
 from valska_hera_beam.external_tools.bayeseor.report import (
+    ReportArtefactExportResult,
     SweepReportResult,
+    export_report_artefacts,
     generate_sweep_report,
 )
 
@@ -87,6 +89,16 @@ def build_parser() -> argparse.ArgumentParser:
             "(used with --include-plot-analysis-results). If omitted, "
             "ValSKA uses ./plot.yaml when present, then the packaged "
             "plot_configs/plot.yaml if available."
+        ),
+    )
+    parser.add_argument(
+        "--export-report-assets",
+        type=Path,
+        default=None,
+        help=(
+            "Copy generated report artefacts into this directory and write "
+            "artefact_manifest.json. This is intended for documentation report "
+            "asset snapshots; the canonical report outputs remain in --out-dir."
         ),
     )
     parser.add_argument(
@@ -303,6 +315,28 @@ def _print_summary(result: SweepReportResult, *, colors: CliColors) -> None:
         )
 
 
+def _export_payload(
+    export: ReportArtefactExportResult | None,
+) -> dict[str, object] | None:
+    if export is None:
+        return None
+    return {
+        "assets_dir": str(export.assets_dir),
+        "manifest_json": str(export.manifest_json),
+        "artefact_paths": [str(path) for path in export.artefact_paths],
+        "artefact_count": len(export.artefact_paths),
+    }
+
+
+def _print_export_summary(
+    export: ReportArtefactExportResult, *, colors: CliColors
+) -> None:
+    print("\n" + colors.heading("Report assets exported:"))
+    print(f"  assets_dir:     {colors.path(export.assets_dir)}")
+    print(f"  manifest_json:  {colors.path(export.manifest_json)}")
+    print(f"  artefact_count: {len(export.artefact_paths)}")
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for ``valska-bayeseor-report``."""
     args = build_parser().parse_args(argv)
@@ -340,6 +374,14 @@ def main(argv: list[str] | None = None) -> int:
                 json_out=bool(args.json_out),
             ),
         )
+        artefact_export = (
+            export_report_artefacts(
+                result,
+                Path(args.export_report_assets),
+            )
+            if args.export_report_assets is not None
+            else None
+        )
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
@@ -375,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
             if result.complete_analysis_csv is not None
             else None,
             "complete_analysis_rows": result.complete_analysis_rows,
+            "report_assets": _export_payload(artefact_export),
         }
         print(json.dumps(payload, indent=2))
         return 0
@@ -384,6 +427,8 @@ def main(argv: list[str] | None = None) -> int:
         enabled=not bool(args.json_out),
     )
     _print_summary(result, colors=colors)
+    if artefact_export is not None:
+        _print_export_summary(artefact_export, colors=colors)
     if args.print_complete_analysis_table:
         _print_complete_analysis_table(
             result.complete_analysis_rows,

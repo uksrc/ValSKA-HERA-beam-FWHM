@@ -48,7 +48,7 @@ Basic run (tables + default evidence plots):
 
 Airy sweep helper can trigger this automatically after sweep preparation/submission:
 
-  bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+    bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
 
 Use `--report-no-plots` on the helper for table-only reporting.
 
@@ -86,26 +86,26 @@ ValSKA also provides a convenience wrapper:
 
 To discover available sweep directories quickly, use:
 
-  valska-bayeseor-list-sweeps
+    valska-bayeseor-list-sweeps
 
 JSON output mode (for scripting):
 
-  valska-bayeseor-list-sweeps --json
+    valska-bayeseor-list-sweeps --json
 
 Filter examples:
 
-  valska-bayeseor-list-sweeps --beam airy --sky GSM_plus_GLEAM
-  valska-bayeseor-list-sweeps --run-id sweep_airy_init --latest
+    valska-bayeseor-list-sweeps --beam airy --sky GSM_plus_GLEAM
+    valska-bayeseor-list-sweeps --run-id sweep_airy_init --latest
 
 Shell helper equivalent:
 
-  bash_scripts/valska-list-sweeps.sh
+    bash_scripts/valska-list-sweeps.sh
 
 The shell helper is a thin wrapper around `valska-bayeseor-list-sweeps`.
 
 JSON output mode (for scripting):
 
-  bash_scripts/valska-list-sweeps.sh --json
+    bash_scripts/valska-list-sweeps.sh --json
 
 ---
 
@@ -113,46 +113,46 @@ JSON output mode (for scripting):
 
 For quick, command-local usage examples, run:
 
-  valska-bayeseor-list-sweeps --help
-  valska-bayeseor-sweep-status --help
-  valska-bayeseor-validate-sweep --help
-  valska-bayeseor-sweep-audit --help
+    valska-bayeseor-list-sweeps --help
+    valska-bayeseor-sweep-status --help
+    valska-bayeseor-validate-sweep --help
+    valska-bayeseor-sweep-audit --help
 
 Check per-point output completeness for a sweep:
 
-  valska-bayeseor-sweep-status /path/to/_sweeps/<run_id>
+    valska-bayeseor-sweep-status /path/to/_sweeps/<run_id>
 
 Machine-readable status payload:
 
-  valska-bayeseor-sweep-status /path/to/_sweeps/<run_id> --json
+    valska-bayeseor-sweep-status /path/to/_sweeps/<run_id> --json
 
 Validate sweep integrity with exit-code semantics:
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id>
+    valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id>
 
 Allow partial sweeps (at least one complete point):
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --allow-partial
+    valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --allow-partial
 
 Require `jobs.json` for every point:
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --require-jobs-json
+    valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --require-jobs-json
 
 JSON validation payload (includes `exit_code` and `failures`):
 
-  valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --json
+    valska-bayeseor-validate-sweep /path/to/_sweeps/<run_id> --json
 
 Aggregate audit across discovered sweeps (list + status + validate):
 
-  valska-bayeseor-sweep-audit
+    valska-bayeseor-sweep-audit
 
 Filter and machine-readable output:
 
-  valska-bayeseor-sweep-audit --beam airy --sky GSM_plus_GLEAM --json
+    valska-bayeseor-sweep-audit --beam airy --sky GSM_plus_GLEAM --json
 
 Fail non-zero when any audited sweep is invalid:
 
-  valska-bayeseor-sweep-audit --fail-on-invalid
+    valska-bayeseor-sweep-audit --fail-on-invalid
 
 ### Wrapper defaults
 

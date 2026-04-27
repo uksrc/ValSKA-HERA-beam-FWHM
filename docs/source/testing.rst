@@ -1,7 +1,7 @@
 Testing Guide for Developers
 ============================
 
-This document provides comprehensive instructions for running tests in the ValSKA-HERA-beam-FWHM project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
+This document provides comprehensive instructions for running tests in the ValSKA project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
 
 Development Dependencies
 ------------------------
@@ -14,11 +14,10 @@ The project uses ``pyproject.toml`` to manage the devlopment dependencies. These
 - ``pytest-cov`` - Coverage reporting
 - ``pytest-mock`` - Mocking support
 - ``nbmake`` - Notebook execution and validation
-- ``black``, ``isort`` - Code formatting
-- ``flake8``, ``pylint`` - Linting
-- ``ruff``, ``mypy`` - Additional code quality tools
+- ``ruff`` - Code formatting and linting
+- ``mypy`` - Type checking
 
-The recommended way to install the dependencies is via the conda environment specification in ``valska_env.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
+The recommended way to install the dependencies is via the conda environment specification in ``valska_env_base.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
 
  
 Unit Tests
@@ -63,7 +62,10 @@ Jupyter notebooks can be tested (end-to-end) using ``nbmake``. This is set up in
 - Excludes ``.py`` files automatically
 - Validates that notebooks run end-to-end successfully
 
-It won't work where user input is required, or paths need to be set up - for example, the cells which actually make the plots and read the data will not be tested. These cells can be excluded from the test by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to add the "skip-execution" tag:
+It won't work where user input is required, or paths need to be set up - for example, the cells which
+actually make the plots and read the data will not be tested. These cells can be excluded from the test
+by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to
+add the "skip-execution" tag:
 
 .. code-block:: bash
 
@@ -79,6 +81,9 @@ It won't work where user input is required, or paths need to be set up - for exa
    "source": [...],
    }
 
+.. note::
+
+   Notebook tests are temporarily disabled in the CI pipeline until test data are available.
 
 
 Linting and Formatting
@@ -106,12 +111,7 @@ To run linting
    make notebook-lint
 
 
-**Linting includes:**
-
-- ``isort`` - Import sorting verification
-- ``black`` - Code formatting verification
-- ``flake8`` - Style guide enforcement
-- ``pylint`` - Advanced code analysis
+Linting and formatting use `ruff <https://docs.astral.sh/ruff/>`_ and `mypy <https://mypy-lang.org/>`_.
 
 Linting results are saved to ``build/reports/linting-python.xml`` and ``build/reports/linting-notebooks.xml``.
 
@@ -129,18 +129,20 @@ All of the testing targets are defined in ``python.mk``. Below is a summary of c
      - Key Variables
    * - ``python-test``
      - Run pytest with coverage
-     - ``PYTHON_TEST_FILE`` (default: ``tests/``) 
+     - ``PYTHON_TEST_FILE`` (default: ``tests/``), 
        ``PYTHON_VARS_AFTER_PYTEST`` (pytest flags)
    * - ``notebook-test``
      - Execute notebooks with nbmake
-     - ``PYTHON_TEST_FOLDER_NBMAKE`` (default: ``.``) 
+     - ``PYTHON_TEST_FOLDER_NBMAKE`` (default: ``.``), 
        ``NOTEBOOK_IGNORE_FILES`` (files to skip)
    * - ``python-lint``
      - Lint Python code
-     - ``PYTHON_LINT_TARGET`` (default: ``src/ tests/``)
+     - ``PYTHON_LINT_TARGET`` (default: ``src/ tests/``),
+       ``PYTHON_SWITCHES_FOR_RUFF`` (default: none)
    * - ``notebook-lint``
      - Lint notebooks
-     - ``NOTEBOOK_LINT_TARGET`` (default: ``.``)
+     - ``NOTEBOOK_LINT_TARGET`` (default: ``notebooks/``),
+       ``NOTEBOOK_SWITCHES_FOR_RUFF`` (default: ``--ignore=D100,N802``)
    * - ``python-format``
      - Auto-format Python code
      - ``PYTHON_LINE_LENGTH`` (default: 79)
@@ -171,24 +173,40 @@ You can override Make variables on the command line:
 CI/CD Integration
 -----------------
 
-The project uses GitHub Actions for continuous integration. The workflow is defined in ``.github/workflows/python-app.yml``.
+The project uses GitHub Actions for continuous integration. The workflow is defined in ``.github/workflows/valska-actions.yml``.
 
 **CI Pipeline:**
 
-1. Checkout code
-2. Install dependencies using conda
-3. Run ``make python-test`` (unit tests)
-4. Run ``make notebook-test`` (notebook validation)
+The pipeline consists of 3 jobs, with each job checking out the code, installing dependencies (cached between jobs) 
+and running the following steps:
+
+1. Linting and Formatting
+
+   - Run ``pre-commit run --all-files``
+   - Upload lint reports
+
+2. Testing
+
+   - Run ``make python-test`` (unit tests)
+
+..   - Run ``make notebook-test`` (notebook validation)
+
+3. Documentation
+
+   - Run ``sphinx-build -W -b html docs/source/ docs/_build/html``
 
 The CI pipeline runs on every push to validate that:
 
+- Formatting and linting rules have been followed
 - All unit tests pass
-- All notebooks execute without errors
 - Code coverage is maintained
+- Documentation builds without errors or warnings
+
+.. - All notebooks execute without errors
 
 **Viewing CI Results:**
 
-- Go to the `Actions tab <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_ on GitHub
+- Go to the `Actions tab <https://github.com/uksrc/ValSKA/actions>`_ on GitHub
 - Click on a workflow run to see detailed logs
 - Download test artifacts (coverage reports, etc.) from completed runs
 
@@ -291,9 +309,10 @@ Getting Help
 
 If you encounter issues not covered here:
 
-1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues>`_
-2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_
+1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA/issues>`_
+2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA/actions>`_
 3. Contact the UKSRC Science Validation team:
+
    - Peter Sims (PO) - ps550 [at] cam.ac.uk
    - Tianyue Chen (SM) - tianyue.chen [at] manchester.ac.uk
    - Quentin Gueuning - qdg20 [at] cam.ac.uk

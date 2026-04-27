@@ -4,13 +4,15 @@
 # Standard install: pip install .
 # ---
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+# setuptools-scm must be available at build time for dynamic versioning from Git tags
+requires = ["setuptools>=68", "wheel", "setuptools-scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "valska-hera-beam-fwhm"
-version = "0.1.0"
-description = "Validation utilities for HERA beam FWHM sensitivity in 21-cm power-spectrum forward modelling."
+name = "valska"
+# Version is derived from your Git tags by setuptools-scm
+dynamic = ["version"]
+description = "Validation tooling for SKA and precursor science workflows, including HERA beam perturbation studies."
 readme = "README.md"
 # requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -28,64 +30,80 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Astronomy"
 ]
 
-# TODO: consider fixing to a specific versions for reproducibility
-dependencies = [
-    "astropy",
-    "astropy-healpix",
-    "h5py",
-    "jsonargparse",
-    "numpy",
-    "pymultinest",
-    "pyuvdata",
-    "rich",
-    "scipy",
-    "setuptools_scm",
-    "anesthetic",
-    "tqdm",
-    # "bayeseor@git+https://github.com/PSims/BayesEoR.git@main"
-    "bayeseor@git+https://github.com/PSims/BayesEoR.git@restructure"
-]
+# Dependencies are specified in valska_env.yaml not here
+# dependencies = []
 
 # Version is derived from your Git tags by setuptools-scm
 # dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-  "black",
-  "flake8",
-  "isort",
-  "pylint",
-  "pylint-junit",
-  "pytest",
-  "pytest-cov",
-  "pytest-mock",
-  "ruff>=0.12.0",
-  "mypy",
-  "pre-commit",
-  "ipykernel",
-  "nbstripout",
-  "build",
-  "twine",
-  "nbmake",
-  "sphinx",
-  "sphinx_rtd_theme",
-  "myst_parser"
+  # Testing
+  "pytest>=9.0.2",
+  "pytest-cov>=7.1.0",
+  "pytest-mock>=3.15.1",
+  "nbmake>=1.5.5",
+
+  # Linting & formatting
+  "ruff>=0.15.7",
+
+  # Type checking
+  "mypy>=1.19.1",
+  "types-pyyaml>=6.0.12.20250915",
+
+  # Notebooks
+  "nbqa>=1.9.1",
+  "nbstripout>=0.9.1",
+  "ipykernel>=7.2.0",
+
+  # Packaging & distribution
+  "build>=1.4.1",
+  "twine>=6.2.0",
+
+  # Dev workflow
+  "pre-commit>=4.5.1",
 ]
+
 docs = [
-  "mkdocs",
-  "mkdocs-material"
+  "sphinx>=9.1.0",
+  "sphinx_rtd_theme>=3.1.0",
+  "myst_parser>=5.0.0",
+  # "mkdocs>=1.6.1",
+  # "mkdocs-material>=9.7.1",
 ]
 
 [project.urls]
-Homepage = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM"
-Issues = "https://github.com/UKSRC/ValSKA-HERA-beam-FWHM/issues"
+Homepage = "https://github.com/UKSRC/ValSKA"
+Issues = "https://github.com/UKSRC/ValSKA/issues"
 
 [project.scripts]
-valska-beam-validate = "valska_hera_beam.cli:main"
+# valska-beam-validate = "valska_hera_beam.cli:main"
+valska-beam-validate = "valska_hera_beam.cli.main:main"
+valska-bayeseor-prepare = "valska_hera_beam.external_tools.bayeseor.cli_prepare:main"
+valska-bayeseor-submit = "valska_hera_beam.external_tools.bayeseor.cli_submit:main"
+valska-bayeseor-sweep = "valska_hera_beam.external_tools.bayeseor.cli_sweep:main"
+valska-bayeseor-report = "valska_hera_beam.external_tools.bayeseor.cli_report:main"
+valska-bayeseor-list-sweeps = "valska_hera_beam.external_tools.bayeseor.cli_list_sweeps:main"
+valska-bayeseor-sweep-status = "valska_hera_beam.external_tools.bayeseor.cli_sweep_status:main"
+valska-bayeseor-validate-sweep = "valska_hera_beam.external_tools.bayeseor.cli_validate_sweep:main"
+valska-bayeseor-sweep-audit = "valska_hera_beam.external_tools.bayeseor.cli_sweep_audit:main"
+valska-bayeseor-resume = "valska_hera_beam.external_tools.bayeseor.cli_resume:main"
+valska-bayeseor-report-all = "valska_hera_beam.external_tools.bayeseor.cli_report_all:main"
+valska-bayeseor-compare-sweeps = "valska_hera_beam.external_tools.bayeseor.cli_compare_sweeps:main"
+valska-bayeseor-cleanup = "valska_hera_beam.external_tools.bayeseor.cli_cleanup:main"
+valska-bayeseor-help = "valska_hera_beam.external_tools.bayeseor.cli_help:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 include-package-data = true
+
+# Explicitly include non-Python package data (e.g. YAML configs) in built distributions.
+# This is important even if you mainly install from source/editable, and helps wheel installs.
+[tool.setuptools.package-data]
+valska_hera_beam = [
+  "config/*.yaml",
+  "external_tools/bayeseor/templates/*.yaml",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -94,3 +112,14 @@ exclude = ["tests*", "docs*", "notebooks*", "scripts*", "temp*"]
 [tool.setuptools_scm]
 write_to = "src/valska_hera_beam/_version.py"
 fallback_version = "0.1.0"
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+# E/F = Flake8, I = Isort, UP = Pyupgrade
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/valska_hera_beam/_version.py" = ["I001", "UP006", "UP007", "UP035"]

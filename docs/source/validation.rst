@@ -49,7 +49,7 @@ Because real SKA and precursor data are complex and contaminated with systematic
 
    We validate to ensure that *precision astrophysics is built on solid foundations*. Without validation, even sophisticated analyses can lead to incorrect or misleading conclusions.
 
-| 
+|
 
 🎯 2. Why is Validation Critical for SKA Science?
 =================================================
@@ -120,14 +120,14 @@ Validation provides **evidence-based confidence** that:
 
    **Without validation, we’re building science conclusions on untested assumptions. With validation, we make those assumptions testable -- and trustworthy.**
 
-| 
+|
 
 🧪 3. Types of Validation We Perform
 ====================================
 
 Validation within the Science Validation Tooling (UKSRC-ST) team is structured across **multiple layers** of the analysis pipeline, from individual components to end-to-end science inferences. This layered approach ensures that each part of the system -- and their interactions -- are tested for reliability, accuracy, and scientific credibility.
 
-| 
+|
 
 --------------
 
@@ -204,7 +204,7 @@ BaNTER provides a **model validation prior**, which is then used to weight model
 📈 Summary Table
 ~~~~~~~~~~~~~~~~
 
-| 
+|
 
 +-------------------------------+----------------------------------------------+----------------------------------------------+
 | **Type of Validation**        | **Goal**                                     | **Tools**                                    |
@@ -220,7 +220,7 @@ BaNTER provides a **model validation prior**, which is then used to weight model
 
 --------------
 
-| 
+|
 
 🛠️ 4. Our Approach
 ==================
@@ -284,7 +284,8 @@ Validation requires reproducibility, scalability, and traceability. We use a mod
 +===================================+=========================================================================================================================================+
 | **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation )                                       |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-| **Versioning**                    | All validation code tracked in UKSRC GitHub repos (e.g. ```ValSKA-HERA-beam-FWHM`` <https://github.com/uksrc/ValSKA-HERA-beam-FWHM>`__) |
+| **Versioning**                    | All validation code tracked in UKSRC GitHub repos                                                                                       |
+|                                   | (e.g. the ``ValSKA`` repository)                                                                                                        |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Workflow**                      | Notebooks for exploratory work, containers (Docker/Singularity) for reproducibility                                                     |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -329,7 +330,7 @@ Feedback loops with instrument teams, sky model developers, and domain scientist
 
 This structured process ensures **science credibility is not left to chance.**
 
-| 
+|
 
 🧠 5. Key Concepts
 ==================
@@ -372,7 +373,7 @@ Composite models are required for realism -- but they can **hide biases** if com
 🔎 **Predictivity vs. Accuracy**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| 
+|
 
 +------------------+-----------------------------------------------------------------------------+
 | Term             | Definition                                                                  |
@@ -450,19 +451,19 @@ Result: a robust, **bias-aware model selection criterion**, improving confidence
 **Validation Workflow**
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-| 
+|
 
 The diagram highlights three main stages -- **model specification**, **model validation**, and **data analysis** -- and distinguishes between a standard unvalidated Bayesian inference workflow (dashed red lines) and the enhanced BaNTER-validated approach (solid black lines). This formalises the process of introducing prior credibility assessments before posterior model comparison, improving robustness of signal inference. *(Figure credit:* `Sims+2025 <https://arxiv.org/abs/2502.14029>`__\ *)*
 
-| 
+|
 
 --------------
 
 These concepts form the **intellectual backbone** of our validation framework -- combining physical realism, statistical rigour, and practical insight to support trustworthy SKA science.
 
-| 
+|
 
-| 
+|
 
 🧰 6. Tools We Use
 ==================
@@ -521,7 +522,7 @@ These tools enable us to perform:
 Science recovery requires knowledge of the instrument. This knowledge is necessarily incomplete (e.g. element patterns and signal chain characterised to x% and y% accuracy, with x and y < 100). Thus, the question naturally arises: is our knowledge sufficient for precision cosmology? To answer this, we can test sensitivity to systematic uncertainties by perturbing model components:
 
 -  | **Beam FWHM perturbation framework**
-   | (e.g. ``ValSKA-HERA-beam-FWHM`` GitHub repo)
+   | (e.g. ``ValSKA`` GitHub repo)
 
 -  **Instrument layout variation**
 
@@ -536,7 +537,7 @@ These are used to probe how errors in inputs propagate to science outputs -- and
 🖧 **Infrastructure**
 ~~~~~~~~~~~~~~~~~~~~
 
-| 
+|
 
 ============ ==========================================================
 **Platform** **Purpose**
@@ -552,7 +553,7 @@ We use Singularity and Docker containers for **reproducible software environment
 🗃️ **Version Control and Collaboration**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| 
+|
 
 +----------------+---------------------------------------------------------------------+
 | **System**     | **Use**                                                             |
@@ -572,9 +573,9 @@ We use Singularity and Docker containers for **reproducible software environment
 
 This toolset is **modular, extensible, and FAIR-aligned**, allowing us to scale from tightly controlled validation cases to complex, high-dimensional SKA use cases.
 
-| 
+|
 
-| 
+|
 
 🤝 7. How Stakeholders Benefit
 ==============================
@@ -635,13 +636,13 @@ Why This Matters to Stakeholders
 -  Helps prioritise which instrument parameters or modelling choices matter most
 -  Makes UKSRC science contributions more credible and internationally competitive
 
-| 
+|
 
 --------------
 
    ✅ **In short**: Validation turns “we hope this works” into “we have evidence that it does.”
 
-| 
+|
 
 🔭 8. Looking Ahead
 ===================
@@ -707,24 +708,24 @@ Validation is not a one-off task -- it is a continuous process that evolves alon
 
 By investing in rigorous, scalable validation now, we’re laying the foundation for **credible, world-leading science** with SKA and its pathfinders.
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|
 
-| 
+|

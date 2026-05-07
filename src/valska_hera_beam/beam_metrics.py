@@ -1,9 +1,10 @@
+import lmfit
 import matplotlib.axes
+import matplotlib.lines
 import matplotlib.pyplot as plt
 import numpy
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from pyuvdata import UVData
-from scipy.optimize import curve_fit
 
 CORR_SAMPLES = 5
 
@@ -11,145 +12,373 @@ CORR_SAMPLES = 5
 def airy(
     x: numpy.typing.NDArray, A: float, x0: float, w: float
 ) -> numpy.typing.NDArray:
-    """Airy model function with amplitude, centre and width"""
+    """Airy-like sinc² beam model."""
     r = (x - x0) / w
     return A * (numpy.sinc(r)) ** 2
 
 
-def gauss(
-    x: numpy.typing.NDArray, H: float, A: float, x0: float, sigma: float
-) -> numpy.typing.NDArray:
-    """
-    Gaussian model function with baseline, amplitude, centre and sigma
-    """
-    return H + A * numpy.exp(-((x - x0) ** 2) / (2 * sigma**2))
+class SimulationConfig:
+    def __init__(
+        self,
+        latitude: float | None = None,
+        sigma: float | None = None,
+        beam_shape: str | None = None,
+    ):
+
+        self.latitude = latitude
+        self.sigma = sigma
+        self.beam_shape = beam_shape
 
 
-def reduced_chi2(
-    y: numpy.typing.NDArray, yfit: numpy.typing.NDArray, num_params: int
-) -> float:
-    """
-    Calculate the reduced Chi squared statistic (χ²_red).
+class BeamMetrics:
+    def __init__(self, filename: str):
 
-    Parameters:
-    y : numpy.ndarray
-        The observed data points.
-    yfit : numpy.ndarray
-        The fitted data points.
-    num_params : int
-        The number of parameters in the model being fitted.
+        self.uv_filename = filename
 
-    Returns:
-    float
-        The reduced chi-squared statistic.
-    """
-    # Compute regular chi-squared
-    chi_squared = numpy.mean((y - yfit) ** 2)
+        self.simulation_config = SimulationConfig()
 
-    # Calculate degrees of freedom (N - p)
-    degrees_of_freedom = len(y) - num_params
+        # derived quantities
+        self.baseline_counts = numpy.array([])
+        self.lsts_hours = numpy.array([])
+        self.theta_deg = numpy.array([])
+        self.freq_array = numpy.array([])
+        self.v_auto = numpy.array([])
+        self.v_time_bl = numpy.array([])
 
-    # Compute and return reduced chi-squared
-    return (
-        chi_squared / degrees_of_freedom
-        if degrees_of_freedom > 0
-        else numpy.nan
-    )
+        # self.prepare_uv_data()
+
+    def read_simulation_config(
+        self, latitude: float, sigma: float, beam_shape: str
+    ):
+        """Read in the simulation config information"""
+
+        self.simulation_config = SimulationConfig(
+            latitude,
+            sigma,
+            beam_shape,
+        )
+
+    def check_beam(self):
+        """
+        Check beam parameters from pyuvsim data and produce
+        validation report and plots.
+        """
+
+        uvd = UVData.from_file(self.uv_filename)
+        self.prepare_uv_data(uvd)
+        gauss_result, airy_result, gauss_fwhm_vs_freq = (
+            self.compute_beam_metrics()
+        )
+        self.make_plots(gauss_result, airy_result, gauss_fwhm_vs_freq)
+
+    def prepare_uv_data(self, uvd: UVData):
+        """Resize and prepare UV data"""
+
+        # Select autocorrelations only
+        uv_auto = uvd.select(ant_str="auto", inplace=False)
+        # Reorder so time is the fastest grouping
+        # (i.e [t0 bl0,t0 bl1,t0 bl2....] )
+        uv_auto.reorder_blts(order="time")
+
+        # --- Find time and baseline structure
+        unique_times, counts = numpy.unique(
+            uv_auto.time_array, return_counts=True
+        )
+
+        self.baseline_counts = counts
+
+        # Get LST for each time
+        lsts_per_time = numpy.zeros(counts.size)
+        start = 0
+        for i, count in enumerate(counts):
+            lsts_per_time[i] = uv_auto.lst_array[start]
+            start += count
+
+        lsts_unwrapped = numpy.unwrap(lsts_per_time, period=2 * numpy.pi)
+        self.lsts_hours = lsts_unwrapped * 12.0 / numpy.pi
+
+        # Check that number of baselines is constant with time
+        if not numpy.all(counts == counts[0]):
+            raise ValueError(
+                "Baselines per time are not constant — cannot reshape safely."
+            )
+
+        # --- Reshape directly: (n_times, n_bls, n_freq, n_pol)
+        self.freq_array = numpy.squeeze(uv_auto.freq_array)
+
+        n_times = unique_times.size
+        n_bls = counts[0]
+        n_freq = self.freq_array.shape[0]
+
+        data = uv_auto.data_array.reshape(n_times, n_bls, n_freq, -1)
+
+        # --- Extract XX and YY polarisations
+        data_xx = data[..., 0]
+        data_yy = data[..., 1]
+
+        # --- Stokes I (pyuvsim convention)
+        stokes_I = data_xx + data_yy
+        print(f"Stokes I shape: {stokes_I.shape}")
+        print(f"UVData pol convention: {uvd.pol_convention}")
+
+        # Average over baselines (axis=1) to get power
+        self.v_auto = numpy.nanmean(stokes_I, axis=1)  # shape: (Ntimes, Nfreq)
+
+        # Mid-frequency baseline amplitudes
+        f_mid_idx = n_freq // 2
+        self.v_time_bl = numpy.abs(
+            stokes_I[:, :, f_mid_idx]
+        )  # (Ntimes, Nbls_per_time)
+
+        # Hour angle calculated from LST relative to mean LST
+        hour_angle = numpy.deg2rad(
+            (self.lsts_hours - numpy.mean(self.lsts_hours)) * 15.0
+        )
+
+        # Convert to real angle on the sky
+        if self.simulation_config.latitude is None:
+            raise ValueError("Please add the simulation config information.")
+        else:
+            lat = numpy.deg2rad(self.simulation_config.latitude)
+            cos_theta = numpy.sin(lat) ** 2 + numpy.cos(lat) ** 2 * numpy.cos(
+                hour_angle
+            )
+
+            # Get the sign correct so that it measures angle around mean LST
+            self.theta_deg = numpy.sign(hour_angle) * numpy.rad2deg(
+                numpy.arccos(cos_theta)
+            )
+
+    def compute_beam_metrics(self):
+        """Compute beam metrics"""
+
+        print(f"Fitting for {self.simulation_config.beam_shape} beam")
+        f_mid_idx = self.freq_array.shape[0] // 2
+        mid_freq = self.freq_array[f_mid_idx]
+
+        # Beam width at every frequency
+        gauss_fwhm_vs_freq, gauss_result, airy_result = (
+            fit_beam_width_vs_frequency(
+                self.theta_deg,
+                numpy.abs(self.v_auto),
+                self.simulation_config.beam_shape,
+            )
+        )
+        print(
+            f"   Gaussian at {mid_freq / 1e6} MHz: "
+            f"FWHM = {gauss_fwhm_vs_freq[f_mid_idx]:0.3f} deg; "
+            f"sigma = {gauss_fwhm_vs_freq[f_mid_idx] / (2 * numpy.sqrt(2 * numpy.log(2))):0.3f} deg"
+        )
+
+        if self.simulation_config.sigma is not None:
+            fwhm_power_expected = (
+                2 * numpy.sqrt(numpy.log(2)) * self.simulation_config.sigma
+            )
+            print(
+                f"   Expected Gauss FWHM = {numpy.rad2deg(fwhm_power_expected):0.3f} "
+                f"deg; sigma = {numpy.rad2deg(self.simulation_config.sigma):0.3f} deg"
+            )
+
+        spread = numpy.nanstd(gauss_fwhm_vs_freq)
+        print(f"   Fitted Gaussian width stability: {spread:.4f}")
+
+        # Chromaticity
+        chromaticity_test(self.freq_array, gauss_fwhm_vs_freq)
+
+        return gauss_result, airy_result, gauss_fwhm_vs_freq
+
+    def make_plots(self, gauss_result, airy_result, gauss_fwhm_vs_freq):
+        """Create diagnostic plots"""
+
+        f_mid_idx = self.freq_array.shape[0] // 2
+        mid_freq = self.freq_array[f_mid_idx]
+
+        # Plot figure
+        fig, ax = plt.subplots(2, 2, figsize=(10, 7))
+        fig.suptitle(
+            f"Simulation check: {numpy.abs(self.v_auto.max()):0.1f} "
+            "Jy point source transiting zenith",
+            fontsize=16,
+        )
+
+        # Heatmap of Amplitude at angle vs Baseline Index
+        plot_baseline_heatmap(
+            ax[0, 0],
+            numpy.abs(self.v_time_bl),
+            self.baseline_counts,
+            self.lsts_hours,
+            self.theta_deg,
+            mid_freq,
+        )
+
+        plot_beam_shape(
+            ax[0, 1],
+            self.theta_deg,
+            numpy.abs(self.v_auto[:, f_mid_idx]),
+            mid_freq,
+            gauss_result,
+            airy_result,
+        )
+
+        plot_spectrum(
+            ax[1, 0],
+            self.freq_array / 1e6,
+            gauss_fwhm_vs_freq,
+            "FWHM (deg)",
+            "Beam width vs frequency",
+        )
+
+        ax[1, 0].text(
+            0.4,
+            0.8,
+            f"FWHM at {mid_freq / 1e6} MHz: {gauss_fwhm_vs_freq[f_mid_idx]:0.2f} deg",
+            transform=ax[1, 0].transAxes,
+            fontsize=10,
+            verticalalignment="top",
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.7),
+        )
+
+        plot_waterfall_matplotlib(
+            ax[1, 1],
+            self.v_auto,
+            self.freq_array,
+            self.lsts_hours,
+            self.theta_deg,
+        )
+
+        plt.tight_layout()
+        plt.show()
 
 
-def beam_width_vs_frequency(
-    theta_deg: numpy.typing.NDArray, v_norm: numpy.typing.NDArray
+def fit_beam_width_vs_frequency(
+    theta_deg: numpy.typing.NDArray,
+    v_auto: numpy.typing.NDArray,
+    shape: str,
 ) -> tuple[
     numpy.typing.NDArray,
-    numpy.typing.NDArray | None,
-    numpy.typing.NDArray | None,
+    lmfit.model.ModelResult | None,
+    lmfit.model.ModelResult | None,
 ]:
     """
-    Fit the beam shape with a Gaussian and Airy function at each frequency.
+    Fit beam shape vs frequency using lmfit.
 
-    Parameters:
-    theta_deg : numpy.ndarray
-        Angles (in degrees) corresponding to the beam shape.
-    v_norm : numpy.ndarray
-        Normalized visibility data.
+    Parameters
+    ----------
+    theta_deg
+        Angular coordinate in degrees.
+    v_auto
+        Visibility data with shape (angle, frequency).
+    shape
+        Either "Gaussian" or "Airy".
 
-    Returns:
-    Tuple of:
-    - numpy.ndarray: FWHM values from the Gaussian fit at each frequency.
-    - Optional[numpy.ndarray]: Parameters from the Gaussian fit.
-    - Optional[numpy.ndarray]: Parameters from the Airy fit.
+    Returns
+    -------
+    gauss_fwhm_vs_freq
+        Gaussian FWHM values at each frequency.
+    gauss_result
+        Gaussian result at middle frequency.
+    airy_result
+        Airy result at middle frequency.
     """
 
-    n_f = v_norm.shape[1]
+    n_f = v_auto.shape[1]
     f_mid_idx = n_f // 2
-    gauss_fwhm_vs_freq = numpy.zeros(n_f)
-    chi2_gauss_vs_freq = numpy.zeros(n_f)
-    chi2_airy_vs_freq = numpy.zeros(n_f)
 
-    params_gauss_mid = None
-    params_airy_mid = None
+    gauss_fwhm_vs_freq = numpy.full(n_f, numpy.nan)
+    chi2_gauss_vs_freq = numpy.full(n_f, numpy.nan)
+    chi2_airy_vs_freq = numpy.full(n_f, numpy.nan)
+
+    gauss_result_mid = None
+    airy_result_mid = None
+
+    # lmfit models
+    gaussian_model = lmfit.models.GaussianModel(prefix="g_")
+    airy_model = lmfit.Model(airy)
 
     for freq_idx in range(n_f):
-        # limit fit to main lobe
-        mask = v_norm[:, freq_idx] > 0.2
+        # Restrict fit to main lobe
+        mask = numpy.abs(v_auto[:, freq_idx]) > 0.2
         theta_fit = theta_deg[mask]
-        data_fit = numpy.abs(v_norm[:, freq_idx][mask])
+        data_fit = numpy.abs(v_auto[:, freq_idx][mask])
+
+        if len(theta_fit) == 0:
+            continue
 
         # Gaussian fit
-        try:
-            peak = numpy.nanmax(data_fit)
-            p0 = [peak, 0.0, 0.0, 3.0]
-            params_gauss, _ = curve_fit(gauss, theta_fit, data_fit, p0=p0)
-            sigma = abs(params_gauss[3])
-            gauss_fwhm_vs_freq[freq_idx] = 2.35482 * sigma  # in degrees
-            y_gauss = gauss(theta_deg, *params_gauss)
-            chi2_gauss_vs_freq[freq_idx] = reduced_chi2(
-                v_norm[:, freq_idx], y_gauss, num_params=4
-            )
-        except Exception as e:
-            gauss_fwhm_vs_freq[freq_idx] = numpy.nan
-            chi2_gauss_vs_freq[freq_idx] = numpy.nan
-            params_gauss = None
-            print(f"Gauss fit failed at freq {freq_idx}: {e}")
+        if shape == "Gaussian":
+            try:
+                peak = numpy.nanmax(data_fit)
+                params = gaussian_model.make_params(
+                    g_amplitude=peak,
+                    g_center=0.0,
+                    g_sigma=3.0,
+                )
+                params["g_sigma"].min = 0
+
+                result = gaussian_model.fit(
+                    data_fit,
+                    params,
+                    x=theta_fit,
+                )
+
+                gauss_fwhm_vs_freq[freq_idx] = result.params["g_fwhm"].value
+                chi2_gauss_vs_freq[freq_idx] = result.redchi
+
+                if freq_idx == f_mid_idx:
+                    gauss_result_mid = result
+
+            except Exception as e:
+                print(f"Gaussian fit failed at freq {freq_idx}: {e}")
 
         # Airy fit
-        try:
-            params_airy, _ = curve_fit(
-                airy,
-                theta_fit,
-                data_fit,
-                p0=[1.0, 0.0, 5],
-                bounds=([0, -1, 0], [2, 1, 50]),
-            )
-            y_airy = airy(theta_deg, *params_airy)
-            chi2_airy_vs_freq[freq_idx] = reduced_chi2(
-                v_norm[:, freq_idx], y_airy, num_params=3
-            )
-        except Exception as e:
-            chi2_airy_vs_freq[freq_idx] = numpy.nan
-            params_airy = None
-            print(f"Airy fit failed at freq {freq_idx}: {e}")
+        elif shape == "Airy":
+            try:
+                params = airy_model.make_params(
+                    A=1.0,
+                    x0=0.0,
+                    w=5.0,
+                )
+                params["A"].set(min=0, max=2)
+                params["x0"].set(min=-1, max=1)
+                params["w"].set(min=0, max=50)
 
-        if freq_idx == f_mid_idx:
-            params_gauss_mid = params_gauss
-            params_airy_mid = params_airy
+                result = airy_model.fit(
+                    data_fit,
+                    params,
+                    x=theta_fit,
+                )
 
-    print("Fitted Gaussian and Airy:")
-    print(
-        f"   mean Gaussian χ²: {numpy.mean(chi2_gauss_vs_freq):.3g} "
-        f"({numpy.std(chi2_gauss_vs_freq):.3g})"
-    )
-    print(
-        f"   mean Airy χ²: {numpy.mean(chi2_airy_vs_freq):.3g} "
-        f"({numpy.std(chi2_airy_vs_freq):.3g})"
-    )
+                chi2_airy_vs_freq[freq_idx] = result.redchi
 
-    return gauss_fwhm_vs_freq, params_gauss_mid, params_airy_mid
+                if freq_idx == f_mid_idx:
+                    gauss_result_mid = result
+
+            except Exception as e:
+                print(f"Airy fit failed at freq {freq_idx}: {e}")
+
+        else:
+            raise ValueError("shape must be either 'Gaussian' or 'Airy'")
+
+    # Summary statistics
+    if shape == "Gaussian":
+        print(
+            f"   mean Gaussian χ²: "
+            f"{numpy.nanmean(chi2_gauss_vs_freq):.3g} "
+            f"({numpy.nanstd(chi2_gauss_vs_freq):.3g})"
+        )
+    elif shape == "Airy":
+        print(
+            f"   mean Airy χ²: "
+            f"{numpy.nanmean(chi2_airy_vs_freq):.3g} "
+            f"({numpy.nanstd(chi2_airy_vs_freq):.3g})"
+        )
+
+    return gauss_fwhm_vs_freq, gauss_result_mid, airy_result_mid
 
 
 def chromaticity_test(
     freq_array: numpy.typing.NDArray, test_param: numpy.typing.NDArray
-) -> None:
+) -> float:
     """
     Test the variation of a parameter with frequency.
 
@@ -183,7 +412,7 @@ def chromaticity_test(
     else:
         corr = numpy.nan
 
-    print(f"Correlation with 1/frequency: {corr:.3f}")
+    print(f"  Correlation with 1/frequency: {corr:.3f}")
 
     return corr
 
@@ -193,9 +422,9 @@ def plot_beam_shape(
     theta_deg: numpy.typing.NDArray,
     ydata: numpy.typing.NDArray,
     freq: float,
-    params_gauss: numpy.typing.NDArray | None = None,
-    params_airy: numpy.typing.NDArray | None = None,
-) -> None:
+    gauss_result: lmfit.model.ModelResult | None = None,
+    airy_result: lmfit.model.ModelResult | None = None,
+) -> list[matplotlib.lines.Line2D]:
     """
     Plot the beam shape (normalized response) along with Gaussian
     and Airy fits.
@@ -207,27 +436,29 @@ def plot_beam_shape(
         The angle array.
     ydata : numpy.ndarray
         The data to plot.
-    params_gauss : Optional[numpy.ndarray], optional
-        Parameters from the Gaussian fit.
-    params_airy : Optional[numpy.ndarray], optional
-        Parameters from the Airy fit.
+    gauss_result : lmfit.model.ModelResult , optional
+        Result from the Gaussian fit.
+    airy_result : lmfit.model.ModelResult , optional
+        Result from the Airy fit.
     """
     x_fine = numpy.linspace(theta_deg.min(), theta_deg.max(), 200)
 
-    ax.plot(theta_deg, ydata, "xk", label="Beam data")
+    lines = ax.plot(theta_deg, ydata, "xk", label="Beam data")
 
-    if params_gauss is not None:
-        gauss_fit = gauss(x_fine, *params_gauss)
+    if gauss_result is not None:
+        gauss_fit = gauss_result.eval(x=x_fine)
         ax.plot(x_fine, gauss_fit, "-", label="Gaussian fit")
-    if params_airy is not None:
-        airy_fit = airy(x_fine, *params_airy)
+    if airy_result is not None:
+        airy_fit = airy_result.eval(x=x_fine)
         ax.plot(x_fine, airy_fit, "--", label="Airy fit")
 
     ax.set_xlabel("Angle (deg)")
-    ax.set_ylabel("Response")
+    ax.set_ylabel("Stokes I (XX+YY) Amplitude (Jy)")
     ax.set_title(f"Autocorrelation beam profile ({freq / 1e6} MHz)")
 
     ax.legend()
+
+    return lines
 
 
 def plot_spectrum(
@@ -236,10 +467,10 @@ def plot_spectrum(
     parameter: numpy.typing.NDArray,
     ylabel: str,
     title: str,
-):
+) -> list[matplotlib.lines.Line2D]:
     """Plot spectrum"""
 
-    ax.plot(freq_array, parameter, "o")
+    lines = ax.plot(freq_array, parameter, "o")
     ax.set_xlabel("Frequency (MHz)")
     ax.set_ylabel(ylabel)
     ax.set_title(title)
@@ -252,192 +483,39 @@ def plot_spectrum(
     ax.axhline(mid_y, color="red", linestyle="--", linewidth=1)
     ax.axvline(freq_array[idx], color="red", linestyle="--", linewidth=1)
 
-
-def check_beam(uvd: UVData, latitude: float, exp_sigma_rad: float) -> None:
-    """
-    Check beam parameters from pyuvsim data and produce
-    validation report and plots.
-    """
-
-    print("\n=== BEAM VALIDATION REPORT ===")
-
-    # Select autocorrelations only
-    uv_auto = uvd.select(ant_str="auto", inplace=False)
-    # Reorder so time is the fastest grouping
-    # (i.e [t0 bl0,t0 bl1,t0 bl2....] )
-    uv_auto.reorder_blts(order="time")
-
-    # --- Find time and baseline structure
-    unique_times, bl_counts = numpy.unique(
-        uv_auto.time_array, return_counts=True
-    )
-
-    lsts_per_time = numpy.zeros(bl_counts.size)
-    start = 0
-    for i, c in enumerate(bl_counts):
-        lsts_per_time[i] = uv_auto.lst_array[start]
-        start += c
-
-    lsts_unwrapped = numpy.unwrap(lsts_per_time, period=2 * numpy.pi)
-    lsts_hours = lsts_unwrapped * 12.0 / numpy.pi
-
-    # --- Reshape directly: (n_times, n_bls, n_freq, n_pol)
-    if not numpy.all(bl_counts == bl_counts[0]):
-        raise ValueError(
-            "Baselines per time are not constant — cannot reshape safely."
-        )
-
-    n_times = unique_times.size
-    # Assumes that number of baselines per time is constant
-    n_bls = bl_counts[0]
-    n_freq = uv_auto.freq_array.shape[-1]
-
-    data = uv_auto.data_array.reshape(n_times, n_bls, n_freq, -1)
-
-    # --- Extract XX and YY polarisations
-    data_xx = data[..., 0]
-    data_yy = data[..., 1]
-
-    # --- Stokes I
-    stokes_I = 0.5 * (data_xx + data_yy)
-
-    # Average over baselines (axis=1)
-    v_auto = numpy.nanmean(stokes_I, axis=1)  # shape: (Ntimes, Nfreq)
-    # Convert power to field and normalize
-    v_field = numpy.sqrt(numpy.abs(v_auto))
-    v_norm = v_field / numpy.nanmax(v_field, axis=0)
-
-    # Mid-frequency baseline amplitudes
-    f_mid_idx = n_freq // 2
-    mid_freq = uv_auto.freq_array[f_mid_idx]
-    V_time_bl = numpy.abs(stokes_I[:, :, f_mid_idx])  # (Ntimes, Nbls_per_time)
-
-    lat = numpy.deg2rad(latitude)
-
-    # Hour angle calculated from LST relative to mean LST
-    hour_angle = numpy.deg2rad((lsts_hours - numpy.mean(lsts_hours)) * 15.0)
-
-    # Convert to real angle on the sky
-    cos_theta = numpy.sin(lat) ** 2 + numpy.cos(lat) ** 2 * numpy.cos(
-        hour_angle
-    )
-
-    theta_deg = numpy.rad2deg(numpy.arccos(cos_theta))
-    # Get the sign correct so that it measures angle around mean LST
-    theta_deg = numpy.sign(hour_angle) * theta_deg
-
-    # zenith indices
-    zenith_idx = len(unique_times) // 2
-
-    # Heatmap of Amplitude at angle vs Baseline Index
-    fig, ax = plt.subplots(2, 2, figsize=(10, 7))
-
-    plot_baseline_heatmap(
-        numpy.abs(V_time_bl),
-        bl_counts,
-        lsts_hours,
-        theta_deg,
-        mid_freq,
-        ax=ax[0, 0],
-    )
-
-    beam = "UNKNOWN"
-    if numpy.std(v_norm[:, f_mid_idx]) == 0:
-        beam = "UNIFORM"
-        print(f"   {beam} beam found!")
-        plot_beam_shape(ax[0, 1], theta_deg, v_norm[:, f_mid_idx], mid_freq)
-
-        # Chromaticity
-        chromaticity_test(uv_auto.freq_array, v_norm[zenith_idx, :])
-
-        plot_spectrum(
-            ax[1, 0],
-            uv_auto.freq_array / 1e6,
-            v_norm[zenith_idx, :].real,
-            "Amplitude",
-            "Amplitude spectrum at zenith",
-        )
-
-    else:
-        beam = "NON-UNIFORM"
-        print(f"   {beam} beam found - will check beam FWHM!")
-
-        # Beam width at every frequency
-        gauss_fwhm_vs_freq, p_gauss, p_airy = beam_width_vs_frequency(
-            theta_deg, v_norm
-        )
-        print(
-            f"Gaussian at {mid_freq / 1e6} MHz "
-            f"FWHM = {gauss_fwhm_vs_freq[f_mid_idx]} deg; "
-            f"sigma = {gauss_fwhm_vs_freq[f_mid_idx] / 2.35482}"
-        )
-        print(
-            f"Expected Gauss FWHM = {numpy.rad2deg(exp_sigma_rad * 2.35482)}"
-            f" deg; sigma = {numpy.rad2deg(exp_sigma_rad)}"
-        )
-
-        spread = numpy.nanstd(gauss_fwhm_vs_freq)
-        print(f"Fitted Gaussian width stability: {spread:.4f}")
-
-        # Chromaticity
-        chromaticity_test(uv_auto.freq_array, gauss_fwhm_vs_freq)
-
-        plot_beam_shape(
-            ax[0, 1],
-            theta_deg,
-            v_norm[:, f_mid_idx],
-            mid_freq,
-            p_gauss,
-            p_airy,
-        )
-
-        plot_spectrum(
-            ax[1, 0],
-            uv_auto.freq_array / 1e6,
-            gauss_fwhm_vs_freq,
-            "FWHM (deg)",
-            "Beam width vs frequency",
-        )
-
-    plot_waterfall_matplotlib(
-        v_auto, uv_auto.freq_array, lsts_hours, theta_deg, ax=ax[1, 1]
-    )
-
-    plt.tight_layout()
-    plt.show()
+    return lines
 
 
-def lst_formatter(x, pos):
+def lst_formatter(x: float, pos: int) -> str:
+    """Format LST in hours, wrapped to [0, 24)."""
     return f"{x % 24:.0f}"
 
 
 def plot_waterfall_matplotlib(
-    data,
-    freqs,
-    lsts_hours,
-    theta_deg,
-    ax=None,
-    cmap="viridis",
-):
+    ax: matplotlib.axes.Axes,
+    data: numpy.typing.NDArray[numpy.floating | numpy.complexfloating],
+    freqs: numpy.typing.NDArray[numpy.floating],
+    lsts_hours: numpy.typing.NDArray[numpy.floating],
+    theta_deg: numpy.typing.NDArray[numpy.floating],
+    cmap: str = "viridis",
+) -> matplotlib.axes.Axes:
     """
-    Fully explicit waterfall plot with controlled axes.
-    No hidden orientation conventions.
+    Create a waterfall plot (frequency vs LST).
     """
-
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
 
     # --- safety checks
-    assert data.shape[0] == len(lsts_hours), "LST/time mismatch"
-    assert data.shape[1] == len(freqs), "Frequency mismatch"
+    if data.shape[0] != len(lsts_hours):
+        raise ValueError("Mismatch between data time axis and lsts_hours")
+    if data.shape[1] != len(freqs):
+        raise ValueError("Mismatch between data frequency axis and freqs")
 
     # --- physical axis mapping
-    extent = [
+    extent = (
         freqs.min() / 1e6,  # MHz
         freqs.max() / 1e6,
         lsts_hours.min(),
         lsts_hours.max(),
-    ]
+    )
 
     plot_2d_lst_deg(ax, data, extent, lsts_hours, theta_deg, cmap=cmap)
 
@@ -449,14 +527,14 @@ def plot_waterfall_matplotlib(
 
 
 def plot_baseline_heatmap(
-    data,
-    bl_counts,
-    lsts_hours,
-    theta_deg,
-    freq,
-    ax=None,
-    cmap="viridis",
-):
+    ax: matplotlib.axes.Axes,
+    data: numpy.typing.NDArray[numpy.floating | numpy.complexfloating],
+    bl_counts: numpy.typing.NDArray[numpy.integer],
+    lsts_hours: numpy.typing.NDArray[numpy.floating],
+    theta_deg: numpy.typing.NDArray[numpy.floating],
+    freq: float,
+    cmap: str = "viridis",
+) -> matplotlib.axes.Axes:
     """
     Baseline vs angle heatmap with axes:
     - Left: LST (hours)
@@ -465,14 +543,14 @@ def plot_baseline_heatmap(
     """
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4))
+        _, ax = plt.subplots(figsize=(6, 4))
 
-    extent = [
+    extent = (
         -0.5,
         bl_counts.max() - 0.5,
         lsts_hours.min(),
         lsts_hours.max(),
-    ]
+    )
 
     plot_2d_lst_deg(ax, data, extent, lsts_hours, theta_deg, cmap=cmap)
 
@@ -484,7 +562,19 @@ def plot_baseline_heatmap(
     return ax
 
 
-def plot_2d_lst_deg(ax, data, extent, lsts_hours, theta_deg, cmap="viridis"):
+def plot_2d_lst_deg(
+    ax: matplotlib.axes.Axes,
+    data: numpy.typing.NDArray[numpy.floating | numpy.complexfloating],
+    extent: tuple[float, float, float, float],
+    lsts_hours: numpy.typing.NDArray[numpy.floating],
+    theta_deg: numpy.typing.NDArray[numpy.floating],
+    cmap: str = "viridis",
+) -> matplotlib.axes.Axes:
+    """
+    Plot a 2D image with:
+    - Left y-axis: LST (hours)
+    - Right y-axis: angular separation (degrees)
+    """
 
     im = ax.imshow(
         numpy.abs(data),
@@ -511,7 +601,7 @@ def plot_2d_lst_deg(ax, data, extent, lsts_hours, theta_deg, cmap="viridis"):
         "right", functions=(lambda x: a * x + b, lambda x: (x - b) / a)
     )
 
-    secax.set_ylabel("Angle (deg)", labelpad=0)
+    secax.set_ylabel("Anglular Separation (deg)", labelpad=0)
     secax.yaxis.set_major_locator(MultipleLocator(10))
 
     secax.tick_params(
@@ -521,6 +611,10 @@ def plot_2d_lst_deg(ax, data, extent, lsts_hours, theta_deg, cmap="viridis"):
         pad=2,
     )
 
-    plt.colorbar(im, ax=ax, pad=0.16)
+    cbar = plt.colorbar(im, ax=ax, pad=0.16)
+    vmin, vmax = im.get_clim()
+    ticks = [vmin + i * (vmax - vmin) / 5 for i in range(6)]
+    cbar.set_ticks(ticks)
+    cbar.ax.set_title("Stokes I", fontsize=8)
 
     return ax

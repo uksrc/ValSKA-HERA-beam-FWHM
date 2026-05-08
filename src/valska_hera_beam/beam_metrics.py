@@ -9,7 +9,7 @@ from pyuvdata import UVData
 CORR_SAMPLES = 5
 
 
-def airy(
+def _airy(
     x: numpy.typing.NDArray, A: float, x0: float, w: float
 ) -> numpy.typing.NDArray:
     """Airy-like sinc² beam model."""
@@ -293,7 +293,7 @@ def fit_beam_width_vs_frequency(
 
     # lmfit models
     gaussian_model = lmfit.models.GaussianModel(prefix="g_")
-    airy_model = lmfit.Model(airy)
+    airy_model = lmfit.Model(_airy)
 
     for freq_idx in range(n_f):
         # Restrict fit to main lobe
@@ -351,7 +351,7 @@ def fit_beam_width_vs_frequency(
                 chi2_airy_vs_freq[freq_idx] = result.redchi
 
                 if freq_idx == f_mid_idx:
-                    gauss_result_mid = result
+                    airy_result_mid = result
 
             except Exception as e:
                 print(f"Airy fit failed at freq {freq_idx}: {e}")

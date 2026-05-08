@@ -98,7 +98,21 @@ That document is the primary reference for:
 
 ## Testing
 
-For comprehensive testing instructions, see the [Testing Guide](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html).
+### Unit Tests
+
+For comprehensive unit testing instructions, see the [Testing Guide](https://valska-hera-beam-fwhm.readthedocs.io/en/latest/testing.html).
+
+### Beam Metrics
+
+The `beam_metrics` module contains methods to check simulated UV data (`uvh5` format) to verify that the actual beam size in the data matches the simulation configuration parameters. It fits a Gaussian or Airy beam to the Stokes I amplitude and checks its variation with frequency. For example, the beam metrics checks can be run as follows for a Gaussian beam:
+
+```
+import valska_hera_beam.beam_metrics as beam_metrics
+
+bm = beam_metrics.BeamMetrics("<uvh5_filename>")
+bm.read_simulation_config(telescope_latitude, sigma, "Gaussian")
+bm.check_beam()
+```
 
 
 ## Contributing

@@ -16,15 +16,22 @@ class CondaRunner:
     """
     Run pyuvsim via a named conda environment.
 
-    conda_activate should point to conda.sh (or equivalent) so that
-    `conda activate` works inside non-interactive batch shells (SLURM).
+    If conda_activate/env_name are both None, no activation lines are emitted.
     """
 
-    conda_activate: str  # e.g. "source /path/to/miniconda3/etc/profile.d/conda.sh"
-    env_name: str  # e.g. "valska"
+    conda_activate: str | None
+    env_name: str | None
 
     def bash_prefix(self) -> str:
         """Return shell lines to activate the conda environment."""
+        if not self.conda_activate and not self.env_name:
+            return ""
+
+        if not self.conda_activate or not self.env_name:
+            raise ValueError(
+                "conda_activate and env_name must both be set, or both be None"
+            )
+
         return f"{self.conda_activate}\nconda activate {self.env_name}\n"
 
 

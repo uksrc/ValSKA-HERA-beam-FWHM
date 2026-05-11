@@ -301,6 +301,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+    "--no-conda-activate",
+    action="store_true",
+    help="Do not emit conda activation lines in the generated SLURM script.",
+    )
+
+    parser.add_argument(
         "--override",
         action="append",
         default=[],
@@ -543,14 +549,19 @@ def main(argv: list[str] | None = None) -> int:
             conda_env = str(cfg)
             conda_src = "runtime_paths.yaml"
 
-    if conda_sh is None or conda_env is None:
-        print(
-            "ERROR: conda settings not fully specified. Provide --conda-sh and "
-            "--conda-env or set pyuvsim.conda_sh and pyuvsim.conda_env in "
-            "config/runtime_paths.yaml.",
-            flush=True,
-        )
-        return 2
+    if args.no_conda_activate:
+        conda_sh = None
+        conda_env = None
+        conda_src = "disabled(--no-conda-activate)"
+    else:
+        if conda_sh is None or conda_env is None:
+            print(
+                "ERROR: conda settings not fully specified. Provide --conda-sh and "
+                "--conda-env or set pyuvsim.conda_sh and pyuvsim.conda_env in "
+                "config/runtime_paths.yaml, or pass --no-conda-activate.",
+                flush=True,
+            )
+            return 2
 
     # Template
     template_arg = args.template

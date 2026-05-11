@@ -21,6 +21,63 @@ def _utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
+def _with_valska_root(path_value: Any, valska_root: Path) -> Any:
+    """
+    Convert a pyuvsim template path to an absolute path under valska_root.
+
+    If path_value is already absolute and contains '/config/pyuvsim/',
+    preserve the suffix from 'config/pyuvsim/...'.
+    """
+    if not isinstance(path_value, str):
+        return path_value
+
+    raw = path_value.strip()
+    if not raw:
+        return path_value
+
+    marker = "config/pyuvsim/"
+    normalised = raw.replace("\\\n", "").replace("\n", "").strip()
+
+    if marker in normalised:
+        suffix = normalised.split(marker, 1)[1]
+        return str((valska_root / marker / suffix).resolve())
+
+    p = Path(normalised).expanduser()
+    if p.is_absolute():
+        return str(p.resolve())
+
+    return str((valska_root / p).resolve())
+
+
+def _apply_valska_root_paths(cfg: CommentedMap, valska_root: Path) -> dict[str, Any]:
+    """
+    Rewrite known pyuvsim file-path fields to absolute paths under valska_root.
+    """
+    changed: dict[str, Any] = {}
+
+    path_keys = [
+        ("sources", "catalog"),
+        ("telescope", "array_layout"),
+        ("telescope", "telescope_config_name"),
+    ]
+
+    for section, key in path_keys:
+        sec = cfg.get(section)
+        if not isinstance(sec, dict) or key not in sec:
+            continue
+
+        old = sec[key]
+        new = _with_valska_root(old, valska_root)
+
+        if new != old:
+            sec[key] = new
+            changed[f"{section}.{key}"] = {
+                "old": str(old),
+                "new": str(new),
+            }
+
+    return changed
+
 # -----------------------------------------------------------------------------
 # YAML IO (ruamel.yaml)
 # -----------------------------------------------------------------------------
@@ -172,6 +229,7 @@ def prepare_pyuvsim_run(
     sky_model: str,
     run_label: str,
     beamdata_path: Path | None = None,
+    valska_root: Path | None = None,
     overrides: Mapping[str, Any] | None = None,
     slurm: Mapping[str, object] | None = None,
     slurm_cpu: Mapping[str, object] | None = None,
@@ -202,6 +260,11 @@ def prepare_pyuvsim_run(
         Path(beamdata_path).expanduser().resolve()
         if beamdata_path is not None
         else None
+    )
+    valska_root = (
+    Path(valska_root).expanduser().resolve()
+    if valska_root is not None
+    else None
     )
 
     beam_model = str(beam_model).strip()
@@ -237,6 +300,10 @@ def prepare_pyuvsim_run(
     run_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = _load_yaml(template_yaml)
+
+    valska_root_rewrites = None
+    if valska_root is not None:
+        valska_root_rewrites = _apply_valska_root_paths(cfg, valska_root)
 
     # Optional linkage between ValSKA and pyuvsim:
     # only set beamdata_path if the CLI supplied one.
@@ -288,6 +355,8 @@ def prepare_pyuvsim_run(
         "template_yaml": str(template_yaml),
         "template_name": template_yaml.name,
         "beamdata_path": str(beamdata_path) if beamdata_path is not None else None,
+        "valska_root": str(valska_root) if valska_root is not None else None,
+        "path_rewrites": valska_root_rewrites,
         "overrides": overrides,
         "slurm": {"cpu": dict(slurm_cpu or {})},
         "pyuvsim": {

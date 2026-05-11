@@ -159,6 +159,15 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    parser.add_argument(
+        "--valska-root",
+        type=Path,
+        default=None,
+        help=(
+            "Root path of the ValSKA repository. If provided, pyuvsim template "
+            "paths under config/pyuvsim will be rewritten to absolute paths rooted here."
+        ),
+    )
     # Required science axes
     parser.add_argument(
         "--beam",
@@ -448,6 +457,19 @@ def main(argv: list[str] | None = None) -> int:
     pm = get_default_path_manager()
     runtime = pm.runtime_paths
 
+    valska_root = None
+    valska_root_src = None
+
+    if args.valska_root is not None:
+        valska_root = Path(args.valska_root).expanduser().resolve()
+        valska_root_src = "CLI"
+    else:
+        cfg_root = _get_nested(runtime, "pyuvsim", "valska_root")
+        if cfg_root:
+            valska_root = Path(str(cfg_root)).expanduser().resolve()
+            valska_root_src = "runtime_paths.yaml"
+
+
     # results_root
     if args.results_root is not None:
         results_root = Path(args.results_root).expanduser()
@@ -543,8 +565,18 @@ def main(argv: list[str] | None = None) -> int:
             template_src = "default"
 
     template_path = Path(str(template_arg)).expanduser()
+
     if template_path.exists():
         template_yaml = template_path
+
+    elif valska_root is not None:
+        candidate = (valska_root / template_path).resolve()
+
+        if candidate.exists():
+            template_yaml = candidate
+        else:
+            template_yaml = get_template_path(str(template_arg))
+
     else:
         template_yaml = get_template_path(str(template_arg))
 
@@ -597,6 +629,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  unique:             {unique}")
         print(f"  template:           {template_yaml} [{template_src}]")
         print(f"  variant:            {variant} [{variant_src}]")
+        if valska_root is not None:
+            print(f"  valska_root:        {valska_root} [{valska_root_src}]")
+        else:
+            print("  valska_root:        (none)")
         if beamdata_path is not None:
             print(f"  beamdata:           {beamdata_path} [{beamdata_src}]")
         else:
@@ -623,6 +659,7 @@ def main(argv: list[str] | None = None) -> int:
         template_yaml=Path(template_yaml),
         install=install,
         runner=runner,
+        valska_root=valska_root,
         results_root=Path(results_root),
         beam_model=beam_model,
         sky_model=sky_model,

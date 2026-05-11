@@ -24,9 +24,7 @@ def render_submit_script(
 
     - emits clear "what am I running" information
     - prints SLURM_* environment variables
-    - uses ``srun --mpi=<mpi> -n "$SLURM_NTASKS"`` by default
-    - runs pyuvsim via the runner script resolved from:
-    <pyuvsim_repo>/<run_script>
+    - uses ``mpirun -n "$SLURM_NTASKS"`` by default
 
     Parameters
     ----------
@@ -136,7 +134,6 @@ def render_submit_script(
     # -------------------------
     # Execution control
     # -------------------------
-    mpi = get_str_or_none("mpi", "pmi2") or "pmi2"
     exclusive = slurm.get("exclusive", None)
 
     # -------------------------
@@ -177,8 +174,8 @@ def render_submit_script(
     # -------------------------
     # pyuvsim command
     # -------------------------
-    ntasks_for_srun = ntasks if ntasks is not None else 1
-    srun_prefix = f'srun --mpi={mpi} -n "${{SLURM_NTASKS:-{ntasks_for_srun}}}"'
+    ntasks_for_mpi = ntasks if ntasks is not None else 1
+    mpi_prefix = f'mpirun -n "${{SLURM_NTASKS:-{ntasks_for_mpi}}}"'
 
     pyuvsim_code = (
         "import pyuvsim; "
@@ -187,7 +184,7 @@ def render_submit_script(
         "quiet=False, block_nonroot_stdout=True)"
     )
 
-    inner_cmd = f'{srun_prefix} {python_exe} -u -c "{pyuvsim_code}"'
+    inner_cmd = f'{mpi_prefix} {python_exe} -u -c "{pyuvsim_code}"'
     # -------------------------
     # SBATCH header lines
     # -------------------------
@@ -300,7 +297,7 @@ python -c "import pyuvsim; import pyuvsim.uvsim" || exit 3
 echo "----------------------------------------"
 
 echo "Command:"
-echo '  {inner_cmd}'
+printf '  %s\n' "{inner_cmd}"
 echo "----------------------------------------"
 
 JOBID="${{SLURM_JOB_ID:-unknown}}"

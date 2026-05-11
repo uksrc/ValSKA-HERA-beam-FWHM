@@ -11,7 +11,7 @@ from .runner import pyuvsimInstall, CondaRunner, ContainerRunner
 def render_submit_script(
     *,
     runner: CondaRunner | ContainerRunner,
-    install: pyuvsimInstall,
+    install: pyuvsimInstall | None,
     config_yaml: Path,
     run_dir: Path,
     slurm: Mapping[str, object] | None = None,
@@ -19,69 +19,6 @@ def render_submit_script(
 ) -> str:
     """
     Render a SLURM submit script for a pyuvsim run.
-
-    This function aims to be HPC-friendly and debugging-friendly:
-
-    - emits clear "what am I running" information
-    - prints SLURM_* environment variables
-    - uses ``mpirun -n "$SLURM_NTASKS"`` by default
-
-    Parameters
-    ----------
-    runner
-        How pyuvsim is executed (currently conda; container support later).
-    install
-        Optional metadata describing where a local pyuvsim checkout lives.
-        This is used for provenance/debug printing only; execution does not depend
-        on a repo script in the MVP.
-    config_yaml
-        Path to the rendered pyuvsim obsparam YAML to run.
-    run_dir
-        Run directory containing configs/logs/manifests.
-    slurm
-        SLURM settings map. Usually derived from runtime_paths.yaml defaults plus CLI overrides.
-
-        Any key set to ``None`` (or not present) will be omitted from the
-        generated script.
-
-        Supported keys (all optional)::
-
-            Job identification:
-              - ``job_name``: Full job name
-              - ``job_name_prefix``: Prefix for auto-generated job name
-                (default: "pyuvsim")
-            Resource selection:
-              - ``partition``
-              - ``constraint``
-              - ``qos``
-              - ``account``
-              - ``reservation``
-            Time and memory:
-              - ``time``: Wall time limit (default: "12:00:00")
-              - ``mem``: Memory per node (default: "8G")
-              - ``mem_per_cpu``
-            CPU/task configuration:
-              - ``nodes``: Number of nodes (default: 1)
-              - ``ntasks``: Total number of tasks (default: 1)
-              - ``ntasks_per_node``: Tasks per node (default: 1)
-              - ``cpus_per_task``: CPUs per task (default: 4)
-            Execution control:
-              - ``mpi``: MPI type for srun (default: "pmi2")
-              - ``exclusive``: Request exclusive node access
-            Output:
-              - ``output``: Stdout log path (default: ``run_dir/slurm-simulate-%j.out``)
-              - ``error``: Stderr log path
-            Extensibility:
-              - ``extra_sbatch``: Additional ``#SBATCH`` lines
-                (without the ``"#SBATCH "`` prefix)
-
-    mode
-        Execution mode. Currently only:
-        - ``"simulate"``
-
-    Notes
-    -----
-    Timing is implemented using only ``date`` for portability.
     """
     slurm = dict(slurm or {})
 
@@ -101,66 +38,41 @@ def render_submit_script(
             return None
         return int(val)
 
-    # -------------------------
-    # Job identification
-    # -------------------------
     job_name_prefix = get_str_or_none("job_name_prefix", "pyuvsim") or "pyuvsim"
     job_name = get_str_or_none("job_name") or f"{job_name_prefix}-{run_dir.name}-{mode}"
 
-    # -------------------------
-    # Resource selection
-    # -------------------------
     partition = get_str_or_none("partition")
     constraint = get_str_or_none("constraint")
     qos = get_str_or_none("qos")
     account = get_str_or_none("account")
     reservation = get_str_or_none("reservation")
 
-    # -------------------------
-    # Time and memory
-    # -------------------------
     time = get_str_or_none("time", "12:00:00")
     mem = get_str_or_none("mem", "8G")
     mem_per_cpu = get_str_or_none("mem_per_cpu")
 
-    # -------------------------
-    # CPU/task configuration
-    # -------------------------
     nodes = get_int_or_none("nodes", 1)
     ntasks = get_int_or_none("ntasks", 1)
     ntasks_per_node = get_int_or_none("ntasks_per_node", 1)
     cpus_per_task = get_int_or_none("cpus_per_task", 4)
 
-    # -------------------------
-    # Execution control
-    # -------------------------
     exclusive = slurm.get("exclusive", None)
 
-    # -------------------------
-    # Output paths
-    # -------------------------
     out_log_default = run_dir / f"slurm-{mode}-%j.out"
     out_log = slurm.get("output", out_log_default)
     if out_log is not None:
         out_log = Path(out_log)
+
     err_log = slurm.get("error", None)
     if err_log is not None:
         err_log = Path(err_log)
 
-    # -------------------------
-    # Extra SBATCH lines
-    # -------------------------
     extra_sbatch = slurm.get("extra_sbatch", [])
     if extra_sbatch is None:
         extra_sbatch = []
     if not isinstance(extra_sbatch, list):
-        raise TypeError(
-            "slurm['extra_sbatch'] must be a list of strings if provided"
-        )
+        raise TypeError("slurm['extra_sbatch'] must be a list of strings if provided")
 
-    # -------------------------
-    # Runner prefix
-    # -------------------------
     if isinstance(runner, CondaRunner):
         prefix = runner.bash_prefix()
         python_exe = "python"
@@ -171,9 +83,6 @@ def render_submit_script(
             f'{runner.apptainer_exe} exec {bind_args} "{runner.image_path}" python'
         ).strip()
 
-    # -------------------------
-    # pyuvsim command
-    # -------------------------
     ntasks_for_mpi = ntasks if ntasks is not None else 1
     mpi_prefix = f'mpirun -n "${{SLURM_NTASKS:-{ntasks_for_mpi}}}"'
 
@@ -185,9 +94,8 @@ def render_submit_script(
     )
 
     inner_cmd = f'{mpi_prefix} {python_exe} -u -c "{pyuvsim_code}"'
-    # -------------------------
-    # SBATCH header lines
-    # -------------------------
+    inner_cmd_print = inner_cmd.replace('"', '\\"')
+
     sbatch_lines: list[str] = [
         "#!/bin/bash",
         f"#SBATCH --job-name={job_name}",
@@ -247,6 +155,7 @@ def render_submit_script(
         else "(not recorded)"
     )
     execution_interface = "pyuvsim.uvsim.run_uvsim"
+
     return f"""{sbatch_block}
 
 set -eo pipefail
@@ -297,7 +206,7 @@ python -c "import pyuvsim; import pyuvsim.uvsim" || exit 3
 echo "----------------------------------------"
 
 echo "Command:"
-printf '  %s\n' "{inner_cmd}"
+printf '  %s\\n' "{inner_cmd_print}"
 echo "----------------------------------------"
 
 JOBID="${{SLURM_JOB_ID:-unknown}}"

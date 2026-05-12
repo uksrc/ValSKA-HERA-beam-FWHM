@@ -176,7 +176,7 @@ class BeamMetrics:
             )
             print(
                 f"   Expected Gauss FWHM = {numpy.rad2deg(fwhm_power_expected):0.3f} "
-                f"deg; sigma = {numpy.rad2deg(self.simulation_config.sigma):0.3f} deg"
+                f"deg; sigma = {numpy.rad2deg(self.simulation_config.sigma / numpy.sqrt(2)):0.3f} deg"
             )
 
         spread = numpy.nanstd(gauss_fwhm_vs_freq)

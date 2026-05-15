@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 import numpy
+from scipy.special import j1
 
 # Use an ephemeral, writable temp directory for tests (not checked into VCS)
 BASE_DIR = Path(tempfile.mkdtemp(prefix="valska_tests_")).resolve()
@@ -19,6 +20,7 @@ for d in (CHAINS_DIR, DATA_DIR, RESULTS_DIR):
 
 EOR_PS = 214777.66068216303  # mK^2 Mpc^3
 NOISE_RATIO = 0.5
+C = 299792458.0  # m/s
 
 
 class MockDataContainer:
@@ -170,11 +172,20 @@ def make_gaussian_data(
 
 
 def make_airy_data(
+    freq_hz,
     theta,
     amplitude=1.0,
     centre=0.0,
-    width=5.0,
+    diameter=5.0,
 ):
     """Make Airy data"""
-    r = (theta - centre) / width
-    return amplitude * (numpy.sinc(r)) ** 2
+
+    lam = C / freq_hz
+
+    x = numpy.pi * diameter * numpy.sin(theta - centre) / lam
+    beam = numpy.ones_like(x)
+    mask = numpy.abs(x) > 1e-12
+
+    beam[mask] = (2 * j1(x[mask]) / x[mask]) ** 2
+
+    return amplitude * beam

@@ -22,8 +22,10 @@ def test_beam_width_gaussian_fit_recovers_fwhm():
 
     # shape: (angle, frequency)
     v_auto = y[:, numpy.newaxis]
+    freq = numpy.array([1.0])
 
     fwhm, gauss_result, airy_result = beam_metrics.fit_beam_width_vs_frequency(
+        freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
         shape="Gaussian",
@@ -50,8 +52,10 @@ def test_beam_width_gaussian_fit_multiple_frequencies():
     data = numpy.column_stack(
         [make_gaussian_data(theta, sigma=s) for s in sigmas]
     )
+    freq = numpy.array([1.0, 2.0, 3.0])
 
     fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+        freq=freq,
         theta_deg=theta,
         v_auto=data,
         shape="Gaussian",
@@ -66,12 +70,14 @@ def test_beam_width_airy_fit_returns_parameters():
     """Test beam_width_vs_frequency with Airy"""
 
     theta = numpy.linspace(-20, 20, 500)
+    freqs = numpy.array([150000000.0])
 
-    y = make_airy_data(theta, width=4.0)
+    y = make_airy_data(freqs[0], numpy.radians(theta), diameter=14.0)
 
     v_auto = y[:, numpy.newaxis]
 
     fwhm, gauss_result, airy_result = beam_metrics.fit_beam_width_vs_frequency(
+        freq=freqs,
         theta_deg=theta,
         v_auto=v_auto,
         shape="Airy",
@@ -83,10 +89,10 @@ def test_beam_width_airy_fit_returns_parameters():
     # Airy fit should succeed
     assert airy_result is not None
 
-    # Width should be approximately recovered
+    # Diameter should be approximately recovered
     assert numpy.isclose(
-        airy_result.params["w"].value,
-        4.0,
+        airy_result.params["diam"].value,
+        14.0,
         rtol=0.1,
     )
 
@@ -96,9 +102,11 @@ def test_beam_width_invalid_shape_raises_value_error():
 
     theta = numpy.linspace(-10, 10, 100)
     v_auto = numpy.ones((100, 1))
+    freq = numpy.array([1.0])
 
     with pytest.raises(ValueError):
         beam_metrics.fit_beam_width_vs_frequency(
+            freq=freq,
             theta_deg=theta,
             v_auto=v_auto,
             shape="NotARealShape",
@@ -112,8 +120,10 @@ def test_beam_width_empty_mask_returns_nan():
 
     # Everything below mask threshold (0.2)
     v_auto = numpy.zeros((100, 1))
+    freq = numpy.array([1.0])
 
     fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+        freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
         shape="Gaussian",
@@ -136,8 +146,10 @@ def test_beam_width_gaussian_fit_with_noise():
     noisy = clean + rng.normal(0, 0.02, size=theta.size)
 
     v_auto = noisy[:, numpy.newaxis]
+    freq = numpy.array([1.0])
 
     fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+        freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
         shape="Gaussian",
@@ -512,7 +524,7 @@ def test_make_plots(
     bm.make_plots(
         gauss_result="gauss",
         airy_result="airy",
-        gauss_fwhm_vs_freq=numpy.array([1, 2, 3, 4]),
+        fit_vs_freq=numpy.array([1, 2, 3, 4]),
     )
 
     mock_heatmap.assert_called_once()

@@ -5,16 +5,33 @@ import matplotlib.pyplot as plt
 import numpy
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from pyuvdata import UVData
+from scipy.special import j1
 
+C = 299792458.0  # m/s
 CORR_SAMPLES = 5
 
 
 def _airy(
-    x: numpy.typing.NDArray, A: float, x0: float, w: float
+    theta: numpy.typing.NDArray,
+    freq_hz: float,
+    A: float,
+    theta0: float,
+    diam: float,
 ) -> numpy.typing.NDArray:
-    """Airy-like sinc² beam model."""
-    r = (x - x0) / w
-    return A * (numpy.sinc(r)) ** 2
+    """
+    Airy power beam for a circular aperture.
+    """
+    lam = C / freq_hz
+    # theta0=0.0
+    # A=1.0
+
+    x = numpy.pi * diam * numpy.sin(theta - theta0) / lam
+    beam = numpy.ones_like(x)
+    mask = numpy.abs(x) > 1e-12
+
+    beam[mask] = (2 * j1(x[mask]) / x[mask]) ** 2
+
+    return A * beam
 
 
 class SimulationConfig:
@@ -23,11 +40,13 @@ class SimulationConfig:
         latitude: float | None = None,
         sigma: float | None = None,
         beam_shape: str | None = None,
+        diameter: float | None = None,
     ):
 
         self.latitude = latitude
         self.sigma = sigma
         self.beam_shape = beam_shape
+        self.diameter = diameter
 
 
 class BeamMetrics:
@@ -45,17 +64,20 @@ class BeamMetrics:
         self.v_auto = numpy.array([])
         self.v_time_bl = numpy.array([])
 
-        # self.prepare_uv_data()
-
     def read_simulation_config(
-        self, latitude: float, sigma: float, beam_shape: str
+        self,
+        latitude: float,
+        beam_shape: str,
+        sigma: float | None = None,
+        diameter: float | None = None,
     ):
         """Read in the simulation config information"""
 
         self.simulation_config = SimulationConfig(
-            latitude,
-            sigma,
-            beam_shape,
+            latitude=latitude,
+            sigma=sigma,
+            beam_shape=beam_shape,
+            diameter=diameter,
         )
 
     def check_beam(self):
@@ -66,10 +88,8 @@ class BeamMetrics:
 
         uvd = UVData.from_file(self.uv_filename)
         self.prepare_uv_data(uvd)
-        gauss_result, airy_result, gauss_fwhm_vs_freq = (
-            self.compute_beam_metrics()
-        )
-        self.make_plots(gauss_result, airy_result, gauss_fwhm_vs_freq)
+        gauss_result, airy_result, fit_vs_freq = self.compute_beam_metrics()
+        self.make_plots(gauss_result, airy_result, fit_vs_freq)
 
     def prepare_uv_data(self, uvd: UVData):
         """Resize and prepare UV data"""
@@ -157,37 +177,46 @@ class BeamMetrics:
         mid_freq = self.freq_array[f_mid_idx]
 
         # Beam width at every frequency
-        gauss_fwhm_vs_freq, gauss_result, airy_result = (
-            fit_beam_width_vs_frequency(
-                self.theta_deg,
-                numpy.abs(self.v_auto),
-                self.simulation_config.beam_shape,
-            )
+        fit_vs_freq, gauss_result, airy_result = fit_beam_width_vs_frequency(
+            self.freq_array,
+            self.theta_deg,
+            numpy.abs(self.v_auto),
+            self.simulation_config.beam_shape,
         )
-        print(
-            f"   Gaussian at {mid_freq / 1e6} MHz: "
-            f"FWHM = {gauss_fwhm_vs_freq[f_mid_idx]:0.3f} deg; "
-            f"sigma = {gauss_fwhm_vs_freq[f_mid_idx] / (2 * numpy.sqrt(2 * numpy.log(2))):0.3f} deg"
-        )
-
-        if self.simulation_config.sigma is not None:
-            fwhm_power_expected = (
-                2 * numpy.sqrt(numpy.log(2)) * self.simulation_config.sigma
-            )
+        if self.simulation_config.beam_shape == "Gaussian":
             print(
-                f"   Expected Gauss FWHM = {numpy.rad2deg(fwhm_power_expected):0.3f} "
-                f"deg; sigma = {numpy.rad2deg(self.simulation_config.sigma / numpy.sqrt(2)):0.3f} deg"
+                f"   Gaussian at {mid_freq / 1e6} MHz: "
+                f"FWHM = {fit_vs_freq[f_mid_idx]:0.3f} deg; "
+                f"sigma = {fit_vs_freq[f_mid_idx] / (2 * numpy.sqrt(2 * numpy.log(2))):0.3f} deg"
             )
 
-        spread = numpy.nanstd(gauss_fwhm_vs_freq)
-        print(f"   Fitted Gaussian width stability: {spread:.4f}")
+            if self.simulation_config.sigma is not None:
+                fwhm_power_expected = (
+                    2 * numpy.sqrt(numpy.log(2)) * self.simulation_config.sigma
+                )
+                print(
+                    f"   Expected Gauss FWHM = {numpy.rad2deg(fwhm_power_expected):0.3f} "
+                    f"deg; sigma = {numpy.rad2deg(self.simulation_config.sigma / numpy.sqrt(2)):0.3f} deg"
+                )
+        if self.simulation_config.beam_shape == "Airy":
+            print(
+                f"   Airy at {mid_freq / 1e6} MHz: "
+                f"Diameter = {fit_vs_freq[f_mid_idx]:0.3f} m"
+            )
+            if self.simulation_config.diameter is not None:
+                print(
+                    f"   Expected diameter = {self.simulation_config.diameter} m"
+                )
+
+        spread = numpy.nanstd(fit_vs_freq)
+        print(f"   Fit stability: {spread:.4f}")
 
         # Chromaticity
-        chromaticity_test(self.freq_array, gauss_fwhm_vs_freq)
+        chromaticity_test(self.freq_array, fit_vs_freq)
 
-        return gauss_result, airy_result, gauss_fwhm_vs_freq
+        return gauss_result, airy_result, fit_vs_freq
 
-    def make_plots(self, gauss_result, airy_result, gauss_fwhm_vs_freq):
+    def make_plots(self, gauss_result, airy_result, fit_vs_freq):
         """Create diagnostic plots"""
 
         f_mid_idx = self.freq_array.shape[0] // 2
@@ -220,18 +249,27 @@ class BeamMetrics:
             airy_result,
         )
 
+        if gauss_result is not None:
+            y_label = "FWHM (deg)"
+            plot_title = "Beam width vs frequency"
+            plot_text = f"FWHM at {mid_freq / 1e6} MHz: {fit_vs_freq[f_mid_idx]:0.2f} deg"
+        if airy_result is not None:
+            y_label = "Telescope diameter (m)"
+            plot_title = "Diameter vs frequency"
+            plot_text = f"Diameter at {mid_freq / 1e6} MHz: {fit_vs_freq[f_mid_idx]:0.2f} m"
+
         plot_spectrum(
             ax[1, 0],
             self.freq_array / 1e6,
-            gauss_fwhm_vs_freq,
-            "FWHM (deg)",
-            "Beam width vs frequency",
+            fit_vs_freq,
+            y_label,
+            plot_title,
         )
 
         ax[1, 0].text(
             0.4,
             0.8,
-            f"FWHM at {mid_freq / 1e6} MHz: {gauss_fwhm_vs_freq[f_mid_idx]:0.2f} deg",
+            plot_text,
             transform=ax[1, 0].transAxes,
             fontsize=10,
             verticalalignment="top",
@@ -251,6 +289,7 @@ class BeamMetrics:
 
 
 def fit_beam_width_vs_frequency(
+    freq: numpy.typing.NDArray,
     theta_deg: numpy.typing.NDArray,
     v_auto: numpy.typing.NDArray,
     shape: str,
@@ -264,6 +303,8 @@ def fit_beam_width_vs_frequency(
 
     Parameters
     ----------
+    freq
+        Frequency in Hz
     theta_deg
         Angular coordinate in degrees.
     v_auto
@@ -273,7 +314,7 @@ def fit_beam_width_vs_frequency(
 
     Returns
     -------
-    gauss_fwhm_vs_freq
+    fit_vs_freq
         Gaussian FWHM values at each frequency.
     gauss_result
         Gaussian result at middle frequency.
@@ -281,10 +322,10 @@ def fit_beam_width_vs_frequency(
         Airy result at middle frequency.
     """
 
-    n_f = v_auto.shape[1]
+    n_f = freq.shape[0]
     f_mid_idx = n_f // 2
 
-    gauss_fwhm_vs_freq = numpy.full(n_f, numpy.nan)
+    fit_vs_freq = numpy.full(n_f, numpy.nan)
     chi2_gauss_vs_freq = numpy.full(n_f, numpy.nan)
     chi2_airy_vs_freq = numpy.full(n_f, numpy.nan)
 
@@ -293,20 +334,19 @@ def fit_beam_width_vs_frequency(
 
     # lmfit models
     gaussian_model = lmfit.models.GaussianModel(prefix="g_")
-    airy_model = lmfit.Model(_airy)
+    airy_model = lmfit.Model(_airy, independent_vars=["theta", "freq_hz"])
 
     for freq_idx in range(n_f):
-        # Restrict fit to main lobe
-        mask = numpy.abs(v_auto[:, freq_idx]) > 0.2
-        theta_fit = theta_deg[mask]
-        data_fit = numpy.abs(v_auto[:, freq_idx][mask])
-
-        if len(theta_fit) == 0:
-            continue
-
         # Gaussian fit
         if shape == "Gaussian":
             try:
+                # Restrict fit to main lobe
+                mask = numpy.abs(v_auto[:, freq_idx]) > 0.2
+                theta_fit = theta_deg[mask]
+                data_fit = numpy.abs(v_auto[:, freq_idx][mask])
+                if len(theta_fit) == 0:
+                    continue
+
                 peak = numpy.nanmax(data_fit)
                 params = gaussian_model.make_params(
                     g_amplitude=peak,
@@ -321,7 +361,7 @@ def fit_beam_width_vs_frequency(
                     x=theta_fit,
                 )
 
-                gauss_fwhm_vs_freq[freq_idx] = result.params["g_fwhm"].value
+                fit_vs_freq[freq_idx] = result.params["g_fwhm"].value
                 chi2_gauss_vs_freq[freq_idx] = result.redchi
 
                 if freq_idx == f_mid_idx:
@@ -335,19 +375,23 @@ def fit_beam_width_vs_frequency(
             try:
                 params = airy_model.make_params(
                     A=1.0,
-                    x0=0.0,
-                    w=5.0,
+                    theta0=0.0,
+                    diam=12.0,
                 )
-                params["A"].set(min=0, max=2)
-                params["x0"].set(min=-1, max=1)
-                params["w"].set(min=0, max=50)
+                params["A"].set(min=0.9, max=1.1)
+                params["theta0"].set(
+                    min=numpy.radians(-1), max=numpy.radians(1)
+                )
+                params["diam"].set(min=1, max=25)
 
                 result = airy_model.fit(
-                    data_fit,
+                    v_auto[:, freq_idx],
                     params,
-                    x=theta_fit,
+                    theta=numpy.radians(theta_deg),
+                    freq_hz=freq[freq_idx],
                 )
 
+                fit_vs_freq[freq_idx] = result.params["diam"].value
                 chi2_airy_vs_freq[freq_idx] = result.redchi
 
                 if freq_idx == f_mid_idx:
@@ -373,7 +417,7 @@ def fit_beam_width_vs_frequency(
             f"({numpy.nanstd(chi2_airy_vs_freq):.3g})"
         )
 
-    return gauss_fwhm_vs_freq, gauss_result_mid, airy_result_mid
+    return fit_vs_freq, gauss_result_mid, airy_result_mid
 
 
 def chromaticity_test(
@@ -402,8 +446,8 @@ def chromaticity_test(
     print(
         "\nVariation with frequency:\n"
         f"   Std deviation = {100 * freq_std:.3f}%\n"
-        f"   Gradient of fitted line = {100 * freq_grad}%\n"
-        f"   Residual chromaticity = {100 * frac_resid}%"
+        f"   Gradient of fitted line = {100 * freq_grad:.3f}%\n"
+        f"   Residual chromaticity = {100 * frac_resid:.3f}%"
     )
 
     # Correlation to frequency
@@ -448,8 +492,9 @@ def plot_beam_shape(
     if gauss_result is not None:
         gauss_fit = gauss_result.eval(x=x_fine)
         ax.plot(x_fine, gauss_fit, "-", label="Gaussian fit")
+
     if airy_result is not None:
-        airy_fit = airy_result.eval(x=x_fine)
+        airy_fit = airy_result.eval(theta=numpy.radians(x_fine), freq_hz=freq)
         ax.plot(x_fine, airy_fit, "--", label="Airy fit")
 
     ax.set_xlabel("Angle (deg)")

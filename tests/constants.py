@@ -5,6 +5,9 @@ Variables and util functions for testing
 import tempfile
 from pathlib import Path
 
+import numpy
+from scipy.special import j1
+
 # Use an ephemeral, writable temp directory for tests (not checked into VCS)
 BASE_DIR = Path(tempfile.mkdtemp(prefix="valska_tests_")).resolve()
 CHAINS_DIR = BASE_DIR / "chains"
@@ -17,6 +20,7 @@ for d in (CHAINS_DIR, DATA_DIR, RESULTS_DIR):
 
 EOR_PS = 214777.66068216303  # mK^2 Mpc^3
 NOISE_RATIO = 0.5
+C = 299792458.0  # m/s
 
 
 class MockDataContainer:
@@ -155,3 +159,33 @@ def mock_read_chains(*args, **kwargs):
     Mock method to replace anesthetic read_chains()
     """
     return MockChain(args[0])
+
+
+def make_gaussian_data(
+    theta,
+    sigma=2.0,
+    amplitude=1.0,
+    centre=0.0,
+):
+    """Make Gaussian data"""
+    return amplitude * numpy.exp(-((theta - centre) ** 2) / (2 * sigma**2))
+
+
+def make_airy_data(
+    freq_hz,
+    theta,
+    amplitude=1.0,
+    centre=0.0,
+    diameter=5.0,
+):
+    """Make Airy data"""
+
+    lam = C / freq_hz
+
+    x = numpy.pi * diameter * numpy.sin(theta - centre) / lam
+    beam = numpy.ones_like(x)
+    mask = numpy.abs(x) > 1e-12
+
+    beam[mask] = (2 * j1(x[mask]) / x[mask]) ** 2
+
+    return amplitude * beam

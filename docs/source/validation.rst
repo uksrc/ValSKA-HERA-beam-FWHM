@@ -282,16 +282,14 @@ Validation requires reproducibility, scalability, and traceability. We use a mod
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Component**                     | **Details**                                                                                                                             |
 +===================================+=========================================================================================================================================+
-| **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation )                                       |
+| **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation)                                        |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Versioning**                    | All validation code tracked in UKSRC GitHub repos                                                                                       |
 |                                   | (e.g. the ``ValSKA`` repository)                                                                                                        |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Workflow**                      | Notebooks for exploratory work, containers (Docker/Singularity) for reproducibility                                                     |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-| **Agile Tracking**                | .. container:: content-wrapper                                                                                                          |
-|                                   |                                                                                                                                         |
-|                                   |    Work organized via JIRA Epics and Stories (e.g. SKAO Jiraad75ab71-1245-3349-8713-12bcc32bca7cSAPP-146)                               |
+| **Agile Tracking**                | Work organized via JIRA Epics and Stories                                                                                               |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 
 --------------
@@ -534,7 +532,7 @@ These are used to probe how errors in inputs propagate to science outputs -- and
 
 --------------
 
-🖧 **Infrastructure**
+🌐 **Infrastructure**
 ~~~~~~~~~~~~~~~~~~~~
 
 |

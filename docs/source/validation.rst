@@ -669,7 +669,7 @@ Validation is not a one-off task -- it is a continuous process that evolves alon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  | **FAIR-Aligned Pipelines**
-   | We’re building validation workflows that are Findable, Accessible, Interoperable, and Reproducible.
+   | We're building validation workflows that are Findable, Accessible, Interoperable, and Reproducible.
 
 -  | **CI/CD for Science**
    | Moving toward containerized, automated validation tests that run as part of our development cycle.

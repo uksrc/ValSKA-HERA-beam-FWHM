@@ -3,6 +3,7 @@ import matplotlib.axes
 import matplotlib.lines
 import matplotlib.pyplot as plt
 import numpy
+import yaml
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from pyuvdata import UVData
 from scipy.special import j1
@@ -49,6 +50,10 @@ class SimulationConfig:
         self.diameter = diameter
 
 
+class Loader(yaml.SafeLoader):
+    pass
+
+
 class BeamMetrics:
     def __init__(self, filename: str):
 
@@ -66,18 +71,28 @@ class BeamMetrics:
 
     def read_simulation_config(
         self,
-        latitude: float,
-        beam_shape: str,
-        sigma: float | None = None,
-        diameter: float | None = None,
+        beam_parameters: str,
     ):
         """Read in the simulation config information"""
 
+        # Custom constructor to handle !AnalyticBeam
+        def analytic_beam_constructor(loader, node):
+            return loader.construct_mapping(node)
+
+        Loader.add_constructor("!AnalyticBeam", analytic_beam_constructor)
+
+        with open(beam_parameters, encoding="utf-8") as file:
+            values = yaml.load(file, Loader=Loader)
+
+        lat, lon, alt = map(
+            float, values["telescope_location"].strip("()").split(",")
+        )
+
         self.simulation_config = SimulationConfig(
-            latitude=latitude,
-            sigma=sigma,
-            beam_shape=beam_shape,
-            diameter=diameter,
+            latitude=lat,
+            sigma=values["beam_paths"][0].get("sigma", None),
+            beam_shape=values["beam_paths"][0]["class"],
+            diameter=values["beam_paths"][0].get("diameter", None),
         )
 
     def check_beam(self):
@@ -183,9 +198,9 @@ class BeamMetrics:
             numpy.abs(self.v_auto),
             self.simulation_config.beam_shape,
         )
-        if self.simulation_config.beam_shape == "Gaussian":
+        if self.simulation_config.beam_shape == "GaussianBeam":
             print(
-                f"   Gaussian at {mid_freq / 1e6} MHz: "
+                f"   Gaussian at {mid_freq / 1e6:0.1f} MHz: "
                 f"FWHM = {fit_vs_freq[f_mid_idx]:0.3f} deg; "
                 f"sigma = {fit_vs_freq[f_mid_idx] / (2 * numpy.sqrt(2 * numpy.log(2))):0.3f} deg"
             )
@@ -200,7 +215,7 @@ class BeamMetrics:
                 )
         if self.simulation_config.beam_shape == "Airy":
             print(
-                f"   Airy at {mid_freq / 1e6} MHz: "
+                f"   Airy at {mid_freq / 1e6:0.1f} MHz: "
                 f"Diameter = {fit_vs_freq[f_mid_idx]:0.3f} m"
             )
             if self.simulation_config.diameter is not None:
@@ -252,11 +267,11 @@ class BeamMetrics:
         if gauss_result is not None:
             y_label = "FWHM (deg)"
             plot_title = "Beam width vs frequency"
-            plot_text = f"FWHM at {mid_freq / 1e6} MHz: {fit_vs_freq[f_mid_idx]:0.2f} deg"
+            plot_text = f"FWHM at {mid_freq / 1e6:0.1f} MHz: {fit_vs_freq[f_mid_idx]:0.2f} deg"
         if airy_result is not None:
             y_label = "Telescope diameter (m)"
             plot_title = "Diameter vs frequency"
-            plot_text = f"Diameter at {mid_freq / 1e6} MHz: {fit_vs_freq[f_mid_idx]:0.2f} m"
+            plot_text = f"Diameter at {mid_freq / 1e6:0.1f} MHz: {fit_vs_freq[f_mid_idx]:0.2f} m"
 
         plot_spectrum(
             ax[1, 0],
@@ -310,7 +325,7 @@ def fit_beam_width_vs_frequency(
     v_auto
         Visibility data with shape (angle, frequency).
     shape
-        Either "Gaussian" or "Airy".
+        Either "GaussianBeam" or "AiryBeam".
 
     Returns
     -------
@@ -338,7 +353,7 @@ def fit_beam_width_vs_frequency(
 
     for freq_idx in range(n_f):
         # Gaussian fit
-        if shape == "Gaussian":
+        if shape == "GaussianBeam":
             try:
                 # Restrict fit to main lobe
                 mask = numpy.abs(v_auto[:, freq_idx]) > 0.2
@@ -404,7 +419,7 @@ def fit_beam_width_vs_frequency(
             raise ValueError("shape must be either 'Gaussian' or 'Airy'")
 
     # Summary statistics
-    if shape == "Gaussian":
+    if shape == "GaussianBeam":
         print(
             f"   mean Gaussian χ²: "
             f"{numpy.nanmean(chi2_gauss_vs_freq):.3g} "

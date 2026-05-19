@@ -1,7 +1,7 @@
 Guide to Contributing for Developers
 ====================================
 
-Thank you for your interest in contributing to ValSKA-HERA-beam-FWHM! 
+Thank you for your interest in contributing to ValSKA! 
 
 We use `pre-commit <https://pre-commit.com/>`_ hooks to ensure code quality and consistency. Pre-commit hooks
 automatically check your code before each commit to catch common issues early.

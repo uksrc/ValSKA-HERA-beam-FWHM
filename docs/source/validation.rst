@@ -284,7 +284,8 @@ Validation requires reproducibility, scalability, and traceability. We use a mod
 +===================================+=========================================================================================================================================+
 | **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation )                                       |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-| **Versioning**                    | All validation code tracked in UKSRC GitHub repos (e.g. ```ValSKA-HERA-beam-FWHM`` <https://github.com/uksrc/ValSKA-HERA-beam-FWHM>`__) |
+| **Versioning**                    | All validation code tracked in UKSRC GitHub repos                                                                                       |
+|                                   | (e.g. the ``ValSKA`` repository)                                                                                                        |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Workflow**                      | Notebooks for exploratory work, containers (Docker/Singularity) for reproducibility                                                     |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -521,7 +522,7 @@ These tools enable us to perform:
 Science recovery requires knowledge of the instrument. This knowledge is necessarily incomplete (e.g. element patterns and signal chain characterised to x% and y% accuracy, with x and y < 100). Thus, the question naturally arises: is our knowledge sufficient for precision cosmology? To answer this, we can test sensitivity to systematic uncertainties by perturbing model components:
 
 -  | **Beam FWHM perturbation framework**
-   | (e.g. ``ValSKA-HERA-beam-FWHM`` GitHub repo)
+   | (e.g. ``ValSKA`` GitHub repo)
 
 -  **Instrument layout variation**
 

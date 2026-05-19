@@ -17,7 +17,7 @@ sys.path.insert(
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "ValSKA-HERA-beam-FWHM"
+project = "ValSKA"
 copyright = "2025, P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov"
 author = "P.Sims, Q.Gueuning, E.Polehampton, T.Chen, V.Stolyarov"
 
@@ -46,15 +46,20 @@ autodoc_mock_imports = [
     "bayeseor",
     "anesthetic",
     "matplotlib",
+    "pandas",
+    "IPython",
     "yaml",
     "tqdm",
     "numpy",
+    "ruamel",
+    "ruamel.yaml",
+    "rich",
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = []
 
-myst_heading_anchors = 5  # to avoid uneeded warnings, cf. 
+myst_heading_anchors = 5  # to avoid uneeded warnings, cf.
 # https://github.com/executablebooks/MyST-Parser/issues/885
 
 # -- Options for HTML output -------------------------------------------------

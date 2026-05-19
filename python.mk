@@ -52,17 +52,17 @@ endif
 # 	missing-module-docstring
 # 	invalid-name
 NOTEBOOK_SWITCHES_FOR_RUFF ?= --ignore=D100,N802
-PYTHON_SWITCHES_FOR_RUFF ?= 
+PYTHON_SWITCHES_FOR_RUFF ?=
 
 PYTHON_LINT_TARGET ?= $(PYTHON_SRC) tests/## Paths containing python to be formatted and linted
 
-NOTEBOOK_LINT_TARGET ?= notebooks/## Paths containing Jupyter notebooks to be formatted and linted
+NOTEBOOK_LINT_TARGET ?= notebooks/*.ipynb## Top-level active notebooks to be formatted and linted
 
 
 .PHONY: python-format python-pre-format python-do-format python-post-format \
 	python-lint python-pre-lint python-do-lint python-post-lint \
 	python-test python-pre-test python-do-test python-post-test
-	
+
 
 python-pre-format:
 
@@ -105,7 +105,7 @@ python-do-lint:
 	$(PYTHON_RUNNER) ruff format --check $(PYTHON_LINT_TARGET) \
 		--line-length=$(PYTHON_LINE_LENGTH)
 	## 4. Type checking
-	$(PYTHON_RUNNER) mypy $(PYTHON_LINT_TARGET) --ignore-missing-imports
+	$(PYTHON_RUNNER) python -m mypy $(PYTHON_LINT_TARGET) --ignore-missing-imports
 
 
 ## TARGET: python-lint
@@ -190,7 +190,7 @@ notebook-do-lint:
 	$(PYTHON_RUNNER) ruff format --check $(NOTEBOOK_LINT_TARGET) \
 		--line-length=$(PYTHON_LINE_LENGTH)
 	## 4. Type checking
-	$(PYTHON_RUNNER) nbqa mypy $(NOTEBOOK_LINT_TARGET) --ignore-missing-imports
+	$(PYTHON_RUNNER) python -m nbqa mypy $(NOTEBOOK_LINT_TARGET) --ignore-missing-imports
 
 ## TARGET: notebook-lint
 ## SYNOPSIS: make notebook-lint

@@ -1,7 +1,7 @@
 Testing Guide for Developers
 ============================
 
-This document provides comprehensive instructions for running tests in the ValSKA-HERA-beam-FWHM project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
+This document provides comprehensive instructions for running tests in the ValSKA project. All testing workflows are automated through Make targets and continuously validated via GitHub Actions CI.
 
 Development Dependencies
 ------------------------
@@ -17,7 +17,7 @@ The project uses ``pyproject.toml`` to manage the devlopment dependencies. These
 - ``ruff`` - Code formatting and linting
 - ``mypy`` - Type checking
 
-The recommended way to install the dependencies is via the conda environment specification in ``valska_env.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
+The recommended way to install the dependencies is via the conda environment specification in ``valska_env_base.yaml``. This includes a section at the end to install the development dependencies from ``pyproject.toml`` using pip.
 
  
 Unit Tests
@@ -62,7 +62,10 @@ Jupyter notebooks can be tested (end-to-end) using ``nbmake``. This is set up in
 - Excludes ``.py`` files automatically
 - Validates that notebooks run end-to-end successfully
 
-It won't work where user input is required, or paths need to be set up - for example, the cells which actually make the plots and read the data will not be tested. These cells can be excluded from the test by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to add the "skip-execution" tag:
+It won't work where user input is required, or paths need to be set up - for example, the cells which
+actually make the plots and read the data will not be tested. These cells can be excluded from the test
+by including a tag in the notebook JSON. Open the notebook in a text editor and modify the metadata to
+add the "skip-execution" tag:
 
 .. code-block:: bash
 
@@ -78,6 +81,9 @@ It won't work where user input is required, or paths need to be set up - for exa
    "source": [...],
    }
 
+.. note::
+
+   Notebook tests are temporarily disabled in the CI pipeline until test data are available.
 
 
 Linting and Formatting
@@ -182,7 +188,8 @@ and running the following steps:
 2. Testing
 
    - Run ``make python-test`` (unit tests)
-   - Run ``make notebook-test`` (notebook validation)
+
+..   - Run ``make notebook-test`` (notebook validation)
 
 3. Documentation
 
@@ -192,13 +199,14 @@ The CI pipeline runs on every push to validate that:
 
 - Formatting and linting rules have been followed
 - All unit tests pass
-- All notebooks execute without errors
 - Code coverage is maintained
 - Documentation builds without errors or warnings
 
+.. - All notebooks execute without errors
+
 **Viewing CI Results:**
 
-- Go to the `Actions tab <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_ on GitHub
+- Go to the `Actions tab <https://github.com/uksrc/ValSKA/actions>`_ on GitHub
 - Click on a workflow run to see detailed logs
 - Download test artifacts (coverage reports, etc.) from completed runs
 
@@ -301,8 +309,8 @@ Getting Help
 
 If you encounter issues not covered here:
 
-1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues>`_
-2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA-HERA-beam-FWHM/actions>`_
+1. Check existing `GitHub Issues <https://github.com/uksrc/ValSKA/issues>`_
+2. Review the `CI workflow logs <https://github.com/uksrc/ValSKA/actions>`_
 3. Contact the UKSRC Science Validation team:
 
    - Peter Sims (PO) - ps550 [at] cam.ac.uk

@@ -1,0 +1,30 @@
+# ---
+# GPU additions to base level installation
+#
+# Basic usage:
+# conda env create -f valska_env_base.yaml
+# conda activate valska
+# conda env update -f valska_env_gpu.yaml
+# or
+# mamba env create -f valska_env_base.yaml
+# mamba activate valska
+# mamba env update -n valska -f valska_env_gpu.yaml
+# ---
+
+channels:
+  - conda-forge
+
+dependencies:
+  # CUDA stack
+  - cuda>=12.9.1
+  # OR (cluster-dependent alternative)
+  # - cudatoolkit>=11.8.0
+
+  # GPU linear algebra
+  - magma>=2.9.0
+
+  # GPU Python interface
+  - pycuda>=2024.*
+
+  # Compiler (often needed for PyCUDA builds)
+  - gcc_linux-64>=14.3.0

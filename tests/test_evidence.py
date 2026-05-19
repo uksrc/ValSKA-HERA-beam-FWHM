@@ -4,9 +4,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from constants import mock_read_chains
 
 from valska_hera_beam import evidence
+
+from .constants import mock_read_chains
 
 
 @pytest.mark.parametrize(
@@ -88,6 +89,47 @@ def test_calculate_bayes_factor_error():
         "  exception: "
     )
     assert result["success"] is False
+
+
+def test_find_single_mn_subdir():
+    """Test find subdirectories under root"""
+
+    with tempfile.TemporaryDirectory() as root:
+        Path(f"{root}/subdir/").mkdir()
+        # Should ignore files and only find subdirectories
+        Path(f"{root}/dummy.txt").touch()
+
+        subdirs = evidence._find_single_mn_subdir(Path(root))
+
+        assert subdirs == Path(f"{root}/subdir/")
+
+
+def test_find_single_mn_subdir_multiple_error():
+    """Test find subdirectories under root with too many subdirs"""
+
+    with tempfile.TemporaryDirectory() as root:
+        Path(f"{root}/subdir/").mkdir()
+        Path(f"{root}/subdir2/").mkdir()
+
+        with pytest.raises(RuntimeError):
+            evidence._find_single_mn_subdir(Path(root))
+
+
+def test_find_single_mn_subdir_empty_error():
+    """Test find subdirectories under root with no subdirs"""
+
+    with tempfile.TemporaryDirectory() as root:
+        with pytest.raises(RuntimeError):
+            evidence._find_single_mn_subdir(Path(root))
+
+
+def test_normalize_perturbation_key():
+    """Test normalise key - function currently does nothing"""
+
+    key = "+1e0pp"
+    result = evidence._normalize_perturbation_key(key)
+
+    assert result == key
 
 
 def test_find_chain_pairs_error():

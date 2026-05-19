@@ -282,7 +282,7 @@ Validation requires reproducibility, scalability, and traceability. We use a mod
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Component**                     | **Details**                                                                                                                             |
 +===================================+=========================================================================================================================================+
-| **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation)                                       |
+| **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation)                                        |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Versioning**                    | All validation code tracked in UKSRC GitHub repos                                                                                       |
 |                                   | (e.g. the ``ValSKA`` repository)                                                                                                        |

@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
 from ... import __version__
 from .constants import TOOL_NAME
-from .runner import pyuvsimInstall, CondaRunner, ContainerRunner
+from .runner import CondaRunner, ContainerRunner, pyuvsimInstall
 from .slurm import render_submit_script
 
 
@@ -49,7 +50,9 @@ def _with_valska_root(path_value: Any, valska_root: Path) -> Any:
     return str((valska_root / p).resolve())
 
 
-def _apply_valska_root_paths(cfg: CommentedMap, valska_root: Path) -> dict[str, Any]:
+def _apply_valska_root_paths(
+    cfg: CommentedMap, valska_root: Path
+) -> dict[str, Any]:
     """
     Rewrite known pyuvsim file-path fields to absolute paths under valska_root.
     """
@@ -77,6 +80,7 @@ def _apply_valska_root_paths(cfg: CommentedMap, valska_root: Path) -> dict[str, 
             }
 
     return changed
+
 
 # -----------------------------------------------------------------------------
 # YAML IO (ruamel.yaml)
@@ -262,9 +266,9 @@ def prepare_pyuvsim_run(
         else None
     )
     valska_root = (
-    Path(valska_root).expanduser().resolve()
-    if valska_root is not None
-    else None
+        Path(valska_root).expanduser().resolve()
+        if valska_root is not None
+        else None
     )
 
     beam_model = str(beam_model).strip()
@@ -354,7 +358,9 @@ def prepare_pyuvsim_run(
         "run_dir": str(run_dir),
         "template_yaml": str(template_yaml),
         "template_name": template_yaml.name,
-        "beamdata_path": str(beamdata_path) if beamdata_path is not None else None,
+        "beamdata_path": str(beamdata_path)
+        if beamdata_path is not None
+        else None,
         "valska_root": str(valska_root) if valska_root is not None else None,
         "path_rewrites": valska_root_rewrites,
         "overrides": overrides,

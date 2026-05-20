@@ -82,11 +82,11 @@ from pathlib import Path
 from typing import Any
 
 from valska_hera_beam.external_tools.pyuvsim import (
-    pyuvsimInstall,
     CondaRunner,
     get_template_path,
     list_templates,
     prepare_pyuvsim_run,
+    pyuvsimInstall,
 )
 from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
 
@@ -286,7 +286,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to local clone of pyuvsim (used for provenance and optional helper discovery).",
     )
 
-
     parser.add_argument(
         "--conda-sh",
         type=str,
@@ -301,9 +300,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-    "--no-conda-activate",
-    action="store_true",
-    help="Do not emit conda activation lines in the generated SLURM script.",
+        "--no-conda-activate",
+        action="store_true",
+        help="Do not emit conda activation lines in the generated SLURM script.",
     )
 
     parser.add_argument(
@@ -369,7 +368,9 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for kv in kvs:
         if "=" not in kv:
-            raise ValueError(f"ERROR: Invalid --override '{kv}'. Expected KEY=VALUE.")
+            raise ValueError(
+                f"ERROR: Invalid --override '{kv}'. Expected KEY=VALUE."
+            )
         k, v = kv.split("=", 1)
         k = k.strip()
         v = v.strip()
@@ -418,7 +419,9 @@ def _parse_beam_sky(
         b = beam.strip()
         k = sky.strip()
         if not b or not k:
-            raise ValueError("ERROR: --beam and --sky must be non-empty strings.")
+            raise ValueError(
+                "ERROR: --beam and --sky must be non-empty strings."
+            )
         return b, k, "CLI(--beam/--sky)"
 
     if scenario:
@@ -475,7 +478,6 @@ def main(argv: list[str] | None = None) -> int:
             valska_root = Path(str(cfg_root)).expanduser().resolve()
             valska_root_src = "runtime_paths.yaml"
 
-
     # results_root
     if args.results_root is not None:
         results_root = Path(args.results_root).expanduser()
@@ -483,7 +485,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         results_root = Path(pm.results_root).expanduser()
         results_root_src = (
-            "runtime_paths.yaml" if "results_root" in runtime else "env/default"
+            "runtime_paths.yaml"
+            if "results_root" in runtime
+            else "env/default"
         )
 
     # unique default via runtime_paths.yaml
@@ -510,7 +514,9 @@ def main(argv: list[str] | None = None) -> int:
         run_label_src = "CLI(--run-label)"
     else:
         if args.fwhm_perturb_frac is not None:
-            run_label = _format_run_label_from_fwhm_frac(float(args.fwhm_perturb_frac))
+            run_label = _format_run_label_from_fwhm_frac(
+                float(args.fwhm_perturb_frac)
+            )
             run_label_src = "auto(--fwhm-perturb-frac)"
         else:
             run_label = "default"
@@ -532,7 +538,6 @@ def main(argv: list[str] | None = None) -> int:
             flush=True,
         )
         return 2
-
 
     # conda settings
     conda_sh = args.conda_sh

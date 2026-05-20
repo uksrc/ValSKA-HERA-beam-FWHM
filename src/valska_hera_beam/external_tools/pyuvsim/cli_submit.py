@@ -220,7 +220,9 @@ def _print_human(result: dict[str, Any]) -> None:
 
     print("\nNext steps:")
     print("  - Check `squeue -u $USER` to see submitted jobs.")
-    print("  - Inspect logs referenced by the submit script in the run directory.")
+    print(
+        "  - Inspect logs referenced by the submit script in the run directory."
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

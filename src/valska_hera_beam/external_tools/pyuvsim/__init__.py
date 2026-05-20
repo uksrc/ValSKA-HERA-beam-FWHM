@@ -8,7 +8,7 @@ Primary entry points:
 """
 
 from .constants import TOOL_NAME
-from .runner import pyuvsimInstall, CondaRunner, ContainerRunner
+from .runner import CondaRunner, ContainerRunner, pyuvsimInstall
 from .setup import prepare_pyuvsim_run
 from .submit import SubmissionError, submit_pyuvsim_run
 from .templates import get_template_path, list_templates

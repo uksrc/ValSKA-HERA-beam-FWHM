@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
-from .runner import pyuvsimInstall, CondaRunner, ContainerRunner
+from .runner import CondaRunner, ContainerRunner, pyuvsimInstall
 
 
 def render_submit_script(
@@ -33,13 +33,23 @@ def render_submit_script(
         return s if s else None
 
     def get_int_or_none(key: str, default: int | None = None) -> int | None:
+        """Return int if present and not None, else None."""
         val = slurm.get(key, default)
         if val is None:
             return None
+        if not isinstance(val, int | str):
+            raise TypeError(
+                f"slurm['{key}'] must be int or str, got {type(val).__name__}"
+            )
         return int(val)
 
-    job_name_prefix = get_str_or_none("job_name_prefix", "pyuvsim") or "pyuvsim"
-    job_name = get_str_or_none("job_name") or f"{job_name_prefix}-{run_dir.name}-{mode}"
+    job_name_prefix = (
+        get_str_or_none("job_name_prefix", "pyuvsim") or "pyuvsim"
+    )
+    job_name = (
+        get_str_or_none("job_name")
+        or f"{job_name_prefix}-{run_dir.name}-{mode}"
+    )
 
     partition = get_str_or_none("partition")
     constraint = get_str_or_none("constraint")
@@ -61,17 +71,23 @@ def render_submit_script(
     out_log_default = run_dir / f"slurm-{mode}-%j.out"
     out_log = slurm.get("output", out_log_default)
     if out_log is not None:
+        if not isinstance(out_log, str | Path):
+            raise TypeError("slurm['output'] must be str or Path if provided")
         out_log = Path(out_log)
 
     err_log = slurm.get("error", None)
     if err_log is not None:
+        if not isinstance(err_log, str | Path):
+            raise TypeError("slurm['error'] must be str or Path if provided")
         err_log = Path(err_log)
 
     extra_sbatch = slurm.get("extra_sbatch", [])
     if extra_sbatch is None:
         extra_sbatch = []
     if not isinstance(extra_sbatch, list):
-        raise TypeError("slurm['extra_sbatch'] must be a list of strings if provided")
+        raise TypeError(
+            "slurm['extra_sbatch'] must be a list of strings if provided"
+        )
 
     if isinstance(runner, CondaRunner):
         prefix = runner.bash_prefix()

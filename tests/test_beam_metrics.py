@@ -28,7 +28,7 @@ def test_beam_width_gaussian_fit_recovers_fwhm():
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
-        shape="Gaussian",
+        shape="GaussianBeam",
     )
 
     expected_fwhm = 2 * numpy.sqrt(2 * numpy.log(2)) * sigma
@@ -58,7 +58,7 @@ def test_beam_width_gaussian_fit_multiple_frequencies():
         freq=freq,
         theta_deg=theta,
         v_auto=data,
-        shape="Gaussian",
+        shape="GaussianBeam",
     )
 
     expected = [2 * numpy.sqrt(2 * numpy.log(2)) * s for s in sigmas]
@@ -126,7 +126,7 @@ def test_beam_width_empty_mask_returns_nan():
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
-        shape="Gaussian",
+        shape="GaussianBeam",
     )
 
     assert numpy.isnan(fwhm[0])
@@ -152,7 +152,7 @@ def test_beam_width_gaussian_fit_with_noise():
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
-        shape="Gaussian",
+        shape="GaussianBeam",
     )
 
     expected = 2 * numpy.sqrt(2 * numpy.log(2)) * sigma
@@ -343,12 +343,12 @@ def test_sim_config_init_values():
     config = beam_metrics.SimulationConfig(
         latitude=-30.7,
         sigma=0.5,
-        beam_shape="gaussian",
+        beam_shape="GaussianBeam",
     )
 
     assert config.latitude == -30.7
     assert config.sigma == 0.5
-    assert config.beam_shape == "gaussian"
+    assert config.beam_shape == "GaussianBeam"
 
 
 def test_beam_metrics_init():
@@ -365,18 +365,14 @@ def test_beam_metrics_init():
     numpy.testing.assert_array_equal(bm.v_time_bl, numpy.array([]))
 
 
-def test_read_simulation_config():
+def test_read_simulation_config(pyuvsim_config_file):
     bm = beam_metrics.BeamMetrics("test.uvh5")
 
-    bm.read_simulation_config(
-        latitude=-26.7,
-        sigma=0.2,
-        beam_shape="airy",
-    )
+    bm.read_simulation_config(pyuvsim_config_file)
 
     assert bm.simulation_config.latitude == -26.7
     assert bm.simulation_config.sigma == 0.2
-    assert bm.simulation_config.beam_shape == "airy"
+    assert bm.simulation_config.beam_shape == "GaussianBeam"
 
 
 def test_prepare_uv_data_raises_without_latitude():
@@ -398,13 +394,9 @@ def test_prepare_uv_data_raises_without_latitude():
         bm.prepare_uv_data(mock_uv)
 
 
-def test_prepare_uv_data_success():
+def test_prepare_uv_data_success(pyuvsim_config_file):
     bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(
-        latitude=-30.0,
-        sigma=0.2,
-        beam_shape="gaussian",
-    )
+    bm.read_simulation_config(pyuvsim_config_file)
 
     mock_uv = MagicMock()
 
@@ -436,13 +428,11 @@ def test_prepare_uv_data_success():
     assert len(bm.theta_deg) == 2
 
 
-def test_prepare_uv_data_raises_for_inconsistent_baselines():
+def test_prepare_uv_data_raises_for_inconsistent_baselines(
+    pyuvsim_config_file,
+):
     bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(
-        latitude=-30.0,
-        sigma=0.2,
-        beam_shape="gaussian",
-    )
+    bm.read_simulation_config(pyuvsim_config_file)
 
     mock_uv = MagicMock()
 
@@ -467,14 +457,11 @@ def test_prepare_uv_data_raises_for_inconsistent_baselines():
 def test_compute_beam_metrics(
     mock_fit,
     mock_chromaticity,
+    pyuvsim_config_file,
 ):
     bm = beam_metrics.BeamMetrics("test.uvh5")
 
-    bm.read_simulation_config(
-        latitude=-30.0,
-        sigma=numpy.deg2rad(10),
-        beam_shape="gaussian",
-    )
+    bm.read_simulation_config(pyuvsim_config_file)
 
     bm.theta_deg = numpy.array([-5, 0, 5])
     bm.v_auto = numpy.ones((3, 4))

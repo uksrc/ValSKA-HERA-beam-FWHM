@@ -462,7 +462,9 @@ def chromaticity_test(
     )
 
     # Correlation to frequency
-    if numpy.sum(valid) > CORR_SAMPLES:
+    if numpy.sum(valid) > CORR_SAMPLES and not numpy.isclose(
+        numpy.std(test_param[valid]), 0.0
+    ):
         corr = numpy.corrcoef(test_param[valid], inv_freq[valid])[0, 1]
     else:
         corr = numpy.nan

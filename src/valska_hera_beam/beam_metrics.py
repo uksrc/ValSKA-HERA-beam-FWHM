@@ -23,8 +23,6 @@ def _airy(
     Airy power beam for a circular aperture.
     """
     lam = C / freq_hz
-    # theta0=0.0
-    # A=1.0
 
     x = numpy.pi * diam * numpy.sin(theta - theta0) / lam
     beam = numpy.ones_like(x)
@@ -84,9 +82,7 @@ class BeamMetrics:
         with open(beam_parameters, encoding="utf-8") as file:
             values = yaml.load(file, Loader=Loader)
 
-        lat, lon, alt = map(
-            float, values["telescope_location"].strip("()").split(",")
-        )
+        lat = float(values["telescope_location"].strip("()").split(",")[0])
 
         self.simulation_config = SimulationConfig(
             latitude=lat,
@@ -187,7 +183,7 @@ class BeamMetrics:
     def compute_beam_metrics(self):
         """Compute beam metrics"""
 
-        print(f"Fitting for {self.simulation_config.beam_shape} beam")
+        print(f"Fitting for {self.simulation_config.beam_shape}")
         f_mid_idx = self.freq_array.shape[0] // 2
         mid_freq = self.freq_array[f_mid_idx]
 

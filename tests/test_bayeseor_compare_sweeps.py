@@ -179,6 +179,48 @@ def test_cli_compare_sweeps_metric_and_missing_metric_skip(
     assert abs(payload["top_differences"][0]["delta"] - 0.1) < 1e-12
 
 
+def test_cli_compare_sweeps_color_always(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    _write_summary(
+        left,
+        [
+            _point(
+                "antdiam_0.0e+00",
+                perturb_frac=0.0,
+                status="ok",
+                delta=1.0,
+                log10_bf=0.2,
+            )
+        ],
+    )
+    _write_summary(
+        right,
+        [
+            _point(
+                "antdiam_0.0e+00",
+                perturb_frac=0.0,
+                status="ok",
+                delta=1.2,
+                log10_bf=0.3,
+            )
+        ],
+    )
+
+    code = cli_compare_sweeps.main(
+        [str(left), str(right), "--color", "always"]
+    )
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep comparison summary:" in out
+    assert "antdiam_0.0e+00" in out
+
+
 def test_cli_compare_sweeps_missing_input_returns_2(
     tmp_path: Path, capsys
 ) -> None:

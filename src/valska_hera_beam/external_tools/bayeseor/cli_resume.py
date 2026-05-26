@@ -9,6 +9,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
+
 from .sweep_health import inspect_sweep_health, sweep_health_to_dict
 
 
@@ -50,6 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON payload.",
     )
+    add_color_argument(parser)
     return parser
 
 
@@ -130,17 +137,28 @@ def _build_point_commands(
     return commands, notes, needs
 
 
-def _print_text(payload: dict[str, Any]) -> None:
+def _format_status(status: object, *, colors: CliColors) -> str:
+    text = str(status)
+    if text == "ok":
+        return colors.success(text)
+    if text == "partial":
+        return colors.warning(text)
+    if text in ("missing", "invalid", "error"):
+        return colors.error(text)
+    return text
+
+
+def _print_text(payload: dict[str, Any], *, colors: CliColors) -> None:
     summary = payload["summary"]
-    print("Sweep resume suggestions:")
-    print(f"  sweep_dir:       {payload['sweep_dir']}")
+    print(colors.heading("Sweep resume suggestions:"))
+    print(f"  sweep_dir:       {colors.path(payload['sweep_dir'])}")
     print(f"  stage:           {payload['stage']}")
     print(f"  hypothesis:      {payload['hypothesis']}")
     print(f"  points_total:    {summary['points_total']}")
-    print(f"  points_targeted: {summary['points_targeted']}")
-    print(f"  commands_total:  {summary['commands_total']}")
+    print(f"  points_targeted: {colors.warning(summary['points_targeted'])}")
+    print(f"  commands_total:  {colors.warning(summary['commands_total'])}")
 
-    print("\nPer-point commands:")
+    print("\n" + colors.heading("Per-point commands:"))
     rows = payload["points"]
     if not rows:
         print("  (none)")
@@ -151,11 +169,14 @@ def _print_text(payload: dict[str, Any]) -> None:
             "  - "
             f"{row['run_label']} ({row['perturb_parameter']}={row['perturb_frac']:+.3f})"
         )
-        print(f"      status: {row['point_status']}")
+        print(
+            f"      status: "
+            f"{_format_status(row['point_status'], colors=colors)}"
+        )
         for cmd in row["commands"]:
-            print(f"      {cmd}")
+            print(f"      {colors.success(cmd)}")
         for note in row["notes"]:
-            print(f"      note: {note}")
+            print(f"      note: {colors.warning(note)}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -206,7 +227,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2))
         return 0
 
-    _print_text(payload)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
+    _print_text(payload, colors=colors)
     return 0
 
 

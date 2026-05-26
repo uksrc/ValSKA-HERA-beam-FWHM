@@ -8,10 +8,23 @@ import json
 import sys
 from pathlib import Path
 
+from rich import box
+from rich.table import Table
+
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    add_progress_argument,
+    resolve_color_mode,
+    resolve_progress_mode,
+    show_progress,
+)
 from valska_hera_beam.external_tools.bayeseor.report import (
     SweepReportResult,
     generate_sweep_report,
 )
+
+_TableStyle = str
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -68,38 +81,216 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--print-complete-analysis-table",
+        action="store_true",
+        help=(
+            "Print a terminal summary table for complete-analysis results. "
+            "Implies --include-complete-analysis-table."
+        ),
+    )
+    parser.add_argument(
+        "--complete-analysis-table-style",
+        choices=["emoji", "plain"],
+        default="emoji",
+        help=(
+            "Terminal style for --print-complete-analysis-table. "
+            "Use 'plain' for ASCII-only validation labels. Default: emoji."
+        ),
+    )
+    parser.add_argument(
         "--json",
         dest="json_out",
         action="store_true",
         help="Print report result payload as JSON.",
     )
+    add_progress_argument(parser)
+    add_color_argument(parser)
     return parser
 
 
-def _print_summary(result: SweepReportResult) -> None:
-    print("\nSweep report generated:")
-    print(f"  sweep_dir:      {result.sweep_dir}")
-    print(f"  out_dir:        {result.out_dir}")
+def _format_perturbation_label(raw_label: object) -> str:
+    label = str(raw_label)
+    try:
+        frac = float(label.split("_", 1)[1])
+    except Exception:
+        return label
+
+    if label.startswith("antdiam_"):
+        return f"ΔD/D = {frac * 100:+.2f}%"
+    if label.startswith("fwhm_"):
+        return f"ΔFWHM/FWHM = {frac * 100:+.2f}%"
+    return f"Δ = {frac * 100:+.2f}%"
+
+
+def _perturbation_fraction(raw_label: object) -> float | None:
+    label = str(raw_label)
+    try:
+        return float(label.split("_", 1)[1])
+    except Exception:
+        return None
+
+
+def _coerce_float(raw: object) -> float:
+    if isinstance(raw, str | int | float):
+        return float(raw)
+    raise TypeError(f"Expected a numeric value, got {type(raw).__name__}")
+
+
+def _plain_interpretation(log_bayes_factor: object) -> str:
+    try:
+        log_bf = _coerce_float(log_bayes_factor)
+    except Exception:
+        return "Unable to evaluate"
+    if log_bf > 0:
+        return "Strong evidence for spurious power detected"
+    if log_bf < 0:
+        return "Unbiased inferences recovered"
+    return "Inconclusive"
+
+
+def _format_log_bayes_factor(raw: object) -> str:
+    try:
+        return f"{_coerce_float(raw):.3f}"
+    except Exception:
+        return "N/A"
+
+
+def _validation_display(validation: object, *, style: _TableStyle) -> str:
+    text = str(validation)
+    if style == "plain":
+        return text
+    if text == "PASS":
+        return "✅ PASS"
+    if text == "FAIL":
+        return "❌ FAIL"
+    return f"❌ {text}" if text else "❌ ERROR"
+
+
+def _validation_style(validation: object, *, colors: CliColors) -> str | None:
+    if not colors.enabled:
+        return None
+    text = str(validation)
+    if "PASS" in text:
+        return "green"
+    if "FAIL" in text or "ERROR" in text:
+        return "red"
+    return "yellow"
+
+
+def _print_complete_analysis_table(
+    rows: list[dict[str, object]], *, style: _TableStyle, colors: CliColors
+) -> None:
+    if not rows:
+        print("\nNo successful complete-analysis results to summarize.")
+        return
+
+    table_rows = [
+        {
+            "perturbation": _format_perturbation_label(
+                row.get("perturbation", "unknown")
+            ),
+            "log_bf": _format_log_bayes_factor(row.get("log_bayes_factor")),
+            "validation": _validation_display(
+                row.get("validation", "ERROR"), style=style
+            ),
+            "validation_style": _validation_style(
+                row.get("validation", "ERROR"), colors=colors
+            ),
+            "interpretation": _plain_interpretation(
+                row.get("log_bayes_factor")
+            ),
+            "sort_value": _perturbation_fraction(
+                row.get("perturbation", "unknown")
+            ),
+        }
+        for row in rows
+    ]
+    table_rows.sort(
+        key=lambda row: (
+            row["sort_value"] is None,
+            row["sort_value"] if isinstance(row["sort_value"], float) else 0.0,
+            str(row["perturbation"]),
+        )
+    )
+
+    table = Table(
+        title="Complete BayesEoR Perturbation Analysis Summary",
+        box=box.ASCII,
+        show_lines=False,
+    )
+    table.add_column("Perturbation", style="cyan" if colors.enabled else None)
+    table.add_column("Log BF", justify="right")
+    table.add_column("Validation")
+    table.add_column("Interpretation")
+
+    pass_count = 0
+    fail_count = 0
+    for row in table_rows:
+        validation = str(row["validation"])
+        if "PASS" in validation:
+            pass_count += 1
+        elif "FAIL" in validation:
+            fail_count += 1
+        table.add_row(
+            str(row["perturbation"]),
+            str(row["log_bf"]),
+            str(row["validation"]),
+            str(row["interpretation"]),
+            style=row["validation_style"]
+            if isinstance(row["validation_style"], str)
+            else None,
+        )
+
+    colors.console.print()
+    colors.console.print(table)
+    colors.console.print(
+        colors.success(
+            f"TOTAL: {len(table_rows)} | PASS: {pass_count} | "
+            f"FAIL: {fail_count} | ERROR: 0"
+        )
+    )
+
+
+def _print_summary(result: SweepReportResult, *, colors: CliColors) -> None:
+    print("\n" + colors.heading("Sweep report generated:"))
+    print(f"  sweep_dir:      {colors.path(result.sweep_dir)}")
+    print(f"  out_dir:        {colors.path(result.out_dir)}")
     print(f"  evidence_source:{result.evidence_source}")
     print(f"  points_total:   {result.rows_total}")
-    print(f"  points_complete:{result.rows_complete}")
-    print(f"  summary_csv:    {result.summary_csv}")
-    print(f"  summary_json:   {result.summary_json}")
+    print(f"  points_complete:{colors.success(result.rows_complete)}")
+    print(f"  summary_csv:    {colors.path(result.summary_csv)}")
+    print(f"  summary_json:   {colors.path(result.summary_json)}")
     if result.delta_plot_png is not None:
-        print(f"  delta_plot:     {result.delta_plot_png}")
+        print(f"  delta_plot:     {colors.path(result.delta_plot_png)}")
     if result.evidence_plot_png is not None:
-        print(f"  evidence_plot:  {result.evidence_plot_png}")
+        print(f"  evidence_plot:  {colors.path(result.evidence_plot_png)}")
     if result.plot_analysis_results_png is not None:
-        print(f"  plot_analysis_results: {result.plot_analysis_results_png}")
+        print(
+            "  plot_analysis_results: "
+            f"{colors.path(result.plot_analysis_results_png)}"
+        )
     if result.complete_analysis_json is not None:
-        print(f"  complete_analysis_json: {result.complete_analysis_json}")
+        print(
+            "  complete_analysis_json: "
+            f"{colors.path(result.complete_analysis_json)}"
+        )
     if result.complete_analysis_csv is not None:
-        print(f"  complete_analysis_csv:  {result.complete_analysis_csv}")
+        print(
+            "  complete_analysis_csv:  "
+            f"{colors.path(result.complete_analysis_csv)}"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for ``valska-bayeseor-report``."""
     args = build_parser().parse_args(argv)
+
+    if args.json_out and args.print_complete_analysis_table:
+        print(
+            "ERROR: --print-complete-analysis-table cannot be combined with --json.",
+            file=sys.stderr,
+        )
+        return 2
 
     try:
         result = generate_sweep_report(
@@ -112,6 +303,11 @@ def main(argv: list[str] | None = None) -> int:
             ),
             include_complete_analysis_table=bool(
                 args.include_complete_analysis_table
+                or args.print_complete_analysis_table
+            ),
+            show_progress=show_progress(
+                resolve_progress_mode(args.progress),
+                json_out=bool(args.json_out),
             ),
         )
     except Exception as exc:
@@ -142,14 +338,27 @@ def main(argv: list[str] | None = None) -> int:
             "complete_analysis_csv": str(result.complete_analysis_csv)
             if result.complete_analysis_csv is not None
             else None,
+            "complete_analysis_rows": result.complete_analysis_rows,
         }
         print(json.dumps(payload, indent=2))
         return 0
 
-    _print_summary(result)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
+    _print_summary(result, colors=colors)
+    if args.print_complete_analysis_table:
+        _print_complete_analysis_table(
+            result.complete_analysis_rows,
+            style=str(args.complete_analysis_table_style),
+            colors=colors,
+        )
     if result.rows_complete < result.rows_total:
         print(
-            "\nNote: some points were incomplete and are marked in the summary table."
+            "\n"
+            + colors.warning(
+                "Note: some points were incomplete and are marked in the summary table."
+            )
         )
     return 0
 

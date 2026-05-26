@@ -129,6 +129,36 @@ def test_cli_report_all_json_and_only_new(tmp_path: Path, capsys) -> None:
     assert payload["summary"]["count_errors"] == 0
 
 
+def test_cli_report_all_color_always(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    results_root = tmp_path / "results"
+    _mk_sweep(
+        results_root,
+        beam="airy_diam14m",
+        sky="GSM_plus_GLEAM",
+        run_id="sweep_color",
+        with_points=True,
+    )
+
+    code = cli_report_all.main(
+        [
+            "--results-root",
+            str(results_root),
+            "--no-plots",
+            "--color",
+            "always",
+        ]
+    )
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep batch report summary:" in out
+    assert "sweep_color" in out
+
+
 def test_cli_report_all_fail_on_error_returns_1(
     tmp_path: Path, capsys
 ) -> None:

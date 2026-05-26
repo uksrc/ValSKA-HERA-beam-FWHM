@@ -135,6 +135,28 @@ def test_sweep_audit_fail_on_invalid(tmp_path: Path) -> None:
     assert code == 1
 
 
+def test_sweep_audit_color_always(tmp_path: Path, capsys, monkeypatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    results_root = tmp_path / "results"
+    _mk_sweep(
+        results_root,
+        beam="airy_diam14m",
+        sky="GSM_plus_GLEAM",
+        run_id="sweep_partial",
+        point_kind="partial",
+    )
+
+    code = cli_sweep_audit.main(
+        ["--results-root", str(results_root), "--color", "always"]
+    )
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep audit summary:" in out
+    assert "sweep_partial" in out
+
+
 def test_sweep_audit_missing_search_root_returns_2(
     tmp_path: Path, capsys
 ) -> None:

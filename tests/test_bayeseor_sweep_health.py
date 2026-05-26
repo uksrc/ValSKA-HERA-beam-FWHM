@@ -97,6 +97,21 @@ def test_cli_sweep_status_json(tmp_path: Path, capsys) -> None:
     assert payload["points_partial"] == 1
 
 
+def test_cli_sweep_status_color_always(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    sweep_dir = _mk_sweep(tmp_path)
+
+    code = cli_sweep_status.main([str(sweep_dir), "--color", "always"])
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep status summary:" in out
+    assert "partial" in out
+
+
 def test_cli_validate_sweep_fails_without_allow_partial(
     tmp_path: Path, capsys
 ) -> None:
@@ -105,6 +120,21 @@ def test_cli_validate_sweep_fails_without_allow_partial(
     code = cli_validate_sweep.main([str(sweep_dir)])
     assert code == 1
     assert "Sweep status is 'partial'" in capsys.readouterr().out
+
+
+def test_cli_validate_sweep_color_always(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    sweep_dir = _mk_sweep(tmp_path)
+
+    code = cli_validate_sweep.main([str(sweep_dir), "--color", "always"])
+    assert code == 1
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep validation:" in out
+    assert "exit_code:" in out
 
 
 def test_cli_validate_sweep_allow_partial_but_require_jobs_json(

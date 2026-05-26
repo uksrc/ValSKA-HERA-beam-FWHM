@@ -8,6 +8,12 @@ import json
 import sys
 from pathlib import Path
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
+
 from .sweep_health import (
     inspect_sweep_health,
     sweep_health_to_dict,
@@ -50,29 +56,50 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON payload.",
     )
+    add_color_argument(parser)
     return parser
 
 
-def _print_text(*, health, failures: list[str], exit_code: int) -> None:
-    print("Sweep validation:")
-    print(f"  sweep_dir:    {health.sweep_dir}")
-    print(f"  sweep_status: {health.sweep_status}")
+def _format_status(status: object, *, colors: CliColors) -> str:
+    text = str(status)
+    if text == "ok":
+        return colors.success(text)
+    if text == "partial":
+        return colors.warning(text)
+    if text in ("missing", "invalid", "error"):
+        return colors.error(text)
+    return text
+
+
+def _print_text(
+    *, health, failures: list[str], exit_code: int, colors: CliColors
+) -> None:
+    print(colors.heading("Sweep validation:"))
+    print(f"  sweep_dir:    {colors.path(health.sweep_dir)}")
+    print(
+        f"  sweep_status: {_format_status(health.sweep_status, colors=colors)}"
+    )
     print(
         "  points:       "
         f"total={health.points_total}, "
-        f"ok={health.points_ok}, "
-        f"partial={health.points_partial}, "
-        f"missing={health.points_missing}"
+        f"ok={colors.success(health.points_ok)}, "
+        f"partial={colors.warning(health.points_partial)}, "
+        f"missing={colors.error(health.points_missing)}"
     )
 
     if failures:
-        print("  failures:")
+        print(colors.heading("  failures:"))
         for item in failures:
-            print(f"    - {item}")
+            print(f"    - {colors.error(item)}")
     else:
-        print("  failures:     none")
+        print(f"  failures:     {colors.success('none')}")
 
-    print(f"  exit_code:    {exit_code}")
+    exit_code_display = (
+        colors.success(exit_code)
+        if exit_code == 0
+        else colors.error(exit_code)
+    )
+    print(f"  exit_code:    {exit_code_display}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -101,7 +128,15 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2))
         return exit_code
 
-    _print_text(health=health, failures=failures, exit_code=exit_code)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
+    _print_text(
+        health=health,
+        failures=failures,
+        exit_code=exit_code,
+        colors=colors,
+    )
     return exit_code
 
 

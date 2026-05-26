@@ -130,6 +130,93 @@ def test_cli_sweep_antenna_mode_dry_run_returns_0():
     assert code == 0
 
 
+def test_cli_sweep_dry_run_color_always(capsys, monkeypatch):
+    """Dry-run output can be colorized explicitly for demos."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+            "--color",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "[DRY RUN] Sweep would be executed with:" in out
+
+
+def test_cli_sweep_dry_run_color_never(capsys):
+    """Dry-run output remains plain when color is disabled."""
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+            "--color",
+            "never",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" not in out
+    assert "[runtime_paths.yaml:data.root]" in out
+
+
+def test_cli_sweep_dry_run_no_color_env_suppresses_color(capsys, monkeypatch):
+    """NO_COLOR suppresses ANSI output even when color is requested."""
+    monkeypatch.setenv("NO_COLOR", "1")
+
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+            "--color",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" not in out
+
+
 def test_cli_sweep_rejects_mismatched_perturbation_flags():
     """
     sweep should reject fwhm-only flags when perturb_parameter is antenna_diameter.

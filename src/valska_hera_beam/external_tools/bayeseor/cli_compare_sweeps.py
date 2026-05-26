@@ -11,6 +11,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
+
 _Metric = (
     "delta_log_evidence",
     "log10_bayes_factor_signal_over_no_signal",
@@ -68,6 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON payload.",
     )
+    add_color_argument(parser)
     return parser
 
 
@@ -222,31 +229,66 @@ def _build_payload(
     }
 
 
-def _print_text(payload: dict[str, Any]) -> None:
+def _format_delta(value: object, *, colors: CliColors) -> str:
+    if not isinstance(value, str | int | float):
+        return str(value)
+    delta = float(value)
+    text = f"{delta:+.6g}"
+    if delta == 0:
+        return text
+    return colors.warning(text)
+
+
+def _print_text(payload: dict[str, Any], *, colors: CliColors) -> None:
     summary = payload["summary"]
     left = payload["left"]
     right = payload["right"]
 
-    print("Sweep comparison summary:")
+    print(colors.heading("Sweep comparison summary:"))
     print(f"  metric:             {payload['metric']}")
-    print(f"  left:               {left['name']} ({left['summary_json']})")
-    print(f"  right:              {right['name']} ({right['summary_json']})")
+    print(
+        f"  left:               "
+        f"{left['name']} ({colors.path(left['summary_json'])})"
+    )
+    print(
+        f"  right:              "
+        f"{right['name']} ({colors.path(right['summary_json'])})"
+    )
     print(f"  left_points:        {summary['left_points']}")
     print(f"  right_points:       {summary['right_points']}")
     print(f"  shared_points:      {summary['shared_points']}")
     print(f"  compared_points:    {summary['compared_points']}")
-    print(f"  skipped_metric:     {summary['skipped_missing_metric']}")
-    print(f"  status_mismatch:    {summary['status_mismatch_points']}")
-    print(f"  left_only_points:   {summary['left_only_points']}")
-    print(f"  right_only_points:  {summary['right_only_points']}")
+    print(
+        "  skipped_metric:     "
+        f"{colors.warning(summary['skipped_missing_metric'])}"
+    )
+    print(
+        "  status_mismatch:    "
+        f"{colors.warning(summary['status_mismatch_points'])}"
+    )
+    print(
+        f"  left_only_points:   {colors.warning(summary['left_only_points'])}"
+    )
+    print(
+        f"  right_only_points:  {colors.warning(summary['right_only_points'])}"
+    )
 
     if summary["mean_delta"] is not None:
-        print(f"  mean_delta:         {summary['mean_delta']:+.6g}")
-        print(f"  min_delta:          {summary['min_delta']:+.6g}")
-        print(f"  max_delta:          {summary['max_delta']:+.6g}")
+        print(
+            "  mean_delta:         "
+            f"{_format_delta(summary['mean_delta'], colors=colors)}"
+        )
+        print(
+            "  min_delta:          "
+            f"{_format_delta(summary['min_delta'], colors=colors)}"
+        )
+        print(
+            "  max_delta:          "
+            f"{_format_delta(summary['max_delta'], colors=colors)}"
+        )
         print(f"  mean_abs_delta:     {summary['mean_abs_delta']:+.6g}")
 
-    print("\nTop differences (right - left):")
+    print("\n" + colors.heading("Top differences (right - left):"))
     rows = payload["top_differences"]
     if not rows:
         print("  (none)")
@@ -257,7 +299,7 @@ def _print_text(payload: dict[str, Any]) -> None:
                 f"{row['point_key']}: "
                 f"left={row['left_value']:+.6g}, "
                 f"right={row['right_value']:+.6g}, "
-                f"delta={row['delta']:+.6g}"
+                f"delta={_format_delta(row['delta'], colors=colors)}"
             )
 
 
@@ -283,7 +325,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2))
         return 0
 
-    _print_text(payload)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
+    _print_text(payload, colors=colors)
     return 0
 
 

@@ -8,6 +8,12 @@ import json
 import sys
 from pathlib import Path
 
+from valska_hera_beam.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
+
 from .sweep_health import inspect_sweep_health, sweep_health_to_dict
 
 
@@ -41,45 +47,61 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Include per-point note details in text output.",
     )
+    add_color_argument(parser)
     return parser
 
 
-def _print_text(*, health, show_notes: bool) -> None:
-    print("Sweep status summary:")
-    print(f"  sweep_dir:      {health.sweep_dir}")
-    print(f"  sweep_manifest: {health.sweep_manifest_path}")
+def _format_status(status: object, *, colors: CliColors) -> str:
+    text = str(status)
+    if text == "ok":
+        return colors.success(text)
+    if text == "partial":
+        return colors.warning(text)
+    if text in ("missing", "invalid", "error"):
+        return colors.error(text)
+    return text
+
+
+def _print_text(*, health, show_notes: bool, colors: CliColors) -> None:
+    print(colors.heading("Sweep status summary:"))
+    print(f"  sweep_dir:      {colors.path(health.sweep_dir)}")
+    print(f"  sweep_manifest: {colors.path(health.sweep_manifest_path)}")
     if health.run_id is not None:
         print(f"  run_id:         {health.run_id}")
     if health.beam_model is not None:
         print(f"  beam_model:     {health.beam_model}")
     if health.sky_model is not None:
         print(f"  sky_model:      {health.sky_model}")
-    print(f"  sweep_status:   {health.sweep_status}")
+    print(
+        f"  sweep_status:   "
+        f"{_format_status(health.sweep_status, colors=colors)}"
+    )
     print(f"  points_total:   {health.points_total}")
-    print(f"  points_ok:      {health.points_ok}")
-    print(f"  points_partial: {health.points_partial}")
-    print(f"  points_missing: {health.points_missing}")
+    print(f"  points_ok:      {colors.success(health.points_ok)}")
+    print(f"  points_partial: {colors.warning(health.points_partial)}")
+    print(f"  points_missing: {colors.error(health.points_missing)}")
 
     if health.messages:
-        print("  messages:")
+        print(colors.heading("  messages:"))
         for msg in health.messages:
-            print(f"    - {msg}")
+            print(f"    - {colors.warning(msg)}")
 
-    print("\nPer-point:")
+    print("\n" + colors.heading("Per-point:"))
     if not health.point_rows:
         print("  (none)")
         return
 
     for row in health.point_rows:
+        point_status = _format_status(row.point_status, colors=colors)
         print(
             "  - "
             f"{row.run_label} "
             f"({row.perturb_parameter}={row.perturb_frac:+.3f}) "
-            f"=> {row.point_status}"
+            f"=> {point_status}"
         )
         if show_notes and row.notes:
             for note in row.notes:
-                print(f"      note: {note}")
+                print(f"      note: {colors.warning(note)}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -95,7 +117,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(sweep_health_to_dict(health), indent=2))
         return 0
 
-    _print_text(health=health, show_notes=bool(args.show_notes))
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
+    _print_text(health=health, show_notes=bool(args.show_notes), colors=colors)
     return 0
 
 

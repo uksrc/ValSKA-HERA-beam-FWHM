@@ -8,6 +8,7 @@ API
    valska_hera_beam.notebook_helpers
    valska_hera_beam.plotting
    valska_hera_beam.utils
+
    valska_hera_beam.external_tools.bayeseor.cli_cleanup
    valska_hera_beam.external_tools.bayeseor.cli_compare_sweeps
    valska_hera_beam.external_tools.bayeseor.cli_help
@@ -30,3 +31,13 @@ API
    valska_hera_beam.external_tools.bayeseor.sweep
    valska_hera_beam.external_tools.bayeseor.sweep_health
    valska_hera_beam.external_tools.bayeseor.templates
+
+   valska_hera_beam.external_tools.pyuvsim.cli_prepare
+   valska_hera_beam.external_tools.pyuvsim.cli_submit
+   valska_hera_beam.external_tools.pyuvsim.constants
+   valska_hera_beam.external_tools.pyuvsim.runner
+   valska_hera_beam.external_tools.pyuvsim.setup
+   valska_hera_beam.external_tools.pyuvsim.slurm
+   valska_hera_beam.external_tools.pyuvsim.submit
+   valska_hera_beam.external_tools.pyuvsim.templates
+

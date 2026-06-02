@@ -2,8 +2,8 @@
 pyuvsim integration helpers.
 
 Primary entry points:
-- prepare_pyuvsim_run: render apyuvsim config + SLURM submit script into a ValSKA results dir.
-- submit_pyuvsim_run: submit a preparedpyuvsim run directory to SLURM.
+- prepare_pyuvsim_run: render a pyuvsim config + SLURM submit script into a ValSKA results dir.
+- submit_pyuvsim_run: submit a prepared pyuvsim run directory to SLURM.
 - get_template_path: access shipped validation templates.
 """
 

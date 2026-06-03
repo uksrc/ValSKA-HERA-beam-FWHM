@@ -292,13 +292,17 @@ def test_create_path_manager_default(pm, chains):
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
-            assert path_manager.base_dir == Path(base_dir).resolve()
+            assert path_manager.base_dir.resolve() == Path(base_dir).resolve()
             assert (
-                path_manager.chains_dir == Path(base_dir + "/chains").resolve()
+                path_manager.chains_dir.resolve()
+                == Path(base_dir + "/chains").resolve()
             )
-            assert path_manager.data_dir == Path(base_dir + "/data").resolve()
             assert (
-                path_manager.results_dir
+                path_manager.data_dir.resolve()
+                == Path(base_dir + "/data").resolve()
+            )
+            assert (
+                path_manager.results_dir.resolve()
                 == Path(base_dir + "/results").resolve()
             )
 

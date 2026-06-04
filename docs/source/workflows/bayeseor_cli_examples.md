@@ -587,11 +587,11 @@ Wrapper equivalent (extended outputs enabled by default):
 
 Airy helper convenience (prepare/submit sweep and auto-run reporting at the end):
 
-  bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
+    bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report
 
 Skip plot generation when auto-reporting:
 
-  bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report-no-plots
+    bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh --submit all --report-no-plots
 
 For full reporting options and failure-handling behavior, see:
 
@@ -623,15 +623,15 @@ If you also require `jobs.json` per point:
 
 Run one command that discovers sweeps and evaluates status + validation:
 
-  valska-bayeseor-sweep-audit
+    valska-bayeseor-sweep-audit
 
 Apply filters and output JSON:
 
-  valska-bayeseor-sweep-audit --beam airy --sky GSM_plus_GLEAM --json
+    valska-bayeseor-sweep-audit --beam airy --sky GSM_plus_GLEAM --json
 
 Use non-zero exit if any audited sweep is invalid:
 
-  valska-bayeseor-sweep-audit --fail-on-invalid
+    valska-bayeseor-sweep-audit --fail-on-invalid
 
 ### M) Backwards compatibility: deprecated --scenario
 

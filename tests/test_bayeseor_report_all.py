@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from valska_hera_beam.external_tools.bayeseor import cli_report_all
+from valska.external_tools.bayeseor import cli_report_all
 
 
 def _write_chain_outputs(path: Path) -> None:

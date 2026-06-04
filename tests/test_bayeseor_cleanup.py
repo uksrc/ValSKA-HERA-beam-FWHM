@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import cli_cleanup
+from valska.external_tools.bayeseor import cli_cleanup
 
 
 def _write_data_stats(path: Path) -> None:

@@ -7,11 +7,11 @@ from pathlib import Path
 
 import numpy as np
 
-from valska_hera_beam.external_tools.bayeseor import cli_report
-from valska_hera_beam.external_tools.bayeseor.analysis_plot import (
+from valska.external_tools.bayeseor import cli_report
+from valska.external_tools.bayeseor.analysis_plot import (
     BayesEoRPlotConfig,
 )
-from valska_hera_beam.external_tools.bayeseor.report import (
+from valska.external_tools.bayeseor.report import (
     _plot_config_for_hypothesis,
     export_report_artefacts,
     generate_sweep_report,

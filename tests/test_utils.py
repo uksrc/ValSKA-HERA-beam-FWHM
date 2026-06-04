@@ -9,8 +9,8 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 
-from valska_hera_beam import utils
-from valska_hera_beam.external_tools.bayeseor import (
+from valska import utils
+from valska.external_tools.bayeseor import (
     TOOL_NAME as BAYESEOR_TOOL_NAME,
 )
 
@@ -348,9 +348,7 @@ def test_create_path_manager_default(pm, chains):
             elif pm == "method":
                 # Ensure get_default_path_manager doesn't inject site/runtime
                 # values by patching load_paths to a minimal dict during call.
-                with patch(
-                    "valska_hera_beam.utils.load_paths", return_value={}
-                ):
+                with patch("valska.utils.load_paths", return_value={}):
                     path_manager = utils.get_default_path_manager()
                 # Force the attributes used by assertions
                 path_manager.base_dir = Path(base_dir)
@@ -366,13 +364,17 @@ def test_create_path_manager_default(pm, chains):
 
             assert path_manager.utils_dir == test_dir.parent.resolve()
             assert path_manager.package_dir == test_dir.parent.resolve()
-            assert path_manager.base_dir == Path(base_dir).resolve()
+            assert path_manager.base_dir.resolve() == Path(base_dir).resolve()
             assert (
-                path_manager.chains_dir == Path(base_dir + "/chains").resolve()
+                path_manager.chains_dir.resolve()
+                == Path(base_dir + "/chains").resolve()
             )
-            assert path_manager.data_dir == Path(base_dir + "/data").resolve()
             assert (
-                path_manager.results_dir
+                path_manager.data_dir.resolve()
+                == Path(base_dir + "/data").resolve()
+            )
+            assert (
+                path_manager.results_dir.resolve()
                 == Path(base_dir + "/results").resolve()
             )
 

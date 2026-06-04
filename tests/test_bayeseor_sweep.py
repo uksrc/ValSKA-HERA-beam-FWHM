@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import sweep as sweep_mod
-from valska_hera_beam.external_tools.bayeseor.runner import (
+from valska.external_tools.bayeseor import sweep as sweep_mod
+from valska.external_tools.bayeseor.runner import (
     BayesEoRInstall,
     CondaRunner,
 )

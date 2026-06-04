@@ -27,12 +27,12 @@ Notes on testing techniques used:
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import (
+from valska.external_tools.bayeseor import (
     cli_prepare,
     cli_submit,
     cli_sweep,
 )
-from valska_hera_beam.external_tools.bayeseor import submit as submit_mod
+from valska.external_tools.bayeseor import submit as submit_mod
 
 
 def _write_minimal_manifest(run_dir: Path) -> None:

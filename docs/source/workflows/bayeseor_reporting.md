@@ -183,8 +183,8 @@ valska-bayeseor-report /path/to/_sweeps/<run_id> \
 ValSKA ships two plot config files:
 
 ```text
-src/valska_hera_beam/external_tools/bayeseor/plot_configs/plot.yaml
-src/valska_hera_beam/external_tools/bayeseor/plot_configs/default_analysis_plot.yaml
+src/valska/external_tools/bayeseor/plot_configs/plot.yaml
+src/valska/external_tools/bayeseor/plot_configs/default_analysis_plot.yaml
 ```
 
 When `--plot-config` is omitted, report commands first use `./plot.yaml` if it

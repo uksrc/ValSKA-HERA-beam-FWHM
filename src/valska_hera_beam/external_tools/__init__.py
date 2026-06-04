@@ -1,6 +1,9 @@
-"""
-Helpers/adapters for external tools used in ValSKA validation workflows.
+"""Compatibility wrapper for deprecated module `valska_hera_beam.external_tools.__init__`."""
 
-This package intentionally contains "glue" code: configuration rendering,
-runner abstractions (conda now, container later), and HPC submission helpers.
-"""
+from __future__ import annotations
+
+from valska_hera_beam._compat import warn_import as _warn_import
+
+_warn_import(__name__, "valska.external_tools")
+
+from valska.external_tools import *  # noqa: F401,F403

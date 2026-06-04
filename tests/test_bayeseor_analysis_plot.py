@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from valska_hera_beam.external_tools.bayeseor.analysis_plot import (
+from valska.external_tools.bayeseor.analysis_plot import (
     BayesEoRPlotConfig,
     _format_perturbation_label,
     _prior_groups,
@@ -18,7 +18,7 @@ from valska_hera_beam.external_tools.bayeseor.analysis_plot import (
     ps_to_dmps,
     weighted_quantiles,
 )
-from valska_hera_beam.external_tools.bayeseor.plot_configs import (
+from valska.external_tools.bayeseor.plot_configs import (
     get_default_analysis_plot_config_path,
     resolve_analysis_plot_config_path,
 )

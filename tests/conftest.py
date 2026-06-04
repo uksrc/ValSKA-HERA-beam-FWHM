@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from valska_hera_beam.plotting import BeamAnalysisPlotter
-from valska_hera_beam.utils import PathManager
+from valska.plotting import BeamAnalysisPlotter
+from valska.utils import PathManager
 
 from .constants import EOR_PS, NOISE_RATIO
 

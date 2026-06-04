@@ -25,6 +25,7 @@ import os
 from collections.abc import Mapping, MutableMapping
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
@@ -37,6 +38,24 @@ PairsMap = Mapping[str, object]  # generic mapping of key -> value
 MutablePairsMap = MutableMapping[str, object]
 
 
+def read_yaml(path: PathLike) -> dict[str, Any]:
+    """
+    Load YAML file safely for str, str mapping,
+    ensuring the correct typing for returned value
+    """
+
+    with open(path, encoding="utf-8") as file:
+        return yaml.safe_load(file) or {}
+        # data = yaml.safe_load(file) or {}
+
+        # if not all(
+        #     isinstance(k, str) and isinstance(v, str) for k, v in data.items()
+        # ):
+        #     raise ValueError(f"Expected string-to-string mapping got {data.items()}")
+
+        # return {k: v for k, v in data.items()}
+
+
 # =============================================================================
 # RUNTIME PATHS YAML (SITE/USER CONFIG)
 # =============================================================================
@@ -45,7 +64,7 @@ MutablePairsMap = MutableMapping[str, object]
 def load_runtime_paths(
     base_dir: PathLike | None = None,
     runtime_paths_file: PathLike | None = None,
-) -> dict[str, object]:
+) -> dict[str, str]:
     """Load site/user runtime paths from ``config/runtime_paths.yaml`` if present.
 
     This configuration is intended for site/user-specific settings such as
@@ -109,8 +128,7 @@ def load_runtime_paths(
     if not p.exists():
         return {}
 
-    with p.open("r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    data = read_yaml(p)
 
     if not isinstance(data, dict):
         raise ValueError(f"Expected a mapping in runtime paths YAML: {p}")
@@ -120,7 +138,7 @@ def load_runtime_paths(
 
 def resolve_data_path(
     data_path: PathLike,
-    runtime_paths: Mapping[str, object] | None = None,
+    runtime_paths: dict[str, Any] | None = None,
 ) -> Path:
     """Resolve an input dataset path using runtime_paths.yaml defaults.
 
@@ -244,7 +262,7 @@ class PathManager:
             self.base_dir = Path(base_dir).expanduser().resolve()
 
         # Load runtime paths YAML (site/user config)
-        self.runtime_paths: dict[str, object] = load_runtime_paths(
+        self.runtime_paths: dict[str, str] = load_runtime_paths(
             base_dir=self.base_dir,
             runtime_paths_file=runtime_paths_file,
         )
@@ -445,7 +463,9 @@ def make_timestamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
 
-def load_paths(custom_paths_file: PathLike | None = None) -> dict[str, str]:
+def load_paths(
+    custom_paths_file: PathLike | None = None,
+) -> dict[str, Any]:
     """Load analysis paths from a YAML configuration file.
 
     Parameters
@@ -469,8 +489,7 @@ def load_paths(custom_paths_file: PathLike | None = None) -> dict[str, str]:
     if not paths_file.exists():
         raise FileNotFoundError(f"Paths file not found: {paths_file}")
 
-    with open(paths_file, encoding="utf-8") as f:
-        paths = yaml.safe_load(f)
+    paths = read_yaml(paths_file)
 
     return paths
 

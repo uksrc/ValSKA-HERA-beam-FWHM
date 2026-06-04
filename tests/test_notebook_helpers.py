@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from valska_hera_beam.notebook_helpers import extract_vis, unpack_shape
+from valska.notebook_helpers import extract_vis, unpack_shape
 
 # =========================
 # unpack_shape

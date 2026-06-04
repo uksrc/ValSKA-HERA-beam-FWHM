@@ -40,8 +40,7 @@ MutablePairsMap = MutableMapping[str, object]
 
 def read_yaml(path: PathLike) -> dict[str, Any]:
     """
-    Load YAML file safely for str, str mapping,
-    ensuring the correct typing for returned value
+    Load YAML file safely
     """
 
     with open(path, encoding="utf-8") as file:
@@ -56,7 +55,7 @@ def read_yaml(path: PathLike) -> dict[str, Any]:
 def load_runtime_paths(
     base_dir: PathLike | None = None,
     runtime_paths_file: PathLike | None = None,
-) -> dict[str, str]:
+) -> dict[str, object]:
     """Load site/user runtime paths from ``config/runtime_paths.yaml`` if present.
 
     This configuration is intended for site/user-specific settings such as
@@ -254,7 +253,7 @@ class PathManager:
             self.base_dir = Path(base_dir).expanduser().resolve()
 
         # Load runtime paths YAML (site/user config)
-        self.runtime_paths: dict[str, str] = load_runtime_paths(
+        self.runtime_paths: dict[str, object] = load_runtime_paths(
             base_dir=self.base_dir,
             runtime_paths_file=runtime_paths_file,
         )
@@ -481,7 +480,15 @@ def load_paths(custom_paths_file: PathLike | None = None) -> dict[str, str]:
 
     paths = read_yaml(paths_file)
 
-    return paths
+    # Ensure correct type for output
+    result: dict[str, str] = {}
+
+    for k, v in paths.items():
+        if not isinstance(v, str):
+            raise TypeError(f"{k!r} has non-string value {v!r}")
+        result[k] = v
+
+    return result
 
 
 # =============================================================================

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import numpy
 import pytest
 
-from valska_hera_beam import beam_metrics
+from valska import beam_metrics
 
 from .constants import make_airy_data, make_gaussian_data
 

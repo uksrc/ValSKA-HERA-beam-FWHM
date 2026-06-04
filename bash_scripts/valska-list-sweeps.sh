@@ -26,7 +26,7 @@ fi
 # Developer fallback when entry-point scripts are not installed yet.
 if command -v python >/dev/null 2>&1 && [[ -d "src" ]]; then
     exec env PYTHONPATH=src python -m \
-        valska_hera_beam.external_tools.bayeseor.cli_list_sweeps "$@"
+        valska.external_tools.bayeseor.cli_list_sweeps "$@"
 fi
 
 echo "Error: could not find valska-bayeseor-list-sweeps, conda fallback, or local module fallback." >&2

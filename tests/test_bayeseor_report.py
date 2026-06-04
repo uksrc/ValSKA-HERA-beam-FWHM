@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import cli_report
-from valska_hera_beam.external_tools.bayeseor.report import (
+from valska.external_tools.bayeseor import cli_report
+from valska.external_tools.bayeseor.report import (
     generate_sweep_report,
     parse_data_stats_evidence,
 )

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import (
+from valska.external_tools.bayeseor import (
     cli_sweep_status,
     cli_validate_sweep,
 )

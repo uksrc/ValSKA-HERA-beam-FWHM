@@ -87,18 +87,18 @@ Your taxonomy is encoded in how you construct the run directory path (see §4.4)
 
 ### 3.1 Create the module directory
 
-Create the tool module under `src/valska_hera_beam/external_tools/`:
+Create the tool module under `src/valska/external_tools/`:
 
 ```bash
-mkdir -p src/valska_hera_beam/external_tools/pyuvsim/templates
-touch src/valska_hera_beam/external_tools/pyuvsim/__init__.py
-touch src/valska_hera_beam/external_tools/pyuvsim/cli_prepare.py
-touch src/valska_hera_beam/external_tools/pyuvsim/cli_submit.py
-touch src/valska_hera_beam/external_tools/pyuvsim/setup.py
-touch src/valska_hera_beam/external_tools/pyuvsim/submit.py
-touch src/valska_hera_beam/external_tools/pyuvsim/runner.py
-touch src/valska_hera_beam/external_tools/pyuvsim/slurm.py
-touch src/valska_hera_beam/external_tools/pyuvsim/templates.py
+mkdir -p src/valska/external_tools/pyuvsim/templates
+touch src/valska/external_tools/pyuvsim/__init__.py
+touch src/valska/external_tools/pyuvsim/cli_prepare.py
+touch src/valska/external_tools/pyuvsim/cli_submit.py
+touch src/valska/external_tools/pyuvsim/setup.py
+touch src/valska/external_tools/pyuvsim/submit.py
+touch src/valska/external_tools/pyuvsim/runner.py
+touch src/valska/external_tools/pyuvsim/slurm.py
+touch src/valska/external_tools/pyuvsim/templates.py
 ```
 
 ### 3.2 File responsibilities
@@ -122,8 +122,8 @@ Add CLI entry points to `pyproject.toml`:
 ```toml
 [project.scripts]
 # ...existing entries...
-valska-pyuvsim-prepare = "valska_hera_beam.external_tools.pyuvsim.cli_prepare:main"
-valska-pyuvsim-submit = "valska_hera_beam.external_tools.pyuvsim.cli_submit:main"
+valska-pyuvsim-prepare = "valska.external_tools.pyuvsim.cli_prepare:main"
+valska-pyuvsim-submit = "valska.external_tools.pyuvsim.cli_submit:main"
 ```
 
 After adding these, reinstall the package in development mode:
@@ -159,7 +159,7 @@ Design arguments that are:
 **Example argument structure for pyuvsim:**
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/cli_prepare.py
+# filepath: src/valska/external_tools/pyuvsim/cli_prepare.py
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -251,7 +251,7 @@ def build_parser() -> argparse.ArgumentParser:
 Load and merge configuration following the hierarchy:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/cli_prepare.py
+# filepath: src/valska/external_tools/pyuvsim/cli_prepare.py
 
 from pathlib import Path
 from typing import Any
@@ -294,7 +294,7 @@ def resolve_results_root(
 Construct the run directory following your taxonomy:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/setup.py
+# filepath: src/valska/external_tools/pyuvsim/setup.py
 
 from pathlib import Path
 
@@ -325,14 +325,14 @@ def build_run_dir(
 Create `manifest.json` with all required fields:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/setup.py
+# filepath: src/valska/external_tools/pyuvsim/setup.py
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from valska_hera_beam import __version__
+from valska import __version__
 
 def write_manifest(
     run_dir: Path,
@@ -386,7 +386,7 @@ def write_manifest(
 Create the submit script generator:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/slurm.py
+# filepath: src/valska/external_tools/pyuvsim/slurm.py
 
 from pathlib import Path
 from typing import Any
@@ -494,7 +494,7 @@ def render_submit_script(
 Define your runner classes:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/runner.py
+# filepath: src/valska/external_tools/pyuvsim/runner.py
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -527,7 +527,7 @@ class ContainerRunner:
 Bring it all together:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/setup.py
+# filepath: src/valska/external_tools/pyuvsim/setup.py
 
 from pathlib import Path
 from typing import Any
@@ -621,7 +621,7 @@ def prepare_pyuvsim_run(
 Wire up the CLI:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/cli_prepare.py
+# filepath: src/valska/external_tools/pyuvsim/cli_prepare.py
 
 #!/usr/bin/env python3
 """CLI entry point for valska-pyuvsim-prepare."""
@@ -735,7 +735,7 @@ The submit phase:
 ### 5.2 Core submit logic
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/submit.py
+# filepath: src/valska/external_tools/pyuvsim/submit.py
 
 from __future__ import annotations
 
@@ -883,7 +883,7 @@ def submit_pyuvsim_run(
 ### 5.3 Submit CLI
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/cli_submit.py
+# filepath: src/valska/external_tools/pyuvsim/cli_submit.py
 
 #!/usr/bin/env python3
 """CLI entry point for valska-pyuvsim-submit."""
@@ -1010,7 +1010,7 @@ pyuvsim:
 In your module, document which values have hardcoded defaults:
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/cli_prepare.py
+# filepath: src/valska/external_tools/pyuvsim/cli_prepare.py
 
 def build_slurm_config(
     tool_config: dict[str, Any],
@@ -1063,7 +1063,7 @@ def build_slurm_config(
 Place configuration templates in the `templates/` subdirectory:
 
 ```yaml
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/templates/hera_validation.yaml
+# filepath: src/valska/external_tools/pyuvsim/templates/hera_validation.yaml
 
 # HERA validation simulation template
 # Values marked __SET_BY_VALSKA__ are replaced at prepare time
@@ -1099,7 +1099,7 @@ output:
 ### 7.2 Template utilities
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/templates.py
+# filepath: src/valska/external_tools/pyuvsim/templates.py
 
 from pathlib import Path
 
@@ -1157,7 +1157,7 @@ def get_template_path(name: str) -> Path:
 ### 8.1 Module exports
 
 ```python
-# filepath: src/valska_hera_beam/external_tools/pyuvsim/__init__.py
+# filepath: src/valska/external_tools/pyuvsim/__init__.py
 
 """
 pyuvsim integration for ValSKA.
@@ -1198,7 +1198,7 @@ Create tests in `tests/external_tools/pyuvsim/`:
 import pytest
 from pathlib import Path
 
-from valska_hera_beam.external_tools.pyuvsim import (
+from valska.external_tools.pyuvsim import (
     prepare_pyuvsim_run,
     CondaRunner,
 )
@@ -1289,7 +1289,7 @@ class TestPrepareExecution:
 
 import pytest
 
-from valska_hera_beam.external_tools.pyuvsim.cli_prepare import (
+from valska.external_tools.pyuvsim.cli_prepare import (
     build_slurm_config,
 )
 
@@ -1344,7 +1344,7 @@ class TestConfigResolution:
 Before considering your integration complete, verify:
 
 ### 10.1 Structure
-- [ ] Module created under `src/valska_hera_beam/external_tools/<tool>/`
+- [ ] Module created under `src/valska/external_tools/<tool>/`
 - [ ] Entry points registered in `pyproject.toml`
 - [ ] `__init__.py` exports public API
 
@@ -1446,7 +1446,7 @@ hash -r  # Clear shell command cache
 
 ### B.2 Import errors
 
-**Symptom:** `ModuleNotFoundError: No module named 'valska_hera_beam.external_tools.pyuvsim'`
+**Symptom:** `ModuleNotFoundError: No module named 'valska.external_tools.pyuvsim'`
 
 **Check:**
 1. `__init__.py` exists in the module directory

@@ -6,6 +6,7 @@ import json
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
+from shutil import copytree
 from typing import Any
 
 from ruamel.yaml import YAML
@@ -15,6 +16,7 @@ from ... import __version__
 from .constants import TOOL_NAME
 from .runner import CondaRunner, ContainerRunner, pyuvsimInstall
 from .slurm import render_submit_script
+from .templates import get_template_path
 
 
 def _utc_stamp() -> str:
@@ -257,6 +259,7 @@ def prepare_pyuvsim_run(
     dict
         Paths to created artefacts (obsparam yaml, submit script, manifest), plus run_dir.
     """
+
     overrides = dict(overrides or {})
     results_root = Path(results_root).expanduser().resolve()
     template_yaml = Path(template_yaml).expanduser().resolve()
@@ -329,6 +332,18 @@ def prepare_pyuvsim_run(
     obsparam_yaml = run_dir / "obsparam.yaml"
     _dump_yaml(cfg, obsparam_yaml)
     outputs["obsparam_yaml"] = obsparam_yaml
+
+    # Include reference simulation config and catalogue files for the default template
+    # TODO: Allow these to be referenced from outside the repository (e.g. a shared data folder) and include them in the manifest
+    if template_yaml == get_template_path("fov-19.4-oscar-sm.yml"):
+        templates_dir = template_yaml.parent
+
+        for folder in ["reference_simulations", "catalog_files"]:
+            copytree(
+                templates_dir / folder,
+                run_dir / folder,
+                dirs_exist_ok=True,
+            )
 
     submit_simulate = run_dir / "submit_simulate.sh"
     submit_simulate.write_text(

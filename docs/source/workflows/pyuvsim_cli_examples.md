@@ -14,11 +14,11 @@ ValSKA setup:
 
 pyuvsim setup:
 
-  - clone pyuvsim locally in a location you control from [the repository on GitHub](https://github.com/RadioAstronomySoftwareGroup/pyuvsim) (`git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`)
-  - run the next few commands from inside the cloned repository (`cd pyuvsim`)
-    - create a pyuvsim virtual environment, e.g. using the environment yaml file to include its dependencies (see [pyuvsim installation documentation](https://pyuvsim.readthedocs.io/en/latest/index.html#developer-installation))
-    - activate the virtual environment (e.g. `conda activate pyuvsim`)
-    - install pyuvsim inside the virtual environment (`pip install .`)
+- clone pyuvsim locally in a location you control from [the repository on GitHub](https://github.com/RadioAstronomySoftwareGroup/pyuvsim) (`git clone https://github.com/RadioAstronomySoftwareGroup/pyuvsim`)
+- run the next few commands from inside the cloned repository (`cd pyuvsim`)
+  - create a pyuvsim virtual environment, e.g. using the environment yaml file to include its dependencies (see [pyuvsim installation documentation](https://pyuvsim.readthedocs.io/en/latest/index.html#developer-installation))
+  - activate the virtual environment (e.g. `conda activate pyuvsim`)
+  - install pyuvsim inside the virtual environment (`pip install .`)
 
 ValSKA runtime configuration:
 
@@ -30,16 +30,14 @@ ValSKA runtime configuration:
 
 pyuvsim input configuration:
 
-The simulation parameters for the pyuvsim run are specified by the `--template` argument. If this is not present, the internal reference template is used (`external_tools/pyuvsim/templates/fov-19.4-oscar-sm.yml`).
+- The simulation parameters for the pyuvsim run are specified by the `--template` argument. If this is not present, the default reference template is used (`external_tools/pyuvsim/templates/fov-19.4-oscar-sm.yml`).
 
-The simulation parameters template must contain valid paths to the telescope parameters and sky catalogue:
+- The simulation parameters template must contain valid paths to the sky catalogue and telescope parameters:
+  - `sources.catalog` (e.g. GLEAM skyh5 file)
+  - `telescope.array_layout` (e.g. `hex-37-14.6m.csv`)
+  - `telescope.telescope_config_name` (e.g. `hex-37-14.6m-gauss-fwhm9.3.yml`)
 
-- telescope params:
-  - location and beam (e.g. `hex-37-14.6m-gauss-fwhm9.3.yml`)
-  - array layout (e.g. `hex-37-14.6m.csv`)
-- sky catalogue (e.g. GLEAM skyh5 file)
-
-Make sure all paths referenced by the template file are valid on the filesystem visible to the compute nodes.
+- Make sure all paths referenced by the template file are valid on the filesystem visible to the compute nodes.
 
 ### Minimal first run
 
@@ -133,7 +131,7 @@ Sky model label (e.g. GLEAM, GSM, GLEAM_plus_GSM). This is a mandatory parameter
 
 `--template`
 
-Name and path of pyuvsim simulation parameter yaml file. If not specified, the internal template will be used.
+Name and path of pyuvsim simulation parameter yaml file. If not specified, the default template will be used.
 
 `--run-id`
 

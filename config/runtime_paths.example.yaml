@@ -114,6 +114,9 @@ pyuvsim:
   # conda_sh: "source /path/to/anaconda3/etc/profile.d/conda.sh"
   conda_env: pyuvsim
 
+  # Default template if --template is not provided
+  default_template: fov-19.4-oscar-sm.yml
+  
   slurm_defaults:
     # partition: <partition_name>     # optional (omit on constraint-based sites)
     # constraint: <constraint_name>   # optional

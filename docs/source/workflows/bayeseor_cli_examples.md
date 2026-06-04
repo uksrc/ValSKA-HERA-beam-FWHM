@@ -670,11 +670,11 @@ Ambiguous older patterns like `GLEAM_beam` are rejected to prevent silent misrou
 
 ## Related files (in this repo)
 
-- `src/valska_hera_beam/external_tools/bayeseor/cli_prepare.py`
-- `src/valska_hera_beam/external_tools/bayeseor/cli_sweep.py`
-- `src/valska_hera_beam/external_tools/bayeseor/cli_submit.py`
-- `src/valska_hera_beam/external_tools/bayeseor/setup.py`
-- `src/valska_hera_beam/external_tools/bayeseor/sweep.py`
-- `src/valska_hera_beam/external_tools/bayeseor/submit.py`
+- `src/valska/external_tools/bayeseor/cli_prepare.py`
+- `src/valska/external_tools/bayeseor/cli_sweep.py`
+- `src/valska/external_tools/bayeseor/cli_submit.py`
+- `src/valska/external_tools/bayeseor/setup.py`
+- `src/valska/external_tools/bayeseor/sweep.py`
+- `src/valska/external_tools/bayeseor/submit.py`
 - `config/runtime_paths.yaml`
 - `bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM.sh`

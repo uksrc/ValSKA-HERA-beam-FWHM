@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from valska_hera_beam.external_tools.bayeseor import cli_help
+from valska.external_tools.bayeseor import cli_help
 
 
 def test_cli_help_json_contains_catalog_and_workflows(capsys) -> None:

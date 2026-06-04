@@ -103,7 +103,7 @@ Troubleshooting
   - Ensure `--data` is a valid runtime_paths key or an absolute path to the .uvh5.
   - The checker uses a temporary `--results-root` unless you pass `--results-root <dir>` or `--keep`. Use `--keep` to inspect generated files.
 - Wrong `tool` field:
-  - Manifest `tool` should be `"bayeseor"`. If it differs, inspect `src/valska_hera_beam/external_tools/bayeseor/setup.py`.
+  - Manifest `tool` should be `"bayeseor"`. If it differs, inspect `src/valska/external_tools/bayeseor/setup.py`.
 - Pretty printing not working:
   - Install `jq` / `yq`; the scripts fall back to Python / `sed`.
 - Binary artefacts:

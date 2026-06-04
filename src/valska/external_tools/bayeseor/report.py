@@ -41,6 +41,10 @@ _TRAILING_FLOAT_RE = re.compile(
     r"(?P<value>[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)$",
     re.IGNORECASE,
 )
+_LEGACY_PERTURBATION_FIELDS = {
+    "fwhm_perturb_frac": "fwhm_deg",
+    "antenna_diameter_perturb_frac": "antenna_diameter",
+}
 
 _Hyp = Literal["signal_fit", "no_signal"]
 _Source = Literal["ns", "ins"]
@@ -218,6 +222,11 @@ def _coerce_perturb_frac(point: dict[str, Any], run_label: str) -> float:
     if raw is not None:
         return float(raw)
 
+    for field in _LEGACY_PERTURBATION_FIELDS:
+        raw = point.get(field)
+        if raw is not None:
+            return float(raw)
+
     match = _TRAILING_FLOAT_RE.search(run_label)
     if match is None:
         raise ValueError(
@@ -230,6 +239,9 @@ def _coerce_perturb_parameter(point: dict[str, Any], run_label: str) -> str:
     raw = point.get("perturb_parameter")
     if raw:
         return str(raw)
+    for field, default_parameter in _LEGACY_PERTURBATION_FIELDS.items():
+        if point.get(field) is not None:
+            return default_parameter
     if "_" in run_label:
         return run_label.rsplit("_", 1)[0]
     return "unknown"

@@ -387,7 +387,7 @@ def run_airy_banter_summary(
             )
         )
     else:
-        print("No successful results to summarize.")
+        print("No successful results to summarise.")
 
     summary = results.get("summary", {})
     if len(summary_df):

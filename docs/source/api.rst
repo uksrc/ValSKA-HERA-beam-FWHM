@@ -12,6 +12,7 @@ deprecated compatibility shim for downstream users migrating existing code.
    valska.notebook_helpers
    valska.plotting
    valska.utils
+   valska.external_tools.bayeseor.analysis_plot
    valska.external_tools.bayeseor.cli_cleanup
    valska.external_tools.bayeseor.cli_compare_sweeps
    valska.external_tools.bayeseor.cli_help
@@ -26,6 +27,7 @@ deprecated compatibility shim for downstream users migrating existing code.
    valska.external_tools.bayeseor.cli_sweep_status
    valska.external_tools.bayeseor.cli_validate_sweep
    valska.external_tools.bayeseor.constants
+   valska.external_tools.bayeseor.plot_configs
    valska.external_tools.bayeseor.report
    valska.external_tools.bayeseor.runner
    valska.external_tools.bayeseor.setup

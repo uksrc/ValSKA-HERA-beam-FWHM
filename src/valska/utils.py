@@ -13,7 +13,8 @@ Notes on runtime_paths.yaml
 `config/runtime_paths.yaml` is intended for *site/user-specific* settings, e.g.
 
 - results_root (where all ValSKA outputs go)
-- data.root (a default root for input datasets; used to resolve relative --data paths)
+- data.named_roots.default (preferred default root for input datasets)
+- data.root (legacy default root for input datasets)
 - BayesEoR repo_path / conda_sh / conda_env defaults
 - Other external tool paths (pyuvsim, OSKAR) in future
 """
@@ -25,6 +26,7 @@ import os
 from collections.abc import Mapping, MutableMapping
 from datetime import datetime
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml  # type: ignore[import-untyped]
 
@@ -42,6 +44,14 @@ MutablePairsMap = MutableMapping[str, object]
 # =============================================================================
 
 
+class ResolvedDataPath(NamedTuple):
+    """Resolved dataset path plus provenance for CLI output/manifests."""
+
+    path: Path
+    source: str
+    data_root_key: str | None
+
+
 def load_runtime_paths(
     base_dir: PathLike | None = None,
     runtime_paths_file: PathLike | None = None,
@@ -49,7 +59,7 @@ def load_runtime_paths(
     """Load site/user runtime paths from ``config/runtime_paths.yaml`` if present.
 
     This configuration is intended for site/user-specific settings such as
-    ``results_root``, ``data.root``, and default external-tool paths.
+    ``results_root``, ``data.named_roots``, and default external-tool paths.
 
     Parameters
     ----------
@@ -121,13 +131,18 @@ def load_runtime_paths(
 def resolve_data_path(
     data_path: PathLike,
     runtime_paths: Mapping[str, object] | None = None,
+    data_root_key: str | None = None,
 ) -> Path:
     """Resolve an input dataset path using runtime_paths.yaml defaults.
 
     Rules
     -----
     - If `data_path` is absolute: return it (expanded + resolved).
-    - If `data_path` is relative and runtime_paths contains `data.root`:
+    - If `data_path` is relative and `data_root_key` is provided:
+        return `<data.named_roots[data_root_key]>/<data_path>` (expanded + resolved).
+    - If `data_path` is relative and runtime_paths contains `data.named_roots.default`:
+        return `<data.named_roots.default>/<data_path>` (expanded + resolved).
+    - If `data_path` is relative and runtime_paths contains legacy `data.root`:
         return `<data.root>/<data_path>` (expanded + resolved).
     - Otherwise: resolve relative to the current working directory.
 
@@ -140,25 +155,82 @@ def resolve_data_path(
         Dataset path provided by a user/CLI.
     runtime_paths
         Parsed runtime paths mapping (typically from `load_runtime_paths()`).
+    data_root_key
+        Optional key in ``runtime_paths.yaml:data.named_roots`` to use for
+        relative input paths.
 
     Returns
     -------
     Path
         Fully resolved absolute path.
     """
+    return resolve_data_path_info(
+        data_path, runtime_paths, data_root_key=data_root_key
+    ).path
+
+
+def resolve_data_path_info(
+    data_path: PathLike,
+    runtime_paths: Mapping[str, object] | None = None,
+    data_root_key: str | None = None,
+) -> ResolvedDataPath:
+    """Resolve an input dataset path and report where it came from."""
     p = Path(data_path).expanduser()
 
     if p.is_absolute():
-        return p.resolve()
+        return ResolvedDataPath(
+            path=p.resolve(), source="CLI", data_root_key=None
+        )
 
     rt = runtime_paths or {}
     data_cfg = rt.get("data") if isinstance(rt, Mapping) else None
     if isinstance(data_cfg, Mapping):
+        key = (data_root_key or "").strip()
+        named_roots = data_cfg.get("named_roots")
+        if key or isinstance(named_roots, Mapping):
+            roots = named_roots
+            available = (
+                sorted(str(k) for k in roots.keys())
+                if isinstance(roots, Mapping)
+                else []
+            )
+            selected_key = key or "default"
+            if not isinstance(roots, Mapping) or selected_key not in roots:
+                if key:
+                    if available:
+                        available_msg = ", ".join(available)
+                    else:
+                        available_msg = "(none configured)"
+                    raise ValueError(
+                        "ERROR: data root key "
+                        f"'{key}' not found in "
+                        "runtime_paths.yaml:data.named_roots. "
+                        f"Available keys: {available_msg}"
+                    )
+            else:
+                root = roots[selected_key]
+                if not isinstance(root, str) or not root.strip():
+                    raise ValueError(
+                        "ERROR: runtime_paths.yaml:data.named_roots."
+                        f"{selected_key} must be a non-empty path string."
+                    )
+                return ResolvedDataPath(
+                    path=(Path(root).expanduser() / p).resolve(),
+                    source=(
+                        f"runtime_paths.yaml:data.named_roots.{selected_key}"
+                    ),
+                    data_root_key=selected_key,
+                )
+
         root = data_cfg.get("root")
         if isinstance(root, str) and root.strip():
-            return (Path(root).expanduser() / p).resolve()
+            return ResolvedDataPath(
+                path=(Path(root).expanduser() / p).resolve(),
+                source="runtime_paths.yaml:data.root",
+                data_root_key=None,
+            )
 
-    return p.resolve()
+    return ResolvedDataPath(path=p.resolve(), source="CLI", data_root_key=None)
 
 
 # =============================================================================
@@ -218,7 +290,8 @@ class PathManager:
                         environment/config-aware defaults.
         data_dir
             Directory containing data files (input datasets). If None, attempts:
-              - config/runtime_paths.yaml: data.root
+              - config/runtime_paths.yaml: data.named_roots.default
+              - config/runtime_paths.yaml: data.root (legacy)
               - <base_dir>/data (created)
         results_dir
             Directory for ValSKA-produced results (tables/plots/summaries).
@@ -264,8 +337,9 @@ class PathManager:
         #
         # Priority:
         #   1) explicit constructor arg data_dir
-        #   2) runtime_paths.yaml: data.root
-        #   3) <base_dir>/data (created)
+        #   2) runtime_paths.yaml: data.named_roots.default
+        #   3) runtime_paths.yaml: data.root (legacy)
+        #   4) <base_dir>/data (created)
         if data_dir is not None:
             self.data_dir = Path(data_dir).expanduser().resolve()
             # If the user explicitly asked for a data_dir, we can create it.
@@ -274,7 +348,11 @@ class PathManager:
             cfg_data_root = None
             cfg_data = self.runtime_paths.get("data")
             if isinstance(cfg_data, dict):
-                cfg_data_root = cfg_data.get("root")
+                cfg_named_roots = cfg_data.get("named_roots")
+                if isinstance(cfg_named_roots, dict):
+                    cfg_data_root = cfg_named_roots.get("default")
+                if not cfg_data_root:
+                    cfg_data_root = cfg_data.get("root")
 
             if isinstance(cfg_data_root, str) and cfg_data_root.strip():
                 # For a configured data root, do not force creation (could be read-only / shared).
@@ -316,12 +394,16 @@ class PathManager:
 
         # Do not mkdir chains_dir here: chains are often produced externally.
 
-    def resolve_data_path(self, data_path: PathLike) -> Path:
+    def resolve_data_path(
+        self, data_path: PathLike, data_root_key: str | None = None
+    ) -> Path:
         """Resolve a dataset path using this PathManager's runtime_paths.
 
         See module-level `resolve_data_path()` for the rules.
         """
-        return resolve_data_path(data_path, self.runtime_paths)
+        return resolve_data_path(
+            data_path, self.runtime_paths, data_root_key=data_root_key
+        )
 
     def get_paths(self) -> dict[str, Path]:
         """Get a dictionary of all managed paths.
@@ -720,7 +802,7 @@ if __name__ == "__main__":
     path_manager = get_default_path_manager()
     print(path_manager)
 
-    # Example: resolve a relative dataset path via runtime_paths.yaml data.root (if configured)
+    # Example: resolve a relative dataset path via runtime_paths.yaml data.named_roots.default (if configured)
     try:
         example_rel = "example_dataset.uvh5"
         resolved = path_manager.resolve_data_path(example_rel)

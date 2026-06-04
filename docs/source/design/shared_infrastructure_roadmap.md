@@ -17,7 +17,7 @@ This document outlines a future refactoring to extract shared infrastructure fro
 This is a **roadmap**, not a specification. The approach described here is intentionally deferred:
 
 - **Current state:** Each tool (BayesEoR, pyuvsim) implements its own utilities
-- **Future state:** Common patterns extracted into `valska_hera_beam.external_tools.core`
+- **Future state:** Common patterns extracted into `valska.external_tools.core`
 - **Trigger:** Refactoring should occur after two or more tools are implemented and patterns are validated in practice
 
 ### 1.3 Rationale for deferral
@@ -41,7 +41,7 @@ By implementing BayesEoR and pyuvsim as standalone modules first, we gain:
 ### 2.1 BayesEoR module structure
 
 ```
-src/valska_hera_beam/external_tools/bayeseor/
+src/valska/external_tools/bayeseor/
 ├── __init__.py
 ├── cli_prepare.py
 ├── cli_submit.py
@@ -58,7 +58,7 @@ src/valska_hera_beam/external_tools/bayeseor/
 ### 2.2 pyuvsim module structure (planned)
 
 ```
-src/valska_hera_beam/external_tools/pyuvsim/
+src/valska/external_tools/pyuvsim/
 ├── __init__.py
 ├── cli_prepare.py
 ├── cli_submit.py
@@ -94,7 +94,7 @@ Based on the BayesEoR implementation and the pyuvsim patterns described in the T
 ### 3.1 Target structure
 
 ```
-src/valska_hera_beam/external_tools/
+src/valska/external_tools/
 ├── core/
 │   ├── __init__.py
 │   ├── run_directory.py      # Run directory creation and validation
@@ -756,7 +756,7 @@ Before beginning migration:
 ### 5.1 Core module
 
 ```
-src/valska_hera_beam/external_tools/core/
+src/valska/external_tools/core/
 ├── __init__.py
 ├── config.py
 ├── jobs.py
@@ -771,7 +771,7 @@ src/valska_hera_beam/external_tools/core/
 ### 5.2 Tool module (simplified)
 
 ```
-src/valska_hera_beam/external_tools/pyuvsim/
+src/valska/external_tools/pyuvsim/
 ├── __init__.py
 ├── cli_prepare.py      # Argument parsing, tool-specific logic
 ├── cli_submit.py       # Thin wrapper around core submission
@@ -866,7 +866,7 @@ Tool modules depend on core; core never imports from tools.
 
 - [External Tool Integration Specification](external_tool_integration_spec.md)
 - [Tool Implementer's Guide](tool_implementers_guide.md)
-- BayesEoR reference implementation: `src/valska_hera_beam/external_tools/bayeseor/`
+- BayesEoR reference implementation: `src/valska/external_tools/bayeseor/`
 
 ---
 
@@ -876,7 +876,7 @@ Tool modules depend on core; core never imports from tools.
 
 This roadmap primarily covers shared infrastructure for external tool
 integration. A closely related, but distinct, future task is to define a small,
-intentional **public Python API** for `valska_hera_beam` and align the
+intentional **public Python API** for `valska` and align the
 documentation around that supported surface.
 
 This section records the intended direction so that later refactoring can be
@@ -924,7 +924,7 @@ substantially. In particular, it:
 This interim approach is acceptable for now, because it:
 
 1. avoids making premature compatibility promises through
-    `valska_hera_beam.__init__`;
+    `valska.__init__`;
 2. keeps the branch-protection-critical documentation build stable; and
 3. allows BayesEoR and related tooling to continue evolving without implying
     that every internal module is public and supported.
@@ -1019,7 +1019,7 @@ When this work is taken up, the review should answer the following:
 ### 11.7 Suggested implementation sequence
 
 1. Review the existing Python surface and identify genuinely public objects.
-2. Define a small curated export set in `valska_hera_beam.__init__`.
+2. Define a small curated export set in `valska.__init__`.
 3. Add or refine top-level package documentation around that curated surface.
 4. Retain detailed module pages only where they are useful for advanced users
     or developers.

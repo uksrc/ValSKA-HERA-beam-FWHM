@@ -1,4 +1,4 @@
-"""Access to bundled BayesEoR validation templates."""
+"""Access to bundled pyuvsim validation templates."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 def list_templates() -> list[str]:
-    """List shipped BayesEoR validation templates bundled with the package."""
-    pkg = __package__  # valska.external_tools.bayeseor.templates
+    """List shipped pyuvsim validation templates bundled with the package."""
+    pkg = __package__  # valska.external_tools.pyuvsim.templates
     return sorted(
         [
             p.name

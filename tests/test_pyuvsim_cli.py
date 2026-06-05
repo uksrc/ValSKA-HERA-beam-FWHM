@@ -21,12 +21,7 @@ def _write_minimal_manifest(run_dir: Path) -> None:
     Create a minimal manifest and a stub submit shell script.
 
     The submit CLI expects a manifest.json inside the run directory that
-    references an artefact containing a submit script.  This helper creates:
-      - a trivial executable shell script file named "submit_cpu_precompute.sh"
-      - a manifest.json with the minimal keys required by the submit CLI for
-        the tests:
-          - artefacts.submit_sh_cpu_precompute -> script filename
-          - bayeseor.cpu_precompute_driver_hypothesis -> example string
+    references an artefact containing a submit script.
 
     Tests do not execute the script; its presence in the manifest is enough
     for the CLI code paths exercised here.

@@ -452,8 +452,8 @@ def test_prepare_uv_data_raises_for_inconsistent_baselines(
         bm.prepare_uv_data(mock_uv)
 
 
-@patch("valska_hera_beam.beam_metrics.chromaticity_test")
-@patch("valska_hera_beam.beam_metrics.fit_beam_width_vs_frequency")
+@patch("valska.beam_metrics.chromaticity_test")
+@patch("valska.beam_metrics.fit_beam_width_vs_frequency")
 def test_compute_beam_metrics(
     mock_fit,
     mock_chromaticity,
@@ -487,11 +487,11 @@ def test_compute_beam_metrics(
     mock_chromaticity.assert_called_once()
 
 
-@patch("valska_hera_beam.beam_metrics.plt.show")
-@patch("valska_hera_beam.beam_metrics.plot_waterfall_matplotlib")
-@patch("valska_hera_beam.beam_metrics.plot_spectrum")
-@patch("valska_hera_beam.beam_metrics.plot_beam_shape")
-@patch("valska_hera_beam.beam_metrics.plot_baseline_heatmap")
+@patch("valska.beam_metrics.plt.show")
+@patch("valska.beam_metrics.plot_waterfall_matplotlib")
+@patch("valska.beam_metrics.plot_spectrum")
+@patch("valska.beam_metrics.plot_beam_shape")
+@patch("valska.beam_metrics.plot_baseline_heatmap")
 def test_make_plots(
     mock_heatmap,
     mock_beam_shape,
@@ -521,7 +521,7 @@ def test_make_plots(
     mock_show.assert_called_once()
 
 
-@patch("valska_hera_beam.beam_metrics.UVData")
+@patch("valska.beam_metrics.UVData")
 def test_check_beam(mock_uvdata):
     bm = beam_metrics.BeamMetrics("test.uvh5")
 

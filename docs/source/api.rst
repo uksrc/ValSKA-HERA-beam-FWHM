@@ -1,18 +1,22 @@
 API
 ===
 
+``valska`` is the canonical Python import path. The legacy
+``valska_hera_beam`` import path remains temporarily available as a
+deprecated compatibility shim for downstream users migrating existing code.
+
 .. autosummary::
    :toctree: generated
    :recursive:
 
-   valska_hera_beam.evidence
-   valska_hera_beam.notebook_helpers
-   valska_hera_beam.plotting
-   valska_hera_beam.utils
+   valska.evidence
+   valska.notebook_helpers
+   valska.plotting
+   valska.utils
 
-   valska_hera_beam.external_tools
+   valska.external_tools
 
-   valska_hera_beam.external_tools.bayeseor
+   valska.external_tools.bayeseor
 
-   valska_hera_beam.external_tools.pyuvsim
+   valska.external_tools.pyuvsim
 

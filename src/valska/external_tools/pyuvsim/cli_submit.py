@@ -35,9 +35,7 @@ def _load_runtime_paths_yaml() -> dict[str, Any]:
         return {}
 
     try:
-        runtime_path = files("valska_hera_beam").joinpath(
-            "config/runtime_paths.yaml"
-        )
+        runtime_path = files("valska").joinpath("config/runtime_paths.yaml")
     except Exception:
         return {}
 

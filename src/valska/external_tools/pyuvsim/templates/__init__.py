@@ -8,7 +8,7 @@ from pathlib import Path
 
 def list_templates() -> list[str]:
     """List shipped BayesEoR validation templates bundled with the package."""
-    pkg = __package__  # valska_hera_beam.external_tools.bayeseor.templates
+    pkg = __package__  # valska.external_tools.bayeseor.templates
     return sorted(
         [
             p.name

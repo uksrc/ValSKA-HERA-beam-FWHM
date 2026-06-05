@@ -81,14 +81,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from valska_hera_beam.external_tools.pyuvsim import (
+from valska.external_tools.pyuvsim import (
     CondaRunner,
     get_template_path,
     list_templates,
     prepare_pyuvsim_run,
     pyuvsimInstall,
 )
-from valska_hera_beam.utils import get_default_path_manager, resolve_data_path
+from valska.utils import get_default_path_manager, resolve_data_path
 
 
 def _utc_stamp() -> str:

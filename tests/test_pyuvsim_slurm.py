@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from valska_hera_beam.external_tools.pyuvsim.runner import (
+from valska.external_tools.pyuvsim.runner import (
     CondaRunner,
     pyuvsimInstall,
 )
-from valska_hera_beam.external_tools.pyuvsim.slurm import render_submit_script
+from valska.external_tools.pyuvsim.slurm import render_submit_script
 
 
 def _render_script(mode: str) -> str:

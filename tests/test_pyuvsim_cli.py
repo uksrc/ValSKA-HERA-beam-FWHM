@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from valska_hera_beam.external_tools.pyuvsim import (
+from valska.external_tools.pyuvsim import (
     cli_prepare,
     cli_submit,
 )
-from valska_hera_beam.external_tools.pyuvsim import submit as submit_mod
+from valska.external_tools.pyuvsim import submit as submit_mod
 
 
 def _write_minimal_manifest(run_dir: Path) -> None:

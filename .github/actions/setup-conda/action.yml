@@ -21,7 +21,3 @@ runs:
         conda-solver: libmamba
         pkgs-dirs: ~/conda_pkgs_dir
         channel-priority: strict
-    - name: Install project (editable)
-      shell: bash -l {0}
-      run: |
-        pip install -e .

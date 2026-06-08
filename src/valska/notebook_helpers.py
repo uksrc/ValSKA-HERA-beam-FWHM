@@ -7,13 +7,12 @@ import json
 from contextlib import redirect_stdout
 from os.path import commonpath
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy
 import pandas as pd
 from IPython.display import HTML, display
-from pyuvdata import UVData
 
 from .evidence import (
     ChainPair,
@@ -21,6 +20,9 @@ from .evidence import (
     run_complete_bayeseor_analysis,
 )
 from .plotting import BeamAnalysisPlotter
+
+if TYPE_CHECKING:
+    from pyuvdata import UVData
 
 
 def unpack_shape(arr: numpy.typing.NDArray) -> tuple[int, int, int, int]:

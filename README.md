@@ -111,7 +111,7 @@ For comprehensive unit testing instructions, see the [Testing Guide](https://val
 The `beam_metrics` module contains methods to check simulated UV data (`uvh5` format) to verify that the actual beam size in the data matches the simulation configuration parameters. Note: it works for a simulation of a single source that passes through zenith at the telescope latitude. It fits a Gaussian or Airy beam to the Stokes I amplitude and checks its variation with frequency. The beam metrics checks can be run as follows:
 
 ```
-import valska_hera_beam.beam_metrics as beam_metrics
+import valska.beam_metrics as beam_metrics
 
 bm = beam_metrics.BeamMetrics("<uvh5_filename>")
 bm.read_simulation_config("<pyuvsim_config.yaml>")

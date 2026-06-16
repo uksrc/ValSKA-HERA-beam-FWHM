@@ -415,13 +415,13 @@ def fit_beam_width_vs_frequency(
             raise ValueError("shape must be either 'Gaussian' or 'Airy'")
 
     # Summary statistics
-    if shape == "GaussianBeam":
+    if shape == "GaussianBeam" and numpy.any(~numpy.isnan(chi2_gauss_vs_freq)):
         print(
             f"   mean Gaussian χ²: "
             f"{numpy.nanmean(chi2_gauss_vs_freq):.3g} "
             f"({numpy.nanstd(chi2_gauss_vs_freq):.3g})"
         )
-    elif shape == "Airy":
+    elif shape == "Airy" and numpy.any(~numpy.isnan(chi2_airy_vs_freq)):
         print(
             f"   mean Airy χ²: "
             f"{numpy.nanmean(chi2_airy_vs_freq):.3g} "
@@ -446,27 +446,30 @@ def chromaticity_test(
     inv_freq = 1.0 / freq_array
     valid = ~numpy.isnan(test_param)
 
-    # Measure variation across frequency
-    freq_std = numpy.std(test_param) / numpy.mean(test_param)
-    p = numpy.polyfit(freq_array, numpy.abs(test_param), deg=2)
-    freq_grad = p[1] / numpy.mean(test_param)
-    trend = numpy.polyval(p, freq_array)
-    residual = test_param - trend
-    frac_resid = numpy.std(residual) / numpy.mean(test_param)
-
-    print(
-        "\nVariation with frequency:\n"
-        f"   Std deviation = {100 * freq_std:.3f}%\n"
-        f"   Gradient of fitted line = {100 * freq_grad:.3f}%\n"
-        f"   Residual chromaticity = {100 * frac_resid:.3f}%"
-    )
+    print("\nVariation with frequency:\n")
 
     # Correlation to frequency
     if numpy.sum(valid) > CORR_SAMPLES and not numpy.isclose(
         numpy.std(test_param[valid]), 0.0
     ):
+        # Measure variation across frequency
+        freq_std = numpy.std(test_param[valid]) / numpy.mean(test_param[valid])
+        p = numpy.polyfit(
+            freq_array[valid], numpy.abs(test_param[valid]), deg=2
+        )
+        freq_grad = p[1] / numpy.mean(test_param[valid])
+        trend = numpy.polyval(p, freq_array[valid])
+        residual = test_param[valid] - trend
+        frac_resid = numpy.std(residual) / numpy.mean(test_param[valid])
+
+        print(
+            f"   Std deviation = {100 * freq_std:.3f}%\n"
+            f"   Gradient of fitted line = {100 * freq_grad:.3f}%\n"
+            f"   Residual chromaticity = {100 * frac_resid:.3f}%"
+        )
         corr = numpy.corrcoef(test_param[valid], inv_freq[valid])[0, 1]
     else:
+        print("  Not enough valid test parameters")
         corr = numpy.nan
 
     print(f"  Correlation with 1/frequency: {corr:.3f}")

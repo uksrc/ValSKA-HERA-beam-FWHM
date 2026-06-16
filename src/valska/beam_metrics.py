@@ -314,22 +314,22 @@ def fit_beam_width_vs_frequency(
 
     Parameters
     ----------
-    freq
+    freq :
         Frequency in Hz
-    theta_deg
+    theta_deg :
         Angular coordinate in degrees.
-    v_auto
+    v_auto :
         Visibility data with shape (angle, frequency).
-    shape
+    shape :
         Either "GaussianBeam" or "AiryBeam".
 
     Returns
     -------
-    fit_vs_freq
+    fit_vs_freq :
         Gaussian FWHM values at each frequency.
-    gauss_result
+    gauss_result :
         Gaussian result at middle frequency.
-    airy_result
+    airy_result :
         Airy result at middle frequency.
     """
 
@@ -437,10 +437,11 @@ def chromaticity_test(
     """
     Test the variation of a parameter with frequency.
 
-    Parameters:
-    freq_array : numpy.ndarray
+    Parameters
+    ----------
+    freq_array :
         Frequency array.
-    test_param : numpy.ndarray
+    test_param :
         The parameter to test against frequency.
     """
     inv_freq = 1.0 / freq_array
@@ -489,16 +490,17 @@ def plot_beam_shape(
     Plot the beam shape (normalized response) along with Gaussian
     and Airy fits.
 
-    Parameters:
-    ax : matplotlib.axes.Axes
+    Parameters
+    ----------
+    ax :
         The axes on which to plot the data.
-    theta_deg : numpy.ndarray
+    theta_deg :
         The angle array.
-    ydata : numpy.ndarray
+    ydata :
         The data to plot.
-    gauss_result : lmfit.model.ModelResult , optional
+    gauss_result :
         Result from the Gaussian fit.
-    airy_result : lmfit.model.ModelResult , optional
+    airy_result :
         Result from the Airy fit.
     """
     x_fine = numpy.linspace(theta_deg.min(), theta_deg.max(), 200)

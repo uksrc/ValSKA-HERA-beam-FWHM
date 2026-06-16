@@ -6,9 +6,9 @@ import numpy
 import yaml
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from pyuvdata import UVData
+from scipy.constants import c as speed_of_light
 from scipy.special import j1
 
-C = 299792458.0  # m/s
 CORR_SAMPLES = 5
 
 
@@ -22,7 +22,7 @@ def _airy(
     """
     Airy power beam for a circular aperture.
     """
-    lam = C / freq_hz
+    lam = speed_of_light / freq_hz
 
     x = numpy.pi * diam * numpy.sin(theta - theta0) / lam
     beam = numpy.ones_like(x)

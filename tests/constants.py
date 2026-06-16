@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 import numpy
+from scipy.constants import c as speed_of_light
 from scipy.special import j1
 
 # Use an ephemeral, writable temp directory for tests (not checked into VCS)
@@ -20,7 +21,6 @@ for d in (CHAINS_DIR, DATA_DIR, RESULTS_DIR):
 
 EOR_PS = 214777.66068216303  # mK^2 Mpc^3
 NOISE_RATIO = 0.5
-C = 299792458.0  # m/s
 
 
 class MockDataContainer:
@@ -180,7 +180,7 @@ def make_airy_data(
 ):
     """Make Airy data"""
 
-    lam = C / freq_hz
+    lam = speed_of_light / freq_hz
 
     x = numpy.pi * diameter * numpy.sin(theta - centre) / lam
     beam = numpy.ones_like(x)

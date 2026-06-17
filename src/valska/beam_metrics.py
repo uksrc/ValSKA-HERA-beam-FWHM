@@ -492,7 +492,7 @@ def chromaticity_test(
         print("  Not enough valid test parameters")
         corr = numpy.nan
 
-    print(f"  Correlation with 1/frequency: {corr:.3f}")
+    print(f"   Correlation with 1/frequency: {corr:.3f}")
 
     return corr
 

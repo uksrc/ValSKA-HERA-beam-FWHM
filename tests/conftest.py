@@ -80,23 +80,3 @@ def beam_analysis_fixture(chains_dir):
     )
 
     yield beam_analysis_plotter
-
-
-@pytest.fixture
-def pyuvsim_config_file(tmp_path):
-    """Fixture to create a pyuvsim configuration file"""
-
-    config_text = (
-        "beam_paths:\n"
-        "  0: !AnalyticBeam\n"
-        "    class: GaussianBeam\n"
-        "    sigma: 0.2\n"
-        "    reference_frequency: 150000000.0\n"
-        "telescope_location: (-26.7, 20.0, 1073.0)\n"
-        "telescope_name: Dummy"
-    )
-
-    config_path = tmp_path / "pyuvsim_config.yaml"
-    config_path.write_text(config_text)
-
-    return config_path

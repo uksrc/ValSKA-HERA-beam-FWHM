@@ -7,7 +7,17 @@ import pytest
 
 from valska import beam_metrics
 
-from .constants import make_airy_data, make_gaussian_data
+from .constants import make_airy_data, make_gaussian_data, write_pyuvsim_config
+
+CONFIG_TEXT = (
+    "beam_paths:\n"
+    "  0: !AnalyticBeam\n"
+    "{beam_spec}\n"
+    "    reference_frequency: 150000000.0\n"
+    "telescope_location: (-26.7, 20.0, 1073.0)\n"
+    "telescope_name: Dummy"
+)
+BEAM_SPEC = "    class: GaussianBeam\n    sigma: 0.2"
 
 
 def test_beam_width_gaussian_fit_recovers_fwhm():
@@ -80,7 +90,7 @@ def test_beam_width_airy_fit_returns_parameters():
         freq=freqs,
         theta_deg=theta,
         v_auto=v_auto,
-        shape="Airy",
+        shape="AiryBeam",
     )
 
     # Airy branch should not populate Gaussian params
@@ -365,14 +375,65 @@ def test_beam_metrics_init():
     numpy.testing.assert_array_equal(bm.v_time_bl, numpy.array([]))
 
 
-def test_read_simulation_config(pyuvsim_config_file):
+@pytest.mark.parametrize(
+    ("beam_spec", "expected_shape", "expected_size"),
+    [
+        (
+            "    class: GaussianBeam\n    sigma: 0.2",
+            "GaussianBeam",
+            0.2,
+        ),
+        (
+            "    type: gaussian\n    sigma: 0.2",
+            "GaussianBeam",
+            0.2,
+        ),
+        (
+            "    class: AiryBeam\n    diameter: 14.0",
+            "AiryBeam",
+            14.0,
+        ),
+        (
+            "    type: airy\n    diameter: 14.0",
+            "AiryBeam",
+            14.0,
+        ),
+    ],
+)
+def test_read_simulation_config_beam_mapping(
+    tmp_path,
+    beam_spec,
+    expected_shape,
+    expected_size,
+):
+
+    config_text = CONFIG_TEXT.format(beam_spec=beam_spec)
+
+    config_path = write_pyuvsim_config(tmp_path, config_text)
+
+    bm = beam_metrics.BeamMetrics("test.uvh5")
+    bm.read_simulation_config(config_path)
+
+    assert bm.simulation_config.beam_shape == expected_shape
+    if expected_shape == "GaussianBeam":
+        assert bm.simulation_config.sigma == expected_size
+        assert bm.simulation_config.diameter is None
+    if expected_shape == "AiryBeam":
+        assert bm.simulation_config.sigma is None
+        assert bm.simulation_config.diameter == expected_size
+    assert bm.simulation_config.latitude == -26.7
+
+
+def test_read_simulation_config_unknown_beam_type(tmp_path):
+
+    config_text = CONFIG_TEXT.format(beam_spec="    type: not_a_beam\n")
+
+    config_path = write_pyuvsim_config(tmp_path, config_text)
+
     bm = beam_metrics.BeamMetrics("test.uvh5")
 
-    bm.read_simulation_config(pyuvsim_config_file)
-
-    assert bm.simulation_config.latitude == -26.7
-    assert bm.simulation_config.sigma == 0.2
-    assert bm.simulation_config.beam_shape == "GaussianBeam"
+    with pytest.raises(KeyError):
+        bm.read_simulation_config(config_path)
 
 
 def test_prepare_uv_data_raises_without_latitude():
@@ -394,9 +455,13 @@ def test_prepare_uv_data_raises_without_latitude():
         bm.prepare_uv_data(mock_uv)
 
 
-def test_prepare_uv_data_success(pyuvsim_config_file):
+def test_prepare_uv_data_success(tmp_path):
+
+    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
+    config_path = write_pyuvsim_config(tmp_path, config_text)
+
     bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(pyuvsim_config_file)
+    bm.read_simulation_config(config_path)
 
     mock_uv = MagicMock()
 
@@ -428,11 +493,13 @@ def test_prepare_uv_data_success(pyuvsim_config_file):
     assert len(bm.theta_deg) == 2
 
 
-def test_prepare_uv_data_raises_for_inconsistent_baselines(
-    pyuvsim_config_file,
-):
+def test_prepare_uv_data_raises_for_inconsistent_baselines(tmp_path):
+
+    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
+    config_path = write_pyuvsim_config(tmp_path, config_text)
+
     bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(pyuvsim_config_file)
+    bm.read_simulation_config(config_path)
 
     mock_uv = MagicMock()
 
@@ -457,11 +524,14 @@ def test_prepare_uv_data_raises_for_inconsistent_baselines(
 def test_compute_beam_metrics(
     mock_fit,
     mock_chromaticity,
-    pyuvsim_config_file,
+    tmp_path,
 ):
+    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
+    config_path = write_pyuvsim_config(tmp_path, config_text)
+
     bm = beam_metrics.BeamMetrics("test.uvh5")
 
-    bm.read_simulation_config(pyuvsim_config_file)
+    bm.read_simulation_config(config_path)
 
     bm.theta_deg = numpy.array([-5, 0, 5])
     bm.v_auto = numpy.ones((3, 4))

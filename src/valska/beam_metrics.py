@@ -10,6 +10,13 @@ from scipy.constants import c as speed_of_light
 from scipy.special import j1
 
 CORR_SAMPLES = 5
+# Compatibility with older pyuvsim config file syntax:
+TYPE_TO_CLASS = {
+    "gaussian": "GaussianBeam",
+    "airy": "AiryBeam",
+    "uniform": "UniformBeam",
+    "short_dipole": "ShortDipoleBeam",
+}
 
 
 def _airy(
@@ -84,11 +91,22 @@ class BeamMetrics:
 
         lat = float(values["telescope_location"].strip("()").split(",")[0])
 
+        beam_paths = values["beam_paths"][0]
+
+        beam_shape = beam_paths.get("class")
+        if beam_shape is None:
+            beam_type = beam_paths.get("type")
+            if beam_type is None:
+                raise ValueError(
+                    "beam_paths must contain either 'class' or 'type'"
+                )
+            beam_shape = TYPE_TO_CLASS[beam_type]
+
         self.simulation_config = SimulationConfig(
             latitude=lat,
-            sigma=values["beam_paths"][0].get("sigma", None),
-            beam_shape=values["beam_paths"][0]["class"],
-            diameter=values["beam_paths"][0].get("diameter", None),
+            sigma=beam_paths.get("sigma", None),
+            beam_shape=beam_shape,
+            diameter=beam_paths.get("diameter", None),
         )
 
     def check_beam(self):
@@ -149,8 +167,7 @@ class BeamMetrics:
 
         # --- Stokes I (pyuvsim convention)
         stokes_I = data_xx + data_yy
-        print(f"Stokes I shape: {stokes_I.shape}")
-        print(f"UVData pol convention: {uvd.pol_convention}")
+        # print(f"Stokes I shape: {stokes_I.shape}")
 
         # Average over baselines (axis=1) to get power
         self.v_auto = numpy.nanmean(stokes_I, axis=1)  # shape: (Ntimes, Nfreq)
@@ -382,7 +399,7 @@ def fit_beam_width_vs_frequency(
                 print(f"Gaussian fit failed at freq {freq_idx}: {e}")
 
         # Airy fit
-        elif shape == "Airy":
+        elif shape == "AiryBeam":
             try:
                 params = airy_model.make_params(
                     A=1.0,
@@ -412,7 +429,9 @@ def fit_beam_width_vs_frequency(
                 print(f"Airy fit failed at freq {freq_idx}: {e}")
 
         else:
-            raise ValueError("shape must be either 'Gaussian' or 'Airy'")
+            raise ValueError(
+                "shape must be either 'GaussianBeam' or 'AiryBeam'"
+            )
 
     # Summary statistics
     if shape == "GaussianBeam" and numpy.any(~numpy.isnan(chi2_gauss_vs_freq)):
@@ -421,7 +440,7 @@ def fit_beam_width_vs_frequency(
             f"{numpy.nanmean(chi2_gauss_vs_freq):.3g} "
             f"({numpy.nanstd(chi2_gauss_vs_freq):.3g})"
         )
-    elif shape == "Airy" and numpy.any(~numpy.isnan(chi2_airy_vs_freq)):
+    elif shape == "AiryBeam" and numpy.any(~numpy.isnan(chi2_airy_vs_freq)):
         print(
             f"   mean Airy χ²: "
             f"{numpy.nanmean(chi2_airy_vs_freq):.3g} "

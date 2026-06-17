@@ -189,3 +189,10 @@ def make_airy_data(
     beam[mask] = (2 * j1(x[mask]) / x[mask]) ** 2
 
     return amplitude * beam
+
+
+def write_pyuvsim_config(tmp_path, config_text):
+    """Write pyuvsim config file"""
+    path = tmp_path / "config.yaml"
+    path.write_text(config_text)
+    return path

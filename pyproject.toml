@@ -132,3 +132,6 @@ ignore = ["E501"]
 "src/valska/_version.py" = ["I001", "UP006", "UP007", "UP035"]
 "src/valska_hera_beam/*.py" = ["E402"]
 "src/valska_hera_beam/**/*.py" = ["E402"]
+
+[tool.coverage.run]
+omit = ["src/valska_hera_beam/*"]

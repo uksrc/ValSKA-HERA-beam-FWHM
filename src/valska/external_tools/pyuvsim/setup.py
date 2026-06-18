@@ -338,7 +338,7 @@ def prepare_pyuvsim_run(
     if template_yaml == get_template_path("fov-19.4-oscar-sm.yml"):
         templates_dir = template_yaml.parent
 
-        for folder in ["reference_simulations", "catalog_files"]:
+        for folder in ["telescope_config", "catalog_files"]:
             copytree(
                 templates_dir / folder,
                 run_dir / folder,

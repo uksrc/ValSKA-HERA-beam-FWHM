@@ -8,12 +8,11 @@
 # mamba env create -f valska_env_base.yaml
 # mamba activate valska
 # ---
-name: valska
+name: valska2
 channels:
   - conda-forge
 dependencies:
   - python=3.12
-  - openmpi
   - multinest
   - pip
   - pip:

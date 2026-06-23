@@ -8,7 +8,7 @@
 # mamba env create -f valska_env_base.yaml
 # mamba activate valska
 # ---
-name: valska2
+name: valska
 channels:
   - conda-forge
 dependencies:

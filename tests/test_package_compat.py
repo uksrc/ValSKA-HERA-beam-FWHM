@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import importlib
 import sys
+import tomllib
 import warnings
 from pathlib import Path
-
-import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

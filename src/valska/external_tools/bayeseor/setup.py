@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +19,7 @@ from .slurm import render_submit_script
 
 def _utc_stamp() -> str:
     """Return a UTC timestamp suitable for directory naming."""
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 # -----------------------------------------------------------------------------
@@ -440,7 +440,7 @@ def prepare_bayeseor_run(
     # Manifest
     manifest = {
         "tool": TOOL_NAME,
-        "created_utc": datetime.now(timezone.utc).isoformat(),
+        "created_utc": datetime.now(UTC).isoformat(),
         "valska_version": __version__,
         "beam_model": beam_model,
         "sky_model": sky_model,

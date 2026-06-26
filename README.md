@@ -118,6 +118,13 @@ bm.read_simulation_config("<pyuvsim_config.yaml>")
 bm.check_beam()
 ```
 
+To save the diagnostic figure for batch validation, pass a file path and
+disable interactive display:
+
+```
+bm.check_beam(save_path="beam_metrics.png", show=False)
+```
+
 
 ## Contributing
 

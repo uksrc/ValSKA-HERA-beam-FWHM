@@ -5,6 +5,10 @@ Variables and util functions for testing
 import tempfile
 from pathlib import Path
 
+import numpy
+from scipy.constants import c as speed_of_light
+from scipy.special import j1
+
 # Use an ephemeral, writable temp directory for tests (not checked into VCS)
 BASE_DIR = Path(tempfile.mkdtemp(prefix="valska_tests_")).resolve()
 CHAINS_DIR = BASE_DIR / "chains"
@@ -155,3 +159,40 @@ def mock_read_chains(*args, **kwargs):
     Mock method to replace anesthetic read_chains()
     """
     return MockChain(args[0])
+
+
+def make_gaussian_data(
+    theta,
+    sigma=2.0,
+    amplitude=1.0,
+    centre=0.0,
+):
+    """Make Gaussian data"""
+    return amplitude * numpy.exp(-((theta - centre) ** 2) / (2 * sigma**2))
+
+
+def make_airy_data(
+    freq_hz,
+    theta,
+    amplitude=1.0,
+    centre=0.0,
+    diameter=5.0,
+):
+    """Make Airy data"""
+
+    lam = speed_of_light / freq_hz
+
+    x = numpy.pi * diameter * numpy.sin(theta - centre) / lam
+    beam = numpy.ones_like(x)
+    mask = numpy.abs(x) > 1e-12
+
+    beam[mask] = (2 * j1(x[mask]) / x[mask]) ** 2
+
+    return amplitude * beam
+
+
+def write_pyuvsim_config(tmp_path, config_text):
+    """Write pyuvsim config file"""
+    path = tmp_path / "config.yaml"
+    path.write_text(config_text)
+    return path

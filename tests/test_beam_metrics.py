@@ -277,6 +277,7 @@ def test_plot_beam_shape_basic():
     ax.set_ylabel.assert_called_with("Stokes I (XX+YY) Amplitude (Jy)")
     ax.set_title.assert_called_with("Autocorrelation beam profile (1.0 MHz)")
     ax.legend.assert_called_once()
+    ax.set_yscale.assert_not_called()
 
 
 def test_plot_beam_shape_with_fits():
@@ -300,6 +301,18 @@ def test_plot_beam_shape_with_fits():
 
     # Check that fits were plotted
     assert ax.plot.call_count >= 3  # data + two fits
+
+
+def test_plot_beam_shape_ylog():
+    ax = MagicMock()
+
+    theta = numpy.array([0, 1, 2])
+    y = numpy.array([1, 2, 3])
+    freq = 1e6
+
+    beam_metrics.plot_beam_shape(ax, theta, y, freq, ylog=True)
+
+    ax.set_yscale.assert_called_once_with("log")
 
 
 def test_plot_spectrum_basic():

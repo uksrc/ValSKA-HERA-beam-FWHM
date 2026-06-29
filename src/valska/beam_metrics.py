@@ -115,6 +115,7 @@ class BeamMetrics:
         self,
         save_path: str | Path | None = None,
         show: bool = True,
+        beam_ylog: bool = False,
     ):
         """
         Check beam parameters from pyuvsim data and produce
@@ -130,6 +131,7 @@ class BeamMetrics:
             fit_vs_freq,
             save_path=save_path,
             show=show,
+            beam_ylog=beam_ylog,
         )
 
     def prepare_uv_data(self, uvd: UVData):
@@ -263,6 +265,7 @@ class BeamMetrics:
         fit_vs_freq,
         save_path: str | Path | None = None,
         show: bool = True,
+        beam_ylog: bool = False,
     ):
         """Create diagnostic plots"""
 
@@ -294,6 +297,7 @@ class BeamMetrics:
             mid_freq,
             gauss_result,
             airy_result,
+            ylog=beam_ylog,
         )
 
         if gauss_result is not None:
@@ -530,6 +534,7 @@ def plot_beam_shape(
     freq: float,
     gauss_result: lmfit.model.ModelResult | None = None,
     airy_result: lmfit.model.ModelResult | None = None,
+    ylog: bool = False,
 ) -> list[matplotlib.lines.Line2D]:
     """
     Plot the beam shape (normalized response) along with Gaussian
@@ -547,6 +552,8 @@ def plot_beam_shape(
         Result from the Gaussian fit.
     airy_result :
         Result from the Airy fit.
+    ylog :
+        Boolean - if True, plot y-axis with log scale
     """
     x_fine = numpy.linspace(theta_deg.min(), theta_deg.max(), 200)
 
@@ -559,6 +566,9 @@ def plot_beam_shape(
     if airy_result is not None:
         airy_fit = airy_result.eval(theta=numpy.radians(x_fine), freq_hz=freq)
         ax.plot(x_fine, airy_fit, "--", label="Airy fit")
+
+    if ylog is True:
+        ax.set_yscale("log")
 
     ax.set_xlabel("Angle (deg)")
     ax.set_ylabel("Stokes I (XX+YY) Amplitude (Jy)")

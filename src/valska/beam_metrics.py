@@ -249,7 +249,7 @@ class BeamMetrics:
                 )
 
         spread = numpy.nanstd(fit_vs_freq)
-        print(f"   Fit stability: {spread:.4f}")
+        print(f"   Fit-parameter scatter over frequency: {spread:.4f}")
 
         # Chromaticity
         chromaticity_test(self.freq_array, fit_vs_freq)

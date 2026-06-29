@@ -591,6 +591,46 @@ def test_make_plots(
     mock_show.assert_called_once()
 
 
+@patch("valska.beam_metrics.plt.show")
+@patch("valska.beam_metrics.plot_waterfall_matplotlib")
+@patch("valska.beam_metrics.plot_spectrum")
+@patch("valska.beam_metrics.plot_beam_shape")
+@patch("valska.beam_metrics.plot_baseline_heatmap")
+def test_make_plots_can_save_without_showing(
+    mock_heatmap,
+    mock_beam_shape,
+    mock_spectrum,
+    mock_waterfall,
+    mock_show,
+    tmp_path,
+):
+    bm = beam_metrics.BeamMetrics("test.uvh5")
+
+    bm.v_auto = numpy.ones((2, 4))
+    bm.v_time_bl = numpy.ones((2, 2))
+    bm.baseline_counts = numpy.array([2, 2])
+    bm.lsts_hours = numpy.array([1.0, 2.0])
+    bm.theta_deg = numpy.array([-1.0, 1.0])
+    bm.freq_array = numpy.array([100e6, 110e6, 120e6, 130e6])
+
+    save_path = tmp_path / "beam_metrics.png"
+
+    bm.make_plots(
+        gauss_result="gauss",
+        airy_result=None,
+        fit_vs_freq=numpy.array([1, 2, 3, 4]),
+        save_path=save_path,
+        show=False,
+    )
+
+    assert save_path.exists()
+    mock_heatmap.assert_called_once()
+    mock_beam_shape.assert_called_once()
+    mock_spectrum.assert_called_once()
+    mock_waterfall.assert_called_once()
+    mock_show.assert_not_called()
+
+
 @patch("valska.beam_metrics.UVData")
 def test_check_beam(mock_uvdata):
     bm = beam_metrics.BeamMetrics("test.uvh5")

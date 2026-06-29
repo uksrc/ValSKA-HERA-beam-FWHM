@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import lmfit
 import matplotlib.axes
 import matplotlib.lines
@@ -109,7 +111,11 @@ class BeamMetrics:
             diameter=beam_paths.get("diameter", None),
         )
 
-    def check_beam(self):
+    def check_beam(
+        self,
+        save_path: str | Path | None = None,
+        show: bool = True,
+    ):
         """
         Check beam parameters from pyuvsim data and produce
         validation report and plots.
@@ -118,7 +124,13 @@ class BeamMetrics:
         uvd = UVData.from_file(self.uv_filename)
         self.prepare_uv_data(uvd)
         gauss_result, airy_result, fit_vs_freq = self.compute_beam_metrics()
-        self.make_plots(gauss_result, airy_result, fit_vs_freq)
+        self.make_plots(
+            gauss_result,
+            airy_result,
+            fit_vs_freq,
+            save_path=save_path,
+            show=show,
+        )
 
     def prepare_uv_data(self, uvd: UVData):
         """Resize and prepare UV data"""
@@ -244,7 +256,14 @@ class BeamMetrics:
 
         return gauss_result, airy_result, fit_vs_freq
 
-    def make_plots(self, gauss_result, airy_result, fit_vs_freq):
+    def make_plots(
+        self,
+        gauss_result,
+        airy_result,
+        fit_vs_freq,
+        save_path: str | Path | None = None,
+        show: bool = True,
+    ):
         """Create diagnostic plots"""
 
         f_mid_idx = self.freq_array.shape[0] // 2
@@ -313,7 +332,14 @@ class BeamMetrics:
         )
 
         plt.tight_layout()
-        plt.show()
+        if save_path is not None:
+            save_path = Path(save_path)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(save_path, dpi=200, bbox_inches="tight")
+        if show:
+            plt.show()
+
+        return fig
 
 
 def fit_beam_width_vs_frequency(

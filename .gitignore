@@ -242,3 +242,4 @@ UKSRC_val_mock_vis
 *.sh.swo
 docs/source/generated/
 uksrc-st_memos/drafts
+*:Zone.Identifier*

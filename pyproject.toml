@@ -110,8 +110,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UKSRC/ValSKA"
-Issues = "https://github.com/UKSRC/ValSKA/issues"
+Homepage = "https://github.com/uksrc/ValSKA-HERA-beam-FWHM"
+Issues = "https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues"
 
 [project.scripts]
 # valska-beam-validate = "valska.cli:main"
@@ -129,6 +129,8 @@ valska-bayeseor-report-all = "valska.external_tools.bayeseor.cli_report_all:main
 valska-bayeseor-compare-sweeps = "valska.external_tools.bayeseor.cli_compare_sweeps:main"
 valska-bayeseor-cleanup = "valska.external_tools.bayeseor.cli_cleanup:main"
 valska-bayeseor-help = "valska.external_tools.bayeseor.cli_help:main"
+valska-pyuvsim-prepare = "valska.external_tools.pyuvsim.cli_prepare:main"
+valska-pyuvsim-submit  = "valska.external_tools.pyuvsim.cli_submit:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -140,6 +142,7 @@ include-package-data = true
 valska = [
   "config/*.yaml",
   "external_tools/bayeseor/templates/*.yaml",
+  "external_tools/pyuvsim/templates/*.yaml",
 ]
 valska_hera_beam = [
   "config/*.yaml",
@@ -156,6 +159,7 @@ fallback_version = "0.1.0"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
+exclude = ["src/valska_hera_beam/_version.py"]
 
 [tool.ruff.lint]
 # E/F = Flake8, I = Isort, UP = Pyupgrade
@@ -166,3 +170,6 @@ ignore = ["E501"]
 "src/valska/_version.py" = ["I001", "UP006", "UP007", "UP035"]
 "src/valska_hera_beam/*.py" = ["E402"]
 "src/valska_hera_beam/**/*.py" = ["E402"]
+
+[tool.coverage.run]
+omit = ["src/valska_hera_beam/*"]

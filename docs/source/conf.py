@@ -47,10 +47,10 @@ autodoc_mock_imports = [
     "IPython",
     "yaml",
     "tqdm",
-    "numpy",
     "ruamel",
     "ruamel.yaml",
     "rich",
+    "pyuvdata",
 ]
 
 templates_path = ["_templates"]

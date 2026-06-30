@@ -9,6 +9,7 @@ deprecated compatibility shim for downstream users migrating existing code.
    :toctree: generated
    :recursive:
 
+   valska.beam_metrics
    valska.evidence
    valska.notebook_helpers
    valska.plotting

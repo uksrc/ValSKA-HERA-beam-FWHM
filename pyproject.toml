@@ -73,8 +73,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UKSRC/ValSKA"
-Issues = "https://github.com/UKSRC/ValSKA/issues"
+Homepage = "https://github.com/uksrc/ValSKA-HERA-beam-FWHM"
+Issues = "https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues"
 
 [project.scripts]
 # valska-beam-validate = "valska.cli:main"
@@ -105,6 +105,7 @@ include-package-data = true
 valska = [
   "config/*.yaml",
   "external_tools/bayeseor/templates/*.yaml",
+  "external_tools/pyuvsim/templates/*.yaml",
 ]
 valska_hera_beam = [
   "config/*.yaml",

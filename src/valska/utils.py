@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import subprocess
 from collections.abc import Mapping, MutableMapping
 from datetime import datetime
 from pathlib import Path
@@ -38,6 +39,11 @@ PairsMap = Mapping[str, object]  # generic mapping of key -> value
 MutablePairsMap = MutableMapping[str, object]
 
 
+# =============================================================================
+# General
+# =============================================================================
+
+
 def read_yaml(path: PathLike) -> dict[str, Any]:
     """
     Load YAML file safely
@@ -45,6 +51,28 @@ def read_yaml(path: PathLike) -> dict[str, Any]:
 
     with open(path, encoding="utf-8") as file:
         return yaml.safe_load(file) or {}
+
+
+def get_repo_root() -> Path:
+    """
+    Return the repository root path
+
+    Assumes the code is being run from within a Git working tree.
+    """
+
+    try:
+        return Path(
+            subprocess.check_output(
+                ["git", "rev-parse", "--show-toplevel"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        raise RuntimeError(
+            "Could not determine the repository root. "
+            "Ensure Git is installed and you are running from within a cloned Git repository."
+        ) from exc
 
 
 # =============================================================================

@@ -82,7 +82,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -98,7 +98,7 @@ from valska.utils import get_default_path_manager, resolve_data_path
 
 def _utc_stamp() -> str:
     """Return a UTC timestamp suitable for directory naming."""
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _format_run_label_from_fwhm_frac(frac: float) -> str:

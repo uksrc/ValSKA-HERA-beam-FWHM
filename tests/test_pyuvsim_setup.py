@@ -1,13 +1,21 @@
 import filecmp
+import shutil
+from copy import deepcopy
 from importlib.resources import path
 from pathlib import Path
 from typing import Any
 
+import numpy
 import pytest
+from pyradiosky import SkyModel
 
 from valska.external_tools.pyuvsim.constants import TOOL_NAME
 from valska.external_tools.pyuvsim.runner import CondaRunner
 from valska.external_tools.pyuvsim.setup import prepare_pyuvsim_run
+from valska.external_tools.pyuvsim.setup_beamcheck import (
+    prepare_beam_check_cfg,
+)
+from valska.utils_yaml import dump_yaml, load_yaml
 
 
 @pytest.fixture
@@ -148,4 +156,189 @@ def test_prepare_pyuvsim_run_copies_reference_files_with_default_template(
         len(comparison.left_only) + len(comparison.right_only) == 0
         and len(comparison.common_files) > 0
         for comparison in comparisons
+    )
+
+
+def test_prepare_pyuvsim_run_beamcheck_creates_files(
+    _pyuvsim_config, _run_dir
+):
+    prepare_pyuvsim_run(
+        **_pyuvsim_config,
+        make_beam_check=True,
+    )
+
+    assert (_run_dir / "obsparam_beamcheck.yaml").exists()
+    assert (_run_dir / "submit_beamcheck.sh").exists()
+
+
+def test_prepare_pyuvsim_run_beamcheck_returns_outputs(
+    _pyuvsim_config, _run_dir
+):
+
+    out = prepare_pyuvsim_run(
+        **_pyuvsim_config,
+        make_beam_check=True,
+    )
+
+    assert out["obsparam_beamcheck_yaml"] == (
+        _run_dir / "obsparam_beamcheck.yaml"
+    )
+
+    assert out["submit_sh_beamcheck"] == (_run_dir / "submit_beamcheck.sh")
+
+
+def test_prepare_pyuvsim_run_beamcheck_preserves_main_configuration(
+    _pyuvsim_config, _run_dir
+):
+    """The beam-check simulation should use a modified copy of the main
+    configuration without altering the main obsparam.yaml.
+    """
+
+    prepare_pyuvsim_run(
+        **_pyuvsim_config,
+        make_beam_check=True,
+    )
+
+    main_cfg = load_yaml(_run_dir / "obsparam.yaml")
+    beam_cfg = load_yaml(_run_dir / "obsparam_beamcheck.yaml")
+
+    # The beam-check configuration should differ from the main one.
+    assert main_cfg != beam_cfg
+
+    # The catalogue should only be changed for the beam-check run.
+    assert main_cfg["sources"]["catalog"] != beam_cfg["sources"]["catalog"]
+
+    assert beam_cfg["sources"]["catalog"].endswith(
+        "catalog_files/zenith_single_source.skyh5"
+    )
+
+    # The main configuration should still point at the original catalogue.
+    assert not main_cfg["sources"]["catalog"].endswith(
+        "catalog_files/zenith_single_source.skyh5"
+    )
+
+
+def test_prepare_pyuvsim_run_beamcheck_extends_time_array(
+    _pyuvsim_config, _run_dir
+):
+    prepare_pyuvsim_run(
+        **_pyuvsim_config,
+        make_beam_check=True,
+        check_min_hours=2.0,
+    )
+
+    beam_cfg = load_yaml(_run_dir / "obsparam_beamcheck.yaml")
+
+    times = numpy.asarray(beam_cfg["time"]["time_array"])
+
+    duration_hours = (times[-1] - times[0]) * 24.0
+
+    assert duration_hours >= 4.0
+
+
+def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
+    _pyuvsim_config, _run_dir
+):
+    prepare_pyuvsim_run(
+        **_pyuvsim_config,
+        make_beam_check=True,
+    )
+
+    sky_path = _run_dir / "catalog_files" / "zenith_single_source.skyh5"
+
+    assert sky_path.exists()
+
+    sky = SkyModel.from_file(sky_path)
+
+    assert len(sky.ra) == 1
+    assert len(sky.dec) == 1
+
+    assert numpy.isclose(sky.dec[0].deg, -30.72152777777791)
+
+
+def test_prepare_pyuvsim_run_beamcheck_missing_telescope_config(
+    _pyuvsim_config, _run_dir, tmp_path
+):
+    cfg = load_yaml(_pyuvsim_config["template_yaml"])
+
+    cfg["telescope"]["telescope_config_name"] = "does/not/exist.yaml"
+
+    template = tmp_path / "bad_template.yaml"
+    dump_yaml(cfg, template)
+
+    with pytest.raises(FileNotFoundError):
+        prepare_pyuvsim_run(
+            **{
+                **_pyuvsim_config,
+                "template_yaml": template,
+            },
+            make_beam_check=True,
+        )
+
+
+def test_load_yaml_rejects_non_mapping(tmp_path):
+    path = tmp_path / "list.yaml"
+    path.write_text("- 1\n- 2\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Expected a mapping"):
+        load_yaml(path)
+
+
+def test_prepare_beam_check_cfg_does_not_modify_input(
+    _pyuvsim_config, tmp_path
+):
+    template = Path(_pyuvsim_config["template_yaml"])
+    cfg = load_yaml(template)
+
+    original = deepcopy(cfg)
+
+    prepare_beam_check_cfg(
+        cfg,
+        run_dir=tmp_path,
+        template_dir=template.parent,
+    )
+
+    assert cfg == original
+
+
+def test_prepare_beam_check_cfg_does_not_extend_long_observation(
+    _pyuvsim_config, tmp_path
+):
+    original_template = Path(_pyuvsim_config["template_yaml"])
+
+    # Recreate the expected directory layout.
+    telescope_dir = tmp_path / "telescope_config"
+    telescope_dir.mkdir()
+
+    shutil.copy(
+        original_template.parent
+        / "telescope_config"
+        / "hex-37-14.6m-gauss-fwhm9.3.yml",
+        telescope_dir,
+    )
+
+    template = tmp_path / "long_time_template.yaml"
+
+    cfg = load_yaml(original_template)
+
+    times = numpy.linspace(
+        2458098.0 - 2 / 24,
+        2458098.0 + 2 / 24,
+        100,
+    )
+
+    cfg["time"]["time_array"] = times.tolist()
+
+    dump_yaml(cfg, template)
+
+    beam_cfg = prepare_beam_check_cfg(
+        cfg,
+        run_dir=tmp_path,
+        template_dir=tmp_path,
+        min_hours=2.0,
+    )
+
+    assert numpy.allclose(
+        beam_cfg["time"]["time_array"],
+        times,
     )

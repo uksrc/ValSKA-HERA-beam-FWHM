@@ -9,8 +9,12 @@ from pathlib import Path
 from shutil import copytree
 from typing import Any
 
-from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
+
+from valska.external_tools.pyuvsim.setup_beamcheck import (
+    prepare_beam_check_cfg,
+)
+from valska.utils_yaml import dump_yaml, load_yaml
 
 from ... import __version__
 from .constants import TOOL_NAME
@@ -82,36 +86,6 @@ def _apply_valska_root_paths(
             }
 
     return changed
-
-
-# -----------------------------------------------------------------------------
-# YAML IO (ruamel.yaml)
-# -----------------------------------------------------------------------------
-
-_YAML = YAML(typ="rt")  # round-trip
-_YAML.preserve_quotes = True
-_YAML.indent(mapping=2, sequence=4, offset=2)
-_YAML.width = 4096
-
-
-def _load_yaml(path: Path) -> CommentedMap:
-    """Load a YAML file preserving comments and formatting."""
-    with path.open("r", encoding="utf-8") as f:
-        data = _YAML.load(f)
-    if not isinstance(data, CommentedMap):
-        raise ValueError(f"Expected a mapping at top-level of YAML: {path}")
-    return data
-
-
-def _dump_yaml(data: Mapping[str, Any], path: Path) -> None:
-    """Write YAML using ruamel round-trip formatting."""
-    if isinstance(data, CommentedMap):
-        out = data
-    else:
-        out = CommentedMap(dict(data))
-
-    with path.open("w", encoding="utf-8") as f:
-        _YAML.dump(out, f)
 
 
 # -----------------------------------------------------------------------------
@@ -221,6 +195,43 @@ def _install_manifest(install: pyuvsimInstall | None) -> dict[str, Any] | None:
 
 
 # -----------------------------------------------------------------------------
+# Write outputs
+# -----------------------------------------------------------------------------
+
+
+def _write_simulation(
+    *,
+    run_dir: Path,
+    obsparam_yaml: Path,
+    submit_simulate: Path,
+    cfg: dict,
+    runner: CondaRunner | ContainerRunner,
+    install: pyuvsimInstall | None,
+    slurm_cpu: Mapping[str, object] | None,
+):
+    """
+    Write parameters yaml and submit script to run_dir
+    for one simulation run.
+    """
+
+    dump_yaml(cfg, obsparam_yaml)
+    print(f"****written {obsparam_yaml}")
+
+    submit_simulate.write_text(
+        render_submit_script(
+            runner=runner,
+            install=install,
+            config_yaml=obsparam_yaml,
+            run_dir=run_dir,
+            slurm=slurm_cpu,
+            mode="simulate",
+        ),
+        encoding="utf-8",
+    )
+    submit_simulate.chmod(0o750)
+
+
+# -----------------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------------
 
@@ -244,6 +255,8 @@ def prepare_pyuvsim_run(
     variant: str | None = None,
     unique: bool = False,
     fwhm_perturb_frac: float | None = None,
+    make_beam_check: bool = False,
+    check_min_hours: float = 2.0,
 ) -> dict[str, Path]:
     """
     Prepare a pyuvsim run directory containing a single simulation-stage artefact set.
@@ -306,7 +319,7 @@ def prepare_pyuvsim_run(
 
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    cfg = _load_yaml(template_yaml)
+    cfg = load_yaml(template_yaml)
 
     valska_root_rewrites = None
     if valska_root is not None:
@@ -328,13 +341,12 @@ def prepare_pyuvsim_run(
         cfg[k] = v
 
     outputs: dict[str, Path] = {"run_dir": run_dir}
-
-    obsparam_yaml = run_dir / "obsparam.yaml"
-    _dump_yaml(cfg, obsparam_yaml)
-    outputs["obsparam_yaml"] = obsparam_yaml
+    outputs["obsparam_yaml"] = run_dir / "obsparam.yaml"
+    outputs["submit_sh_simulate"] = run_dir / "submit_simulate.sh"
 
     # Include reference simulation config and catalogue files for the default template
-    # TODO: Allow these to be referenced from outside the repository (e.g. a shared data folder) and include them in the manifest
+    # TODO: Allow these to be referenced from outside the repository (e.g. a shared data folder)
+    # and include them in the manifest
     if template_yaml == get_template_path("fov-19.4-oscar-sm.yml"):
         templates_dir = template_yaml.parent
 
@@ -345,21 +357,39 @@ def prepare_pyuvsim_run(
                 dirs_exist_ok=True,
             )
 
-    submit_simulate = run_dir / "submit_simulate.sh"
-    submit_simulate.write_text(
-        render_submit_script(
+    # Prepare the simulation submit script for the main run
+    _write_simulation(
+        run_dir=run_dir,
+        obsparam_yaml=outputs["obsparam_yaml"],
+        submit_simulate=outputs["submit_sh_simulate"],
+        cfg=cfg,
+        runner=runner,
+        install=install,
+        slurm_cpu=slurm_cpu,
+    )
+
+    # If needed prepare the submit script for the zenith test
+    if make_beam_check:
+        outputs["obsparam_beamcheck_yaml"] = (
+            run_dir / "obsparam_beamcheck.yaml"
+        )
+        outputs["submit_sh_beamcheck"] = run_dir / "submit_beamcheck.sh"
+
+        beam_check_cfg = prepare_beam_check_cfg(
+            cfg, run_dir, template_yaml.parent, min_hours=check_min_hours
+        )
+
+        _write_simulation(
+            run_dir=run_dir,
+            obsparam_yaml=outputs["obsparam_beamcheck_yaml"],
+            submit_simulate=outputs["submit_sh_beamcheck"],
+            cfg=beam_check_cfg,
             runner=runner,
             install=install,
-            config_yaml=obsparam_yaml,
-            run_dir=run_dir,
-            slurm=slurm_cpu,
-            mode="simulate",
-        ),
-        encoding="utf-8",
-    )
-    submit_simulate.chmod(0o750)
-    outputs["submit_sh_simulate"] = submit_simulate
+            slurm_cpu=slurm_cpu,
+        )
 
+    # Write final manifest
     manifest = {
         "tool": TOOL_NAME,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -373,6 +403,7 @@ def prepare_pyuvsim_run(
         "run_dir": str(run_dir),
         "template_yaml": str(template_yaml),
         "template_name": template_yaml.name,
+        "beam_check": make_beam_check,
         "beamdata_path": str(beamdata_path)
         if beamdata_path is not None
         else None,

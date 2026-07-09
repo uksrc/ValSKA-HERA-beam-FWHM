@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.test_pyuvsim_slurm import _render_script
 from valska.plotting import BeamAnalysisPlotter
 from valska.utils import PathManager
 
@@ -80,3 +81,9 @@ def beam_analysis_fixture(chains_dir):
     )
 
     yield beam_analysis_plotter
+
+
+# relevant for pyuvsim tests
+@pytest.fixture(scope="session")
+def simulate_script():
+    return _render_script("simulate")

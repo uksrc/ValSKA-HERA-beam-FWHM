@@ -351,6 +351,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print resolved paths and intended run directory, but do not write files.",
     )
 
+    parser.add_argument(
+        "--no-beamcheck",
+        dest="make_beam_check",
+        action="store_false",
+        default=True,
+        help="Disable the beam check simulation (enabled by default).",
+    )
+
+    parser.add_argument(
+        "--beamcheck-min-hours",
+        dest="check_min_hours",
+        type=float,
+        default=2.0,
+        help=(
+            "Minimum duration in hours either side of transit for beam check simulation. "
+            "Default: 2.0"
+        ),
+    )
+
     return parser
 
 
@@ -663,6 +682,11 @@ def main(argv: list[str] | None = None) -> int:
             print("  pyuvsim_repo:       (none)")
         print(f"  conda:              env={conda_env} [{conda_src}]")
         print(f"  run_dir (preview):  {preview_run_dir}")
+        print(
+            f"\n[DRY RUN] Additional beam check simulation: {args.make_beam_check}"
+        )
+        if args.make_beam_check:
+            print(f"  min hours each side of transit: {args.check_min_hours}")
         print("\n[DRY RUN] SLURM defaults to be written:")
         print(f"  cpu: {slurm_cpu}")
         print("\n[DRY RUN] No files will be created.")
@@ -688,6 +712,8 @@ def main(argv: list[str] | None = None) -> int:
         overrides=overrides,
         slurm_cpu=slurm_cpu,
         fwhm_perturb_frac=args.fwhm_perturb_frac,
+        make_beam_check=args.make_beam_check,
+        check_min_hours=args.check_min_hours,
     )
 
     run_dir = Path(out["run_dir"])

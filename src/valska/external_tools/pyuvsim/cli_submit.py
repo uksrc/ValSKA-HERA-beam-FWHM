@@ -211,6 +211,10 @@ def _print_human(result: dict[str, Any]) -> None:
     if isinstance(sim, dict):
         jid = sim.get("job_id")
         print(f"  simulate: {jid if jid is not None else '(dry-run)'}")
+    beamcheck = jobs.get("beamcheck")
+    if isinstance(beamcheck, dict):
+        jid = beamcheck.get("job_id")
+        print(f"  beamcheck: {jid if jid is not None else '(dry-run)'}")
 
     if not dry_run:
         print("\nRecorded:")

@@ -39,6 +39,7 @@ class SubmitPlan:
     run_dir: Path
     manifest_path: Path
     simulate_script: Path
+    beamcheck_script: Path
 
 
 def _utc_now_iso() -> str:
@@ -89,6 +90,7 @@ def build_submit_plan(run_dir: Path) -> SubmitPlan:
         return Path(str(p)).expanduser()
 
     simulate_script = _get_path("submit_sh_simulate", required=True)
+    beamcheck_script = _get_path("submit_sh_beamcheck", required=False)
 
     def _normalise(p: Path | None) -> Path | None:
         if p is None:
@@ -96,11 +98,13 @@ def build_submit_plan(run_dir: Path) -> SubmitPlan:
         return (run_dir / p).resolve() if not p.is_absolute() else p.resolve()
 
     simulate_script = _normalise(simulate_script)
+    beamcheck_script = _normalise(beamcheck_script)
 
     return SubmitPlan(
         run_dir=run_dir,
         manifest_path=manifest_path,
         simulate_script=simulate_script,  # type: ignore[arg-type]
+        beamcheck_script=beamcheck_script,  # type: ignore[arg-type]
     )
 
 
@@ -266,6 +270,8 @@ def submit_pyuvsim_run(
 
     _ensure_script_exists(plan.manifest_path, "manifest.json")
     _ensure_script_exists(plan.simulate_script, "simulate")
+    if plan.beamcheck_script is not None:
+        _ensure_script_exists(plan.beamcheck_script, "beamcheck")
 
     if record == "manifest":
         raise InvalidArgumentError(
@@ -290,6 +296,7 @@ def submit_pyuvsim_run(
                     f"Simulate job already recorded in jobs.json for {plan.run_dir}. "
                     "Refusing to submit again. Use --force or --resubmit."
                 )
+            # Check the beamcheck job here?
 
     result: dict[str, Any] = {
         "run_dir": str(plan.run_dir),
@@ -318,6 +325,20 @@ def submit_pyuvsim_run(
         "script": str(plan.simulate_script),
         "job_id": jobid,
     }
+
+    # Start beam check if required
+    if plan.beamcheck_script is not None:
+        jobid, cmd = _run_sbatch(
+            plan.beamcheck_script,
+            sbatch_exe=sbatch_exe,
+            cwd=plan.run_dir,
+            dry_run=dry_run,
+        )
+        result["commands"].append(cmd)
+        result["jobs"]["beamcheck"] = {
+            "script": str(plan.beamcheck_script),
+            "job_id": jobid,
+        }
 
     if not dry_run:
         merged = _merge_jobs_record(existing_jobs, result)

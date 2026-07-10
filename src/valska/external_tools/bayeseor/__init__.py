@@ -7,9 +7,9 @@ Primary entry points:
 - get_template_path: access shipped validation templates.
 """
 
+from ..common.runner import CondaRunner, ContainerRunner, ToolInstall
 from .constants import TOOL_NAME
 from .report import generate_sweep_report
-from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
 from .submit import SubmissionError, submit_bayeseor_run
 from .sweep_health import inspect_sweep_health
@@ -23,7 +23,7 @@ __all__ = [
     "SubmissionError",
     "get_template_path",
     "list_templates",
-    "BayesEoRInstall",
+    "ToolInstall",
     "CondaRunner",
     "ContainerRunner",
     "TOOL_NAME",

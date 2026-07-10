@@ -9,7 +9,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
+from valska.external_tools.bayeseor.runner import BayesEoRInstall
+
+from ..common.runner import CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
 from .submit import SubmissionError, submit_bayeseor_run
 

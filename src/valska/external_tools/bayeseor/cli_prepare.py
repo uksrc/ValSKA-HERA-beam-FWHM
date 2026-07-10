@@ -87,12 +87,13 @@ from pathlib import Path
 from typing import Any
 
 from valska.external_tools.bayeseor import (
-    BayesEoRInstall,
+    # ToolInstall,
     CondaRunner,
     get_template_path,
     list_templates,
     prepare_bayeseor_run,
 )
+from valska.external_tools.bayeseor.runner import BayesEoRInstall
 from valska.utils import get_default_path_manager, resolve_data_path
 
 
@@ -726,7 +727,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n[DRY RUN] No files will be created.")
         return 0
 
-    install = BayesEoRInstall(repo_path=Path(repo_path))
+    install = BayesEoRInstall(install_path=Path(repo_path))
     runner = CondaRunner(conda_activate=conda_sh, env_name=conda_env)
 
     out = prepare_bayeseor_run(

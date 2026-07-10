@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 from valska.external_tools.bayeseor import (
-    BayesEoRInstall,
     CondaRunner,
     get_template_path,
 )
+from valska.external_tools.bayeseor.runner import BayesEoRInstall
 from valska.utils import get_default_path_manager, resolve_data_path
 
 from . import sweep as sweep_mod  # for DRY helpers (run_label + point dirs)
@@ -829,7 +829,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n[DRY RUN] No files or jobs will be created/submitted.")
         return 0
 
-    install = BayesEoRInstall(repo_path=Path(str(repo_path)).expanduser())
+    install = BayesEoRInstall(install_path=Path(str(repo_path)).expanduser())
     runner = CondaRunner(conda_activate=str(conda_sh), env_name=str(conda_env))
 
     sweep_res = run_fwhm_sweep(

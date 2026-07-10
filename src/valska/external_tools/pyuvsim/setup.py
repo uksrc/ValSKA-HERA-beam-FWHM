@@ -388,9 +388,16 @@ def prepare_pyuvsim_run(
                 f"{beam_check_cfg['filing']['output_format']}"
             )
         )
+        beamcheck_log_suffix = ".beamcheck.log"
+        beamcheck_fig_suffix = ".beamcheck.png"
 
         # Postprocessing command to run beam diagnostics
-        postprocess_cmd = f"valska.beam_metrics {beamcheck_uvh5} {outputs['obsparam_beamcheck_yaml']}"
+        postprocess_cmd = (
+            f"valska.beam_metrics {beamcheck_uvh5} "
+            f"{outputs['obsparam_beamcheck_yaml']} "
+            f"--log-suffix {beamcheck_log_suffix} "
+            f"--fig-suffix {beamcheck_fig_suffix}"
+        )
 
         _write_simulation(
             run_dir=run_dir,
@@ -418,6 +425,12 @@ def prepare_pyuvsim_run(
         "template_yaml": str(template_yaml),
         "template_name": template_yaml.name,
         "beam_check": make_beam_check,
+        "beamcheck_log_suffix": beamcheck_log_suffix
+        if make_beam_check
+        else None,
+        "beamcheck_fig_suffix": beamcheck_fig_suffix
+        if make_beam_check
+        else None,
         "beamdata_path": str(beamdata_path)
         if beamdata_path is not None
         else None,

@@ -797,21 +797,31 @@ def main():
         "simulation_config",
         help="Simulation configuration used to generate the simulation.",
     )
+    parser.add_argument(
+        "--log-suffix",
+        default=".beamcheck.log",
+        help="Suffix for the beam check log file (default: %(default)s).",
+    )
 
+    parser.add_argument(
+        "--fig-suffix",
+        default=".beamcheck.png",
+        help="Suffix for the beam check figure (default: %(default)s).",
+    )
     args = parser.parse_args()
 
     # Write log and plot into uvh5 directory
     uvh5 = Path(args.uvh5)
 
     handlers = [logging.StreamHandler()]
-    handlers.append(logging.FileHandler(uvh5.with_suffix(".beamcheck.log")))
+    handlers.append(logging.FileHandler(uvh5.with_suffix(args.log_suffix)))
     logging.basicConfig(
         level=logging.INFO,
         format="%(message)s",
         handlers=handlers,
     )
 
-    fig_save_path = uvh5.with_suffix(".beamcheck.png")
+    fig_save_path = uvh5.with_suffix(args.fig_suffix)
 
     bm = BeamMetrics(args.uvh5)
     bm.read_simulation_config(args.simulation_config)

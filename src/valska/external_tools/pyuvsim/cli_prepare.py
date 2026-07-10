@@ -728,6 +728,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  run_label:    {run_label}")
     print(f"  run_id:       {args.run_id}")
 
+    if args.make_beam_check:
+        print("\nAlso prepared 'beam check' run with single source at zenith")
+
     print("\nNext steps:")
     print("  Option A) Submit via ValSKA (recommended):")
     print(f"     valska-pyuvsim-submit {run_dir}")
@@ -735,6 +738,8 @@ def main(argv: list[str] | None = None) -> int:
     if "submit_sh_simulate" in out:
         print("\n  Option B) Manual submission:")
         print(f"     sbatch {out['submit_sh_simulate']}")
+        if "submit_sh_beamcheck" in out:
+            print(f"     sbatch {out['submit_sh_beamcheck']}")
 
     return 0
 

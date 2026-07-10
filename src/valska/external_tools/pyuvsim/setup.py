@@ -215,7 +215,6 @@ def _write_simulation(
     """
 
     dump_yaml(cfg, obsparam_yaml)
-    print(f"****written {obsparam_yaml}")
 
     submit_simulate.write_text(
         render_submit_script(

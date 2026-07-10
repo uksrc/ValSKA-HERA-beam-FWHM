@@ -34,11 +34,13 @@ def test_beam_width_gaussian_fit_recovers_fwhm():
     v_auto = y[:, numpy.newaxis]
     freq = numpy.array([1.0])
 
-    fwhm, gauss_result, airy_result = beam_metrics.fit_beam_width_vs_frequency(
-        freq=freq,
-        theta_deg=theta,
-        v_auto=v_auto,
-        shape="GaussianBeam",
+    fwhm, chi2, gauss_result, airy_result = (
+        beam_metrics.fit_beam_width_vs_frequency(
+            freq=freq,
+            theta_deg=theta,
+            v_auto=v_auto,
+            shape="GaussianBeam",
+        )
     )
 
     expected_fwhm = 2 * numpy.sqrt(2 * numpy.log(2)) * sigma
@@ -64,7 +66,7 @@ def test_beam_width_gaussian_fit_multiple_frequencies():
     )
     freq = numpy.array([1.0, 2.0, 3.0])
 
-    fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+    fwhm, _, _, _ = beam_metrics.fit_beam_width_vs_frequency(
         freq=freq,
         theta_deg=theta,
         v_auto=data,
@@ -86,11 +88,13 @@ def test_beam_width_airy_fit_returns_parameters():
 
     v_auto = y[:, numpy.newaxis]
 
-    fwhm, gauss_result, airy_result = beam_metrics.fit_beam_width_vs_frequency(
-        freq=freqs,
-        theta_deg=theta,
-        v_auto=v_auto,
-        shape="AiryBeam",
+    fwhm, chi2, gauss_result, airy_result = (
+        beam_metrics.fit_beam_width_vs_frequency(
+            freq=freqs,
+            theta_deg=theta,
+            v_auto=v_auto,
+            shape="AiryBeam",
+        )
     )
 
     # Airy branch should not populate Gaussian params
@@ -132,7 +136,7 @@ def test_beam_width_empty_mask_returns_nan():
     v_auto = numpy.zeros((100, 1))
     freq = numpy.array([1.0])
 
-    fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+    fwhm, _, _, _ = beam_metrics.fit_beam_width_vs_frequency(
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
@@ -158,7 +162,7 @@ def test_beam_width_gaussian_fit_with_noise():
     v_auto = noisy[:, numpy.newaxis]
     freq = numpy.array([1.0])
 
-    fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+    fwhm, _, _, _ = beam_metrics.fit_beam_width_vs_frequency(
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
@@ -182,15 +186,11 @@ def test_chromaticity_returns_expected_correlation(capsys):
     freq = numpy.array([1, 1.2, 1.5, 2, 3, 6], dtype=float)
     param = numpy.array([6, 5, 4, 3, 2, 1], dtype=float)
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
     expected = 1.0
 
-    assert numpy.isclose(corr, expected)
-
-    captured = capsys.readouterr()
-    assert "Variation with frequency" in captured.out
-    assert "Correlation with 1/frequency" in captured.out
+    assert numpy.isclose(result["correlation"], expected)
 
 
 def test_chromaticity_ignores_nan_values():
@@ -218,14 +218,14 @@ def test_chromaticity_ignores_nan_values():
         dtype=float,
     )
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
     expected = 1.0
 
-    assert numpy.isclose(corr, expected, equal_nan=True)
+    assert numpy.isclose(result["correlation"], expected, equal_nan=True)
 
 
-def test_chromaticity_returns_nan_when_not_enough_samples():
+def test_chromaticity_returns_empty_dict_when_not_enough_samples():
     """
     If the number of valid samples is <= CORR_SAMPLES,
     the function should return NaN.
@@ -233,9 +233,9 @@ def test_chromaticity_returns_nan_when_not_enough_samples():
     freq = numpy.array([1, 2], dtype=float)
     param = numpy.array([1, 2], dtype=float)
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
-    assert numpy.isnan(corr)
+    assert result == {}
 
 
 def test_chromaticity_all_nan_input():
@@ -245,9 +245,9 @@ def test_chromaticity_all_nan_input():
     freq = numpy.array([1, 2, 3], dtype=float)
     param = numpy.array([numpy.nan, numpy.nan, numpy.nan])
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
-    assert numpy.isnan(corr)
+    assert result == {}
 
 
 def test_chromaticity_constant_parameter():
@@ -257,9 +257,9 @@ def test_chromaticity_constant_parameter():
     freq = numpy.array([1, 2, 3, 4, 5, 6], dtype=float)
     param = numpy.ones(6)
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
-    assert numpy.isnan(corr)
+    assert result == {}
 
 
 def test_plot_beam_shape_basic():
@@ -552,17 +552,18 @@ def test_compute_beam_metrics(
 
     mock_fit.return_value = (
         numpy.array([10.0, 11.0, 12.0, 13.0]),
+        numpy.array([1.0, 1.0, 1.0, 1.0]),
         "gauss_result",
         "airy_result",
     )
 
-    gauss_result, airy_result, widths = bm.compute_beam_metrics()
+    bm.compute_beam_metrics()
 
-    assert gauss_result == "gauss_result"
-    assert airy_result == "airy_result"
+    assert bm.gauss_result == "gauss_result"
+    assert bm.airy_result == "airy_result"
 
     numpy.testing.assert_array_equal(
-        widths,
+        bm.fit_vs_freq,
         numpy.array([10.0, 11.0, 12.0, 13.0]),
     )
 
@@ -590,12 +591,11 @@ def test_make_plots(
     bm.lsts_hours = numpy.array([1.0, 2.0])
     bm.theta_deg = numpy.array([-1.0, 1.0])
     bm.freq_array = numpy.array([100e6, 110e6, 120e6, 130e6])
+    bm.gauss_result = "gauss"
+    bm.airy_result = "airy"
+    bm.fit_vs_freq = numpy.array([1, 2, 3, 4])
 
-    bm.make_plots(
-        gauss_result="gauss",
-        airy_result="airy",
-        fit_vs_freq=numpy.array([1, 2, 3, 4]),
-    )
+    bm.make_plots()
 
     mock_heatmap.assert_called_once()
     mock_beam_shape.assert_called_once()
@@ -625,13 +625,13 @@ def test_make_plots_can_save_without_showing(
     bm.lsts_hours = numpy.array([1.0, 2.0])
     bm.theta_deg = numpy.array([-1.0, 1.0])
     bm.freq_array = numpy.array([100e6, 110e6, 120e6, 130e6])
+    bm.gauss_result = "gauss"
+    bm.airy_result = None
+    bm.fit_vs_freq = numpy.array([1, 2, 3, 4])
 
     save_path = tmp_path / "beam_metrics.png"
 
     bm.make_plots(
-        gauss_result="gauss",
-        airy_result=None,
-        fit_vs_freq=numpy.array([1, 2, 3, 4]),
         save_path=save_path,
         show=False,
     )
@@ -653,9 +653,10 @@ def test_check_beam(mock_uvdata):
         patch.object(
             bm,
             "compute_beam_metrics",
-            return_value=("g", "a", numpy.array([1])),
+            return_value=(numpy.array([1]), numpy.array([1]), "g", "a"),
         ) as mock_compute,
         patch.object(bm, "make_plots") as mock_plots,
+        patch.object(bm, "write_report", return_value={}) as mock_write,
     ):
         mock_uv_instance = MagicMock()
         mock_uvdata.from_file.return_value = mock_uv_instance
@@ -666,3 +667,4 @@ def test_check_beam(mock_uvdata):
         mock_prepare.assert_called_once_with(mock_uv_instance)
         mock_compute.assert_called_once()
         mock_plots.assert_called_once()
+        mock_write.assert_called_once()

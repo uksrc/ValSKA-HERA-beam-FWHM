@@ -16,6 +16,7 @@ def render_submit_script(
     run_dir: Path,
     slurm: Mapping[str, object] | None = None,
     mode: str = "simulate",
+    postprocess_cmd: str | None = None,
 ) -> str:
     """
     Render a SLURM submit script for a pyuvsim run.
@@ -270,6 +271,11 @@ echo "Exit code:         $RC"
 if [[ $RC -ne 0 ]]; then
   echo "ERROR: pyuvsim command failed with exit code $RC"
   exit $RC
+fi
+
+if [[ -n "{postprocess_cmd}" ]]; then
+    echo "Running post-processing..."
+    {python_exe} -m {postprocess_cmd}
 fi
 
 echo "----------------------------------------"

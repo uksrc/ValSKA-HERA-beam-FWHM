@@ -208,6 +208,7 @@ def _write_simulation(
     runner: CondaRunner | ContainerRunner,
     install: pyuvsimInstall | None,
     slurm_cpu: Mapping[str, object] | None,
+    postprocess_cmd: str | None = None,
 ):
     """
     Write parameters yaml and submit script to run_dir
@@ -224,6 +225,7 @@ def _write_simulation(
             run_dir=run_dir,
             slurm=slurm_cpu,
             mode="simulate",
+            postprocess_cmd=postprocess_cmd,
         ),
         encoding="utf-8",
     )
@@ -378,6 +380,18 @@ def prepare_pyuvsim_run(
             cfg, run_dir, template_yaml.parent, min_hours=check_min_hours
         )
 
+        beamcheck_uvh5 = (
+            run_dir
+            / beam_check_cfg["filing"]["outdir"]
+            / (
+                f"{beam_check_cfg['filing']['outfile_name']}."
+                f"{beam_check_cfg['filing']['output_format']}"
+            )
+        )
+
+        # Postprocessing command to run beam diagnostics
+        postprocess_cmd = f"valska.beam_metrics {beamcheck_uvh5} {outputs['obsparam_beamcheck_yaml']}"
+
         _write_simulation(
             run_dir=run_dir,
             obsparam_yaml=outputs["obsparam_beamcheck_yaml"],
@@ -386,6 +400,7 @@ def prepare_pyuvsim_run(
             runner=runner,
             install=install,
             slurm_cpu=slurm_cpu,
+            postprocess_cmd=postprocess_cmd,
         )
 
     # Write final manifest

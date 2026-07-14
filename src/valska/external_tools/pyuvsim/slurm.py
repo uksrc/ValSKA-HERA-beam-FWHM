@@ -173,6 +173,13 @@ def render_submit_script(
     )
     execution_interface = "pyuvsim.uvsim.run_uvsim"
 
+    postprocess_block = ""
+    if postprocess_cmd is not None:
+        postprocess_block = (
+            'echo "Running post-processing..."'
+            f"\n{python_exe} -m {postprocess_cmd}"
+        )
+
     return f"""{sbatch_block}
 
 set -eo pipefail
@@ -273,10 +280,7 @@ if [[ $RC -ne 0 ]]; then
   exit $RC
 fi
 
-if [[ -n "{postprocess_cmd}" ]]; then
-    echo "Running post-processing..."
-    {python_exe} -m {postprocess_cmd}
-fi
+{postprocess_block}
 
 echo "----------------------------------------"
 echo "ValSKA / pyuvsim SLURM job complete"

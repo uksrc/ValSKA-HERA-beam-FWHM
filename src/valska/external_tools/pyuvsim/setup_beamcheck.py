@@ -10,6 +10,7 @@ import astropy.units as units
 import numpy
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
+from ruamel.yaml.comments import CommentedSeq
 
 from valska.catalog import write_skyh5_new
 from valska.utils_yaml import load_yaml
@@ -27,7 +28,7 @@ def _adjust_time_array(
     of the observation midpoint while preserving the original cadence.
     """
 
-    cadence = numpy.median(numpy.diff(time_array))
+    step = numpy.median(numpy.diff(time_array))
 
     start = time_array[0]
     end = time_array[-1]
@@ -42,11 +43,10 @@ def _adjust_time_array(
         return cfg
 
     new_start = midpoint - max(before, required)
-    new_end = midpoint + max(after, required)
+    # Ensure that new_end is >= required by adding one step
+    new_end = midpoint + max(after, required) + step
 
-    n = int(numpy.ceil((new_end - new_start) / cadence)) + 1
-
-    new_times = new_start + cadence * numpy.arange(n)
+    new_times = numpy.arange(new_start, new_end, step)
 
     time_cfg = cfg.get("time")
     if not isinstance(time_cfg, dict):
@@ -56,7 +56,9 @@ def _adjust_time_array(
         raise NotImplementedError(
             "Beam-check currently requires an explicit time.time_array."
         )
-    time_cfg["time_array"] = new_times.tolist()
+    time_cfg["time_array"] = CommentedSeq(new_times.tolist())
+    # Ensure time array will be written in flow style
+    time_cfg["time_array"].fa.set_flow_style()
 
     return cfg
 
@@ -138,6 +140,7 @@ def prepare_beam_check_cfg(
     2. Generate catalog with single source at zenith,
     3. Point the catalogue path in cfg to that file,
     4. Optionally modify the observing times.
+    5. Update output filename
     """
 
     new_cfg = deepcopy(cfg)
@@ -168,5 +171,8 @@ def prepare_beam_check_cfg(
         new_cfg = _adjust_time_array(
             new_cfg, time_array, hours_each_side=min_hours
         )
+
+    # 5. Update output filename
+    new_cfg["filing"]["outfile_name"] += ".beamcheck"
 
     return new_cfg

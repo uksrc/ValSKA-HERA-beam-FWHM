@@ -813,6 +813,10 @@ def main():
     # Write log and plot into uvh5 directory
     uvh5 = Path(args.uvh5)
 
+    # Check uvh5 file exists
+    if not uvh5.exists():
+        raise FileNotFoundError(f"No such file or directory: {args.uvh5}")
+
     handlers = [logging.StreamHandler()]
     handlers.append(logging.FileHandler(uvh5.with_suffix(args.log_suffix)))
     logging.basicConfig(

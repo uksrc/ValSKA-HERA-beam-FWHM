@@ -1,13 +1,15 @@
 """Unit tests for beam metrics"""
 
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy
 import pytest
+from astropy.coordinates import Angle
 
 from valska import beam_metrics
 
-from .constants import make_airy_data, make_gaussian_data, write_pyuvsim_config
+from .constants import make_airy_data, make_gaussian_data
 
 CONFIG_TEXT = (
     "beam_paths:\n"
@@ -354,31 +356,25 @@ def test_plot_spectrum_midpoint_is_correct():
     assert ax.axvline.call_args[0][0] == freq[mid_idx]
 
 
-def test_sim_config_init_defaults():
-    config = beam_metrics.SimulationConfig()
-
-    assert config.latitude is None
-    assert config.sigma is None
-    assert config.beam_shape is None
-
-
-def test_sim_config_init_values():
-    config = beam_metrics.SimulationConfig(
-        latitude=-30.7,
-        sigma=0.5,
-        beam_shape="GaussianBeam",
-    )
-
-    assert config.latitude == -30.7
-    assert config.sigma == 0.5
-    assert config.beam_shape == "GaussianBeam"
-
-
 def test_beam_metrics_init():
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+            Path("templates"),
+        )
+
+        mock_config.assert_called_once_with(
+            Path("config.yaml"),
+            Path("templates"),
+        )
+
+        assert bm.simulation_config is mock_config.return_value
 
     assert bm.uv_filename == "test.uvh5"
-    assert isinstance(bm.simulation_config, beam_metrics.SimulationConfig)
 
     numpy.testing.assert_array_equal(bm.baseline_counts, numpy.array([]))
     numpy.testing.assert_array_equal(bm.lsts_hours, numpy.array([]))
@@ -388,93 +384,19 @@ def test_beam_metrics_init():
     numpy.testing.assert_array_equal(bm.v_time_bl, numpy.array([]))
 
 
-@pytest.mark.parametrize(
-    ("beam_spec", "expected_shape", "expected_size"),
-    [
-        (
-            "    class: GaussianBeam\n    sigma: 0.2",
-            "GaussianBeam",
-            0.2,
-        ),
-        (
-            "    type: gaussian\n    sigma: 0.2",
-            "GaussianBeam",
-            0.2,
-        ),
-        (
-            "    class: AiryBeam\n    diameter: 14.0",
-            "AiryBeam",
-            14.0,
-        ),
-        (
-            "    type: airy\n    diameter: 14.0",
-            "AiryBeam",
-            14.0,
-        ),
-    ],
-)
-def test_read_simulation_config_beam_mapping(
-    tmp_path,
-    beam_spec,
-    expected_shape,
-    expected_size,
-):
-
-    config_text = CONFIG_TEXT.format(beam_spec=beam_spec)
-
-    config_path = write_pyuvsim_config(tmp_path, config_text)
-
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(config_path)
-
-    assert bm.simulation_config.beam_shape == expected_shape
-    if expected_shape == "GaussianBeam":
-        assert bm.simulation_config.sigma == expected_size
-        assert bm.simulation_config.diameter is None
-    if expected_shape == "AiryBeam":
-        assert bm.simulation_config.sigma is None
-        assert bm.simulation_config.diameter == expected_size
-    assert bm.simulation_config.latitude == -26.7
-
-
-def test_read_simulation_config_unknown_beam_type(tmp_path):
-
-    config_text = CONFIG_TEXT.format(beam_spec="    type: not_a_beam\n")
-
-    config_path = write_pyuvsim_config(tmp_path, config_text)
-
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-
-    with pytest.raises(KeyError):
-        bm.read_simulation_config(config_path)
-
-
-def test_prepare_uv_data_raises_without_latitude():
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-
-    mock_uv = MagicMock()
-
-    mock_uv.time_array = numpy.array([1.0, 1.0])
-    mock_uv.lst_array = numpy.array([0.1, 0.1])
-    mock_uv.freq_array = numpy.array([[100e6, 110e6]])
-
-    # shape:
-    # (Nblts=2, Nspws=1, Nfreqs=2, Npols=2)
-    mock_uv.data_array = numpy.ones((2, 1, 2, 2), dtype=complex)
-
-    mock_uv.select.return_value = mock_uv
-
-    with pytest.raises(ValueError, match="Please add the simulation config"):
-        bm.prepare_uv_data(mock_uv)
-
-
 def test_prepare_uv_data_success(tmp_path):
 
-    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
-    config_path = write_pyuvsim_config(tmp_path, config_text)
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_sim_config = Mock()
+        mock_sim_config.latitude = Angle(-26.7, unit="deg")
+        mock_sim_config.source_ra = Angle([0.15], unit="rad")
+        mock_config.return_value = mock_sim_config
 
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(config_path)
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+            Path("templates"),
+        )
 
     mock_uv = MagicMock()
 
@@ -505,14 +427,20 @@ def test_prepare_uv_data_success(tmp_path):
 
     assert len(bm.theta_deg) == 2
 
+    numpy.testing.assert_allclose(
+        bm.theta_deg, numpy.array([-2.55926667, 2.55926667])
+    )
+
 
 def test_prepare_uv_data_raises_for_inconsistent_baselines(tmp_path):
 
-    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
-    config_path = write_pyuvsim_config(tmp_path, config_text)
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
 
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(config_path)
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     mock_uv = MagicMock()
 
@@ -539,12 +467,13 @@ def test_compute_beam_metrics(
     mock_chromaticity,
     tmp_path,
 ):
-    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
-    config_path = write_pyuvsim_config(tmp_path, config_text)
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
 
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-
-    bm.read_simulation_config(config_path)
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     bm.theta_deg = numpy.array([-5, 0, 5])
     bm.v_auto = numpy.ones((3, 4))
@@ -583,7 +512,13 @@ def test_make_plots(
     mock_waterfall,
     mock_show,
 ):
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     bm.v_auto = numpy.ones((2, 4))
     bm.v_time_bl = numpy.ones((2, 2))
@@ -617,7 +552,13 @@ def test_make_plots_can_save_without_showing(
     mock_show,
     tmp_path,
 ):
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     bm.v_auto = numpy.ones((2, 4))
     bm.v_time_bl = numpy.ones((2, 2))
@@ -646,7 +587,14 @@ def test_make_plots_can_save_without_showing(
 
 @patch("valska.beam_metrics.UVData")
 def test_check_beam(mock_uvdata):
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     with (
         patch.object(bm, "prepare_uv_data") as mock_prepare,

@@ -12,7 +12,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from ruamel.yaml.comments import CommentedSeq
 
-from valska.catalog import write_skyh5_new
+from valska.catalog import write_skyh5
 from valska.utils_yaml import load_yaml
 
 # -----------------------------------------------------------------------------
@@ -21,32 +21,29 @@ from valska.utils_yaml import load_yaml
 
 
 def _adjust_time_array(
-    cfg: dict, time_array: numpy.typing.NDArray, hours_each_side: float = 2.0
+    cfg: dict,
+    time_array: numpy.typing.NDArray,
+    time_step_seconds: float = 10.0,
+    hours_each_side: float = 2.0,
 ) -> dict:
     """
-    Ensure the observation spans at least ``hours_each_side`` either side
-    of the observation midpoint while preserving the original cadence.
+    Adjust the observation span to be ``hours_each_side`` either side
+    of the observation midpoint.
     """
 
-    step = numpy.median(numpy.diff(time_array))
+    midpoint = 0.5 * (time_array[0] + time_array[-1])
 
-    start = time_array[0]
-    end = time_array[-1]
-    midpoint = 0.5 * (start + end)
+    required_days = hours_each_side / 24
+    step_days = time_step_seconds / 86400
 
-    required = hours_each_side / 24.0
+    # Number of steps on each side
+    steps_each_side = numpy.ceil(required_days / step_days)
 
-    before = midpoint - start
-    after = end - midpoint
-
-    if before >= required and after >= required:
-        return cfg
-
-    new_start = midpoint - max(before, required)
-    # Ensure that new_end is >= required by adding one step
-    new_end = midpoint + max(after, required) + step
-
-    new_times = numpy.arange(new_start, new_end, step)
+    # Number of steps is odd, and midpoint falls exactly at centre
+    time_offsets = (
+        numpy.arange(-steps_each_side, steps_each_side + 1) * step_days
+    )
+    new_times = midpoint + time_offsets
 
     time_cfg = cfg.get("time")
     if not isinstance(time_cfg, dict):
@@ -93,7 +90,7 @@ def _read_config_times(cfg: dict):
     return time_array
 
 
-def _read_config_location(cfg: dict, template_dir):
+def read_config_location(cfg: dict, template_dir: Path | None = None):
 
     telescope = cfg.get("telescope")
     if (
@@ -104,7 +101,7 @@ def _read_config_location(cfg: dict, template_dir):
 
     tel_cfg_path = Path(telescope["telescope_config_name"])
 
-    if not tel_cfg_path.is_absolute():
+    if not tel_cfg_path.is_absolute() and template_dir is not None:
         tel_cfg_path = template_dir / tel_cfg_path
 
     if not tel_cfg_path.exists():
@@ -149,14 +146,14 @@ def prepare_beam_check_cfg(
     time_array = _read_config_times(cfg)
     t_mid = 0.5 * (time_array[0] + time_array[-1])
 
-    earth_location = _read_config_location(cfg, template_dir)
+    earth_location = read_config_location(cfg, template_dir)
 
     # 2. Build minimal sky catalogue
     zenith_sky_path = run_dir / "catalog_files" / "zenith_single_source.skyh5"
     zenith_sky_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Set RA/Dec so that source transits zenith at t_mid
-    write_skyh5_new(
+    write_skyh5(
         filename=zenith_sky_path,
         ra_deg=[_lst_at_time(t_mid, earth_location)],
         dec_deg=[earth_location.lat.deg],

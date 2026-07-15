@@ -1,12 +1,14 @@
 # Catalogue utilities
 
+from pathlib import Path
+
 import astropy.units as units
 import numpy
 from astropy.coordinates import SkyCoord
 from pyradiosky import SkyModel
 
 
-def write_skyh5_new(
+def write_skyh5(
     *,
     filename,
     ra_deg,
@@ -17,7 +19,7 @@ def write_skyh5_new(
     reference_frequency=150e6,
 ):
     """
-    Write a SkyH5 catalog.
+    Write a SkyH5 catalogue.
 
     Parameters
     ----------
@@ -90,3 +92,22 @@ def write_skyh5_new(
 
     sm.check()
     sm.write_skyh5(filename, clobber=True)
+
+
+def read_skyh5_catalogue(filename: str | Path) -> SkyModel:
+    """
+    Read a SkyH5 catalogue into a SkyModel.
+
+    Parameters
+    ----------
+    filename
+        Path to the .skyh5 catalogue.
+
+    Returns
+    -------
+    SkyModel
+        The loaded sky model.
+    """
+    sky = SkyModel()
+    sky.read_skyh5(filename)
+    return sky

@@ -1,5 +1,6 @@
 import argparse
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -8,22 +9,17 @@ import matplotlib.axes
 import matplotlib.lines
 import matplotlib.pyplot as plt
 import numpy
-import yaml
+from astropy.coordinates import Angle
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from pyuvdata import UVData
 from scipy.constants import c as speed_of_light
 from scipy.special import j1
 
+from valska.simulation_config import SimulationConfig
+
 log = logging.getLogger(__name__)
 
 CORR_SAMPLES = 5
-# Compatibility with older pyuvsim config file syntax:
-TYPE_TO_CLASS = {
-    "gaussian": "GaussianBeam",
-    "airy": "AiryBeam",
-    "uniform": "UniformBeam",
-    "short_dipole": "ShortDipoleBeam",
-}
 
 
 def _airy(
@@ -47,31 +43,22 @@ def _airy(
     return A * beam
 
 
-class SimulationConfig:
+class BeamMetrics:
     def __init__(
         self,
-        latitude: float | None = None,
-        sigma: float | None = None,
-        beam_shape: str | None = None,
-        diameter: float | None = None,
+        filename: str,
+        config_yaml: Path | str,
+        template_dir: Path | None = None,
     ):
 
-        self.latitude = latitude
-        self.sigma = sigma
-        self.beam_shape = beam_shape
-        self.diameter = diameter
-
-
-class Loader(yaml.SafeLoader):
-    pass
-
-
-class BeamMetrics:
-    def __init__(self, filename: str):
-
         self.uv_filename = filename
+        self.config_yaml = config_yaml
 
-        self.simulation_config = SimulationConfig()
+        self.simulation_config = SimulationConfig(
+            Path(config_yaml), template_dir
+        )
+
+        self.save_path = None
 
         # derived quantities
         self.baseline_counts = numpy.array([])
@@ -87,41 +74,6 @@ class BeamMetrics:
         self.airy_result = None
 
         self.results: dict[str, Any] = {}
-
-    def read_simulation_config(
-        self,
-        beam_parameters: str,
-    ):
-        """Read in the simulation config information"""
-
-        # Custom constructor to handle !AnalyticBeam
-        def analytic_beam_constructor(loader, node):
-            return loader.construct_mapping(node)
-
-        Loader.add_constructor("!AnalyticBeam", analytic_beam_constructor)
-
-        with open(beam_parameters, encoding="utf-8") as file:
-            values = yaml.load(file, Loader=Loader)
-
-        lat = float(values["telescope_location"].strip("()").split(",")[0])
-
-        beam_paths = values["beam_paths"][0]
-
-        beam_shape = beam_paths.get("class")
-        if beam_shape is None:
-            beam_type = beam_paths.get("type")
-            if beam_type is None:
-                raise ValueError(
-                    "beam_paths must contain either 'class' or 'type'"
-                )
-            beam_shape = TYPE_TO_CLASS[beam_type]
-
-        self.simulation_config = SimulationConfig(
-            latitude=lat,
-            sigma=beam_paths.get("sigma", None),
-            beam_shape=beam_shape,
-            diameter=beam_paths.get("diameter", None),
-        )
 
     def check_beam(
         self,
@@ -148,6 +100,22 @@ class BeamMetrics:
     def write_report(self):
         """Write report and collect results"""
 
+        log.info("***** Beam Check Report *****\n\n")
+        log.info("Generated at %s\n", datetime.now(UTC).isoformat())
+        log.info("uvh5 file: %s", self.uv_filename)
+        log.info("config yaml: %s", self.config_yaml)
+        log.info("output PNG: %s\n", self.save_path)
+        log.info(
+            "LST range: %0.3f - %0.3f hours",
+            self.lsts_hours[0],
+            self.lsts_hours[-1],
+        )
+        log.info(
+            "Freq range: %0.1f - %0.1f MHz\n",
+            self.freq_array[0] / 1e6,
+            self.freq_array[-1] / 1e6,
+        )
+
         log.info("Fitting for %s\n", self.simulation_config.beam_shape)
         self.results["beam_shape"] = self.simulation_config.beam_shape
 
@@ -166,12 +134,14 @@ class BeamMetrics:
                 self.results["beam_sigma_deg"],
             )
 
-            if self.simulation_config.sigma is not None:
-                self.results["expected_fwhm_deg"] = numpy.rad2deg(
-                    2 * numpy.sqrt(numpy.log(2)) * self.simulation_config.sigma
+            if self.simulation_config.beam_sigma.deg is not None:
+                self.results["expected_fwhm_deg"] = (
+                    2
+                    * numpy.sqrt(numpy.log(2))
+                    * self.simulation_config.beam_sigma.deg
                 )
-                self.results["expected_sigma_deg"] = numpy.rad2deg(
-                    self.simulation_config.sigma / numpy.sqrt(2)
+                self.results["expected_sigma_deg"] = (
+                    self.simulation_config.beam_sigma.deg / numpy.sqrt(2)
                 )
 
                 log.info(
@@ -189,7 +159,7 @@ class BeamMetrics:
             )
             if self.simulation_config.diameter is not None:
                 self.results["expected_diameter"] = (
-                    self.simulation_config.diameter
+                    self.simulation_config.diameter.value
                 )
                 log.info(
                     "   Expected diameter = %s m",
@@ -219,7 +189,7 @@ class BeamMetrics:
                 100 * self.results["chromaticity"]["frac_resid"],
             )
             log.info(
-                "   Correlation with 1/frequency: %.3f",
+                "   Correlation with 1/frequency: %.3f\n",
                 self.results["chromaticity"]["correlation"],
             )
 
@@ -284,23 +254,24 @@ class BeamMetrics:
         )  # (Ntimes, Nbls_per_time)
 
         # Hour angle calculated from LST relative to mean LST
-        hour_angle = numpy.deg2rad(
-            (self.lsts_hours - numpy.mean(self.lsts_hours)) * 15.0
-        )
+        lsts_angle = Angle(self.lsts_hours, unit="hourangle")
+        hour_angle = lsts_angle - self.simulation_config.source_ra[0]
+
+        # self.simulation_config.source_ra.[0]
+        # hour_angle = numpy.deg2rad(
+        #     (self.lsts_hours - numpy.mean(self.lsts_hours)) * 15.0
+        # )
 
         # Convert to real angle on the sky
-        if self.simulation_config.latitude is None:
-            raise ValueError("Please add the simulation config information.")
-        else:
-            lat = numpy.deg2rad(self.simulation_config.latitude)
-            cos_theta = numpy.sin(lat) ** 2 + numpy.cos(lat) ** 2 * numpy.cos(
-                hour_angle
-            )
+        lat = self.simulation_config.latitude.rad
+        cos_theta = numpy.sin(lat) ** 2 + numpy.cos(lat) ** 2 * numpy.cos(
+            hour_angle.rad
+        )
 
-            # Get the sign correct so that it measures angle around mean LST
-            self.theta_deg = numpy.sign(hour_angle) * numpy.rad2deg(
-                numpy.arccos(cos_theta)
-            )
+        # Get the sign correct so that it measures angle around mean LST
+        self.theta_deg = numpy.sign(hour_angle) * numpy.rad2deg(
+            numpy.arccos(cos_theta)
+        )
 
     def compute_beam_metrics(self):
         """Compute beam metrics"""
@@ -401,9 +372,9 @@ class BeamMetrics:
 
         plt.tight_layout()
         if save_path is not None:
-            save_path = Path(save_path)
+            self.save_path = Path(save_path)
             save_path.parent.mkdir(parents=True, exist_ok=True)
-            fig.savefig(save_path, dpi=200, bbox_inches="tight")
+            fig.savefig(self.save_path, dpi=200, bbox_inches="tight")
         if show:
             plt.show()
         else:
@@ -798,6 +769,11 @@ def main():
         help="Simulation configuration used to generate the simulation.",
     )
     parser.add_argument(
+        "--template-dir",
+        default=None,
+        help="Template directory for config files (default: %(default)s).",
+    )
+    parser.add_argument(
         "--log-suffix",
         default=".beamcheck.log",
         help="Suffix for the beam check log file (default: %(default)s).",
@@ -810,13 +786,18 @@ def main():
     )
     args = parser.parse_args()
 
-    # Write log and plot into uvh5 directory
     uvh5 = Path(args.uvh5)
+    config_yaml = Path(args.simulation_config)
+
+    template_dir = args.template_dir
+    if template_dir is not None:
+        template_dir = Path(template_dir)
 
     # Check uvh5 file exists
     if not uvh5.exists():
         raise FileNotFoundError(f"No such file or directory: {args.uvh5}")
 
+    # Write log and plot into uvh5 directory
     handlers = [logging.StreamHandler()]
     handlers.append(logging.FileHandler(uvh5.with_suffix(args.log_suffix)))
     logging.basicConfig(
@@ -827,8 +808,8 @@ def main():
 
     fig_save_path = uvh5.with_suffix(args.fig_suffix)
 
-    bm = BeamMetrics(args.uvh5)
-    bm.read_simulation_config(args.simulation_config)
+    bm = BeamMetrics(uvh5, config_yaml, template_dir=template_dir)
+
     bm.check_beam(save_path=fig_save_path, show=False, beam_ylog=False)
 
 

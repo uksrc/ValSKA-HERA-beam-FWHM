@@ -8,6 +8,7 @@ from typing import Any
 import numpy
 import pytest
 from pyradiosky import SkyModel
+from ruamel.yaml.comments import CommentedSeq
 
 from valska.external_tools.pyuvsim.constants import TOOL_NAME
 from valska.external_tools.pyuvsim.runner import CondaRunner
@@ -301,7 +302,7 @@ def test_prepare_beam_check_cfg_does_not_modify_input(
     assert cfg == original
 
 
-def test_prepare_beam_check_cfg_does_not_extend_long_observation(
+def test_prepare_beam_check_cfg_does_not_alter_times(
     _pyuvsim_config, tmp_path
 ):
     original_template = Path(_pyuvsim_config["template_yaml"])
@@ -327,7 +328,7 @@ def test_prepare_beam_check_cfg_does_not_extend_long_observation(
         100,
     )
 
-    cfg["time"]["time_array"] = times.tolist()
+    cfg["time"]["time_array"] = CommentedSeq(times.tolist())
 
     dump_yaml(cfg, template)
 
@@ -335,7 +336,7 @@ def test_prepare_beam_check_cfg_does_not_extend_long_observation(
         cfg,
         run_dir=tmp_path,
         template_dir=tmp_path,
-        min_hours=2.0,
+        min_hours=None,
     )
 
     assert numpy.allclose(

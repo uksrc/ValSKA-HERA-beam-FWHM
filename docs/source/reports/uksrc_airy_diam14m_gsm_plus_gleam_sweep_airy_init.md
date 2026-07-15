@@ -1,4 +1,23 @@
-# UKSRC Airy Beam BayesEoR Validation Report: airy_diam14m / GSM_plus_GLEAM / sweep_airy_init
+# UKSRC Airy Beam BayesEoR Validation Report: airy_diam14m / GSM_plus_GLEAM / sweep_airy_v3
+
+## Contents
+
+- [Report Metadata](#report-metadata)
+- [Executive Summary](#executive-summary)
+- [Scope](#scope)
+- [Evidence Diagnostics](#evidence-diagnostics)
+- [Complete-Analysis Summary](#complete-analysis-summary)
+- [Power-Spectrum and Posterior Diagnostics](#power-spectrum-and-posterior-diagnostics)
+- [Limitations](#limitations)
+- [Conclusions](#conclusions)
+- [Appendix A: Inputs](#appendix-a-inputs)
+- [Appendix B: Reproducibility Commands](#appendix-b-reproducibility-commands)
+- [Appendix C: Campaign Completeness](#appendix-c-campaign-completeness)
+- [Appendix D: Assumptions](#appendix-d-assumptions)
+- [Appendix E: Artefact Register](#appendix-e-artefact-register)
+- [Appendix F: Review Checklist](#appendix-f-review-checklist)
+- [Appendix G: Limitations](#appendix-g-limitations)
+- [Appendix H: Data Provenance Note](#appendix-h-data-provenance-note)
 
 ## Report Metadata
 
@@ -12,12 +31,14 @@
 | Report owner | UKSRC Science Enabling - Science Validation Tooling; P. Sims |
 | Report date | 2026-04-25 (data refreshed to the v2 campaign 2026-07-15; see [Appendix H](#appendix-h-data-provenance-note)) |
 | ValSKA branch or commit | `validation-report-drafts` @ `b529253` (original draft); refreshed against `validation-report-drafts` @ `ff7d999` |
-| External tool versions | Python 3.12.12; `bayeseor` 1.1.1.dev126+g00f53dd3a; `valska` 0.1.1.dev310+gec8c89478 |
+| Report-generation environment versions | Python 3.12.12; `bayeseor` (report/plotting package) 1.1.1.dev126+g00f53dd3a; `valska` 0.1.1.dev310+gec8c89478 — the environment used to run `valska-bayeseor-report`, distinct from the BayesEoR analysis version below |
+| BayesEoR analysis version (historical, `sweep_airy_init`) | `2.0.1.dev22+g3f5b6cd2f` (from each run's `output/{signal_fit,no_signal}/.../version.txt`, uniform across all 11 points) |
+| BayesEoR analysis version (v2, `sweep_airy_v3`) | `2.0.1.dev31+g96e0d7db5` (uniform across all 11 points; 9 development commits ahead of the historical run — see [Appendix H](#appendix-h-data-provenance-note)) |
 | Report status | `draft` |
 
 ## Executive Summary
 
-This report assesses the UKSRC Airy beam BayesEoR validation sweep `sweep_airy_init`, which perturbs `antenna_diameter` for the `airy_diam14m` beam with the `GSM_plus_GLEAM` sky model. The purpose of the campaign is to determine where the validation null test passes and to use that pass region to inform an instrument-modelling accuracy specification. All 11 sweep points completed successfully according to `sweep_report_summary.json`, and all 11 signal-fit versus no-signal pairings were processed successfully according to `complete_analysis_results.json`.
+This report assesses the UKSRC Airy beam BayesEoR validation sweep `sweep_airy_v3` (the v2 campaign), which perturbs `antenna_diameter` for the `airy_diam14m` beam with the `GSM_plus_GLEAM` sky model. The report was originally drafted against the historical campaign `sweep_airy_init`; see [Appendix H](#appendix-h-data-provenance-note) for that history and for why this file keeps the `sweep_airy_init` filename and asset-directory slug. The purpose of the campaign is to determine where the validation null test passes and to use that pass region to inform an instrument-modelling accuracy specification. All 11 sweep points completed successfully according to `sweep_report_summary.json`, and all 11 signal-fit versus no-signal pairings were processed successfully according to `complete_analysis_results.json`.
 
 Draft interpretation: the current sweep identifies a provisional pass window and a failure region. The null test passes at all sampled perturbations from -2 per cent to +2 per cent and fails at all sampled perturbations with magnitude 5 per cent or larger. This suggests that a plus or minus 2 per cent specification is sufficient for the null test to pass in this campaign. A slightly more relaxed tolerance between 2 per cent and 5 per cent may be possible, but it would require additional testing to establish.
 
@@ -43,7 +64,9 @@ The trend is not perfectly symmetric: the negative extreme at -20 per cent is mo
 
 ## Complete-Analysis Summary
 
-The generated complete-analysis outputs report 11 successful signal-fit versus no-signal comparisons, with 5 PASS classifications and 6 FAIL classifications. Table 1 summarises the key values from [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv). The machine-readable results are available in [complete_analysis_results.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_results.json).
+The generated complete-analysis outputs report 11 successful signal-fit versus no-signal comparisons, with 5 PASS classifications and 6 FAIL classifications. Table 1 reproduces the `Delta ln Z` (`ins`-selected `delta_log_evidence`) and PASS/FAIL classification recorded per point in [sweep_report_summary.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.csv) / [sweep_report_summary.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.json).
+
+A second, independent computation is available in [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv) and [complete_analysis_results.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_results.json), which report a BayesEoR-delegated `log_bayes_factor` per point. This is a different quantity from Table 1's `Delta ln Z` (they are computed by different code paths and do not match numerically point-for-point, typically by a few tenths of a nat), but it yields the same 5 PASS / 6 FAIL classification.
 
 | Perturbation fraction | `Delta ln Z` | Validation |
 | --- | ---: | --- |
@@ -59,7 +82,7 @@ The generated complete-analysis outputs report 11 successful signal-fit versus n
 | +0.10 | 112.54 | FAIL |
 | +0.20 | 360.44 | FAIL |
 
-*Table 1. Compact summary of complete-analysis results for the antenna-diameter sweep. The full generated table is available in [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv).*
+*Table 1. `Delta ln Z` (`ins`-selected evidence difference) and PASS/FAIL classification per antenna-diameter perturbation, from [sweep_report_summary.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.csv). The independently computed BayesEoR-delegated log-Bayes-factor, which gives the same classification with different numeric values, is available in [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv).*
 
 Taken at face value, these results identify a null-consistent region centred on the nominal beam diameter. For specification setting, the directly supported statement is that a plus or minus 2 per cent specification is sufficient for the null test to pass. A more relaxed tolerance between 2 per cent and 5 per cent may be possible and would require additional testing to establish.
 
@@ -174,6 +197,7 @@ Report-local copies of the completeness summaries are available at [sweep_report
 - [x] The ValSKA branch and commit are recorded.
 - [x] Known limitations are not hidden in prose.
 - [x] An equivalent `valska-bayeseor-report` reproducibility command completed successfully in this workspace.
+- [x] The report-generation environment version and the BayesEoR analysis version (which produced the chains) are recorded separately, and their difference between campaigns is noted rather than assumed benign.
 
 ## Appendix G: Limitations
 
@@ -185,12 +209,14 @@ Report-local copies of the completeness summaries are available at [sweep_report
 
 ## Appendix H: Data Provenance Note
 
-This report was originally drafted on 2026-04-25 against the historical campaign `sweep_airy_init` (created `2026-02-27T23:36:40Z`, under `validation_results/UKSRC/bayeseor/...`). On 2026-07-15, as part of a merge and refresh of the `validation-report-drafts` branch, the report's data, figures, and tables were updated to the v2 campaign `sweep_airy_v3` (created `2026-04-28T19:09:57Z`, under `validation_results/UKSRC/v2/bayeseor/...`), which uses the same beam model, sky model, input visibility dataset, and `antenna_diameter` sweep points as the original.
+This report was originally drafted on 2026-04-25 against the historical campaign `sweep_airy_init` (created `2026-02-27T23:36:40Z`, under `validation_results/UKSRC/bayeseor/...`). On 2026-07-15, as part of a merge and refresh of the `validation-report-drafts` branch, the report's title, executive summary, data, figures, and tables were updated to the v2 campaign `sweep_airy_v3` (created `2026-04-28T19:09:57Z`, under `validation_results/UKSRC/v2/bayeseor/...`), which uses the same beam model, sky model, input visibility dataset, and `antenna_diameter` sweep points as the original.
+
+The report's filename (`uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init.md`) and asset-directory slug (`uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/`) intentionally still say `sweep_airy_init`. These are referenced from `docs/source/reports.rst` (the toctree entry) and `docs/source/workflows/bayeseor_reporting.md` (an example asset path), plus the report's own embedded image/asset links; renaming them now would break those references for no content benefit, since the filename is only a slug and the report's title, H1, and body text are the parts that state which campaign the content actually describes. A future rename to a `sweep_airy_v3`-based slug, with the corresponding link updates, is a reasonable follow-up but was treated as out of scope for this focused content refresh.
 
 Before updating this report, the following checks were performed to confirm the v2 campaign reproduces rather than changes the original result:
 
 - **Structural completeness:** All 11 v2 sweep points report `status: ok` with zero errors, and `complete_analysis_results.json` reports 11/11 successful signal-fit-versus-no-signal pairings — matching the original campaign's completeness.
-- **Point-by-point evidence comparison:** `delta_log_evidence` (`ins` source) was compared point-by-point between `sweep_airy_init` and `sweep_airy_v3`. Every point agrees to within approximately 0.05-1.0 nats (against magnitudes ranging from about 5 to 875 nats), consistent with expected nested-sampling stochasticity between independent runs of the same configuration rather than a methodology change. The PASS/FAIL classification (5 PASS at 0, ±1%, ±2%; 6 FAIL at ±5%, ±10%, ±20%) is identical between the two campaigns.
+- **Point-by-point evidence comparison:** `delta_log_evidence` (`ins` source) was compared point-by-point between `sweep_airy_init` and `sweep_airy_v3`. Every point agrees to within approximately 0.05-1.0 nats (against magnitudes ranging from about 5 to 875 nats). The PASS/FAIL classification (5 PASS at 0, ±1%, ±2%; 6 FAIL at ±5%, ±10%, ±20%) is identical between the two campaigns. Note that the two campaigns were run with different BayesEoR analysis versions (`2.0.1.dev22+g3f5b6cd2f` for `sweep_airy_init` versus `2.0.1.dev31+g96e0d7db5` for `sweep_airy_v3` — see the Report Metadata table), and the generated signal-fit and no-signal configuration YAMLs are otherwise identical between the two campaigns at all 11 points (differing only in `output_dir`). This refresh does not attempt to attribute the small numerical differences to nested-sampling stochasticity versus the BayesEoR revision change specifically; either or both may contribute. What is established is that the PASS/FAIL classification is robust across both BayesEoR versions tested.
 - **Visual comparison:** The delta-log-evidence plot, the evidence-by-model plot, and the ValSKA-rendered signal-fit/posterior figure were compared between the two campaigns. All three show the same qualitative pattern (same PASS/FAIL point colouring, same posterior shapes per `k` bin, same asymmetry between the -20% and +20% tails).
 
 On this basis, the report's data, figures, and tables were refreshed to the v2 outputs using `valska-bayeseor-report ... --export-report-assets` (see [Appendix B](#appendix-b-reproducibility-commands)), and the resulting `artefact_manifest.json` is retained in [Appendix E](#appendix-e-artefact-register) as the record of that export. The report's scientific conclusions (Executive Summary, Conclusions) were **not** re-derived independently for this refresh; they are unchanged because the v2 numbers reproduce the same PASS/FAIL pattern and the same qualitative evidence trend as the original draft. This refresh does not constitute a scientific sign-off on the v2 campaign or on the plus-or-minus 2 per cent specification recommendation — that remains an open item, as recorded in Appendix D and Appendix F.

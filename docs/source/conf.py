@@ -47,6 +47,7 @@ autodoc_mock_imports = [
     "IPython",
     "yaml",
     "tqdm",
+    "lmfit",
     "numpy",
     "scipy",
     "scipy.stats",

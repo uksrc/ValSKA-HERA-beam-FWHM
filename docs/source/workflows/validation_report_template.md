@@ -206,7 +206,7 @@ Record the exact commands used to regenerate the report artefacts.
 For the current UKSRC Airy validation sweep:
 
 ```bash
-python -m valska_hera_beam.external_tools.bayeseor.cli_report \
+python -m valska.external_tools.bayeseor.cli_report \
   validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init \
   --include-plot-analysis-results \
   --print-complete-analysis-table

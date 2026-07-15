@@ -1,41 +1,36 @@
 #!/usr/bin/env python3
 """
-Prepare a BayesEoR validation run "kit" under the ValSKA results directory.
+Prepare a pyuvsim validation run "kit" under the ValSKA results directory.
 
 This module is the importable CLI entrypoint used by the console script::
 
-  valska-bayeseor-prepare
-
-It preserves the behaviour of the development driver script::
-
-  scripts/prepare_bayeseor_run.py
+  valska-pyuvsim-prepare
 
 What this does
 --------------
-This generates reproducible run artefacts for a BayesEoR analysis, without
-actually running BayesEoR itself.
+This generates reproducible run artefacts for a pyuvsim simulation, without
+actually running pyuvsim itself.
 
 Specifically, it:
 
-- resolves runtime paths (results_root, data root expansion, default template)
-- instantiates the BayesEoR runner (currently conda)
+- resolves runtime paths (results_root, optional beamdata expansion, default template)
+- instantiates the pyuvsim runner (currently conda)
 - prepares a run directory containing:
-  - hypothesis-specific config YAMLs (signal_fit / no_signal)
-  - submit scripts for CPU precompute and GPU run stages
+  - a simulation config YAML / obsparam YAML
+  - a submit script for the simulation stage
   - a manifest.json recording provenance & resolved paths
 
 Design principles
 -----------------
-- setup.prepare_bayeseor_run() is the single source of truth for canonical
+- setup.prepare_pyuvsim_run() is the single source of truth for canonical
   run_dir construction. This CLI only duplicates run_dir logic for --dry-run
   display.
 
 Variant concept
 ---------------
 We include a <variant> directory level to separate template-level differences
-that should never collide (e.g. validation_v1d0 vs
-validation_v1d0_achromatic). By default it is derived from the template
-filename stem by removing the first occurrence of "_template".
+that should never collide. By default it is derived from the template filename
+stem by removing the first occurrence of "_template".
 
 Beam/sky taxonomy
 -----------------
@@ -44,40 +39,36 @@ overloaded "scenario" label.
 
 Canonical non-sweep run directory::
 
-  <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
+  <results_root>/pyuvsim/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
 
 Backwards compatibility
 -----------------------
 - --scenario is deprecated. If used, it must be unambiguous:
   - --scenario <beam>/<sky>
   - --scenario <beam>__<sky>
-- Any other form (e.g. "GLEAM_beam") is rejected to prevent silent misrouting.
+- Any other form is rejected to prevent silent misrouting.
 
-Data path resolution
---------------------
-If you pass --data as a relative path, it is resolved using either an explicit
-named root from runtime_paths.yaml:data.named_roots (via --data-root-key),
-runtime_paths.yaml:data.named_roots.default, or the backwards-compatible
+Beamdata path resolution
+------------------------
+If you pass --beamdata as a relative path, it is resolved using
 runtime_paths.yaml:data.root if set.
 
 Example runtime_paths.yaml::
 
   results_root: /share/nas-0-3/psims/validation_results/UKSRC
   data:
-    named_roots:
-      default: /path/to/default/datasets
-      gaussian: /path/to/gaussian/datasets
+    root: /path/to/datasets
 
 Then ValSKA will resolve::
 
-  --data foo/bar.uvh5  ->  /path/to/datasets/foo/bar.uvh5
+  --beamdata foo/bar  ->  /path/to/datasets/foo/bar
 
 Absolute paths are used as-is. The resolved absolute path is recorded in the
 manifest.
 
 Future container support
 ------------------------
-Today this assumes a conda-based runner. In the future we will support
+Today this assumes a conda-based runner. In the future we may support
 Apptainer/Singularity containers by swapping the "runner" configuration; the
 produced run directory, config YAML, and scripts are designed to remain stable.
 """
@@ -90,17 +81,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from valska.external_tools.bayeseor import (
-    BayesEoRInstall,
+from valska.external_tools.pyuvsim import (
     CondaRunner,
     get_template_path,
     list_templates,
-    prepare_bayeseor_run,
+    prepare_pyuvsim_run,
+    pyuvsimInstall,
 )
-from valska.utils import (
-    get_default_path_manager,
-    resolve_data_path_info,
-)
+from valska.utils import get_default_path_manager, resolve_data_path
 
 
 def _utc_stamp() -> str:
@@ -116,14 +104,6 @@ def _format_run_label_from_fwhm_frac(frac: float) -> str:
     return f"fwhm_{s}"
 
 
-def _format_run_label_from_antenna_diameter_frac(frac: float) -> str:
-    """Format a run label from a fractional antenna_diameter perturbation."""
-    s = f"{frac:+.1e}"
-    if s.startswith("+"):
-        s = s[1:]
-    return f"antdiam_{s}"
-
-
 def _derive_variant_from_template_path(template_yaml: Path) -> str:
     """
     Derive a stable variant key from a template filename.
@@ -131,11 +111,6 @@ def _derive_variant_from_template_path(template_yaml: Path) -> str:
     Rules:
       - take filename stem
       - remove first occurrence of "_template" if present
-
-    Examples:
-      validation_v1d0_template.yaml            -> validation_v1d0
-      validation_v1d0_template_achromatic.yaml -> validation_v1d0_achromatic
-      beam_achromatic.yaml                     -> beam_achromatic
     """
     stem = template_yaml.stem
     if "_template" in stem:
@@ -156,13 +131,13 @@ def _compute_run_dir(
     """
     Compute the canonical run directory for --dry-run display only.
 
-    NOTE: This duplicates the layout logic used in setup.prepare_bayeseor_run().
+    NOTE: This duplicates the layout logic used in setup.prepare_pyuvsim_run().
     For real prepares we pass run_dir=None so setup.py computes the canonical
     location itself (single source of truth).
     """
     base = (
         results_root
-        / "bayeseor"
+        / "pyuvsim"
         / beam_model
         / sky_model
         / variant
@@ -173,17 +148,26 @@ def _compute_run_dir(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the CLI argument parser for valska-bayeseor-prepare."""
+    """Build the CLI argument parser for valska-pyuvsim-prepare."""
     parser = argparse.ArgumentParser(
-        prog="valska-bayeseor-prepare",
+        prog="valska-pyuvsim-prepare",
         description=(
-            "Prepare a BayesEoR validation run directory.\n\n"
+            "Prepare a pyuvsim validation run directory.\n\n"
             "Canonical layout:\n"
-            "  <results_root>/bayeseor/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>/\n"
+            "  <results_root>/pyuvsim/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>/\n"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    parser.add_argument(
+        "--valska-root",
+        type=Path,
+        default=None,
+        help=(
+            "Root path of the ValSKA repository. If provided, pyuvsim template "
+            "paths under config/pyuvsim will be rewritten to absolute paths rooted here."
+        ),
+    )
     # Required science axes
     parser.add_argument(
         "--beam",
@@ -203,27 +187,19 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "DEPRECATED. Use --beam and --sky.\n"
-            "If used, must be '<beam>/<sky>' or '<beam>__<sky>' (e.g. 'achromatic_Gaussian/GLEAM')."
+            "If used, must be '<beam>/<sky>' or '<beam>__<sky>' "
+            "(e.g. 'achromatic_Gaussian/GLEAM')."
         ),
     )
 
     parser.add_argument(
-        "--data",
+        "--beamdata",
         type=Path,
-        required=True,
-        help=(
-            "Path to the UVH5 dataset. Relative paths may be resolved via "
-            "runtime_paths.yaml:data.named_roots.<key>, "
-            "data.named_roots.default, or data.root."
-        ),
-    )
-    parser.add_argument(
-        "--data-root-key",
-        type=str,
+        required=False,
         default=None,
         help=(
-            "Named root under runtime_paths.yaml:data.named_roots used to "
-            "resolve relative --data paths."
+            "Optional path to beam-related input data (e.g. CST / FEKO products). "
+            "Relative paths may be resolved via runtime_paths.yaml:data.root."
         ),
     )
 
@@ -246,7 +222,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Append a UTC timestamp beneath run_id to ensure uniqueness.\n"
-            "If omitted, may still be enabled via runtime_paths.yaml (bayeseor.unique_by_default)."
+            "If omitted, may still be enabled via runtime_paths.yaml "
+            "(pyuvsim.unique_by_default)."
         ),
     )
 
@@ -258,24 +235,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Apply a multiplicative perturbation to fwhm_deg at prepare time, specified as a fraction.\n"
             "Example: --fwhm-perturb-frac=-1e-3 means -0.1%% (multiply by 0.999).\n"
             "Example: --fwhm-perturb-frac=1e-1 means +10%% (multiply by 1.1).\n"
-            "Note: if the value is negative, use either '--fwhm-perturb-frac=-1e-3' or "
-            "place '--' before the value to prevent argparse confusion."
-        ),
-    )
-    parser.add_argument(
-        "--antenna-diameter-perturb-frac",
-        type=float,
-        default=None,
-        help=(
-            "Apply a multiplicative perturbation to antenna_diameter at "
-            "prepare time, specified as a fraction.\n"
-            "Example: --antenna-diameter-perturb-frac=-1e-3 means -0.1%% "
-            "(multiply by 0.999).\n"
-            "Example: --antenna-diameter-perturb-frac=1e-1 means +10%% "
-            "(multiply by 1.1).\n"
-            "Note: if the value is negative, use either "
-            "'--antenna-diameter-perturb-frac=-1e-3' or place '--' before "
-            "the value to prevent argparse confusion."
+            "Note: if the value is negative, use either '--fwhm-perturb-frac=-1e-3' "
+            "or place '--' before the value to prevent argparse confusion."
         ),
     )
 
@@ -285,15 +246,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Template name shipped with ValSKA OR a filesystem path to a template YAML.\n"
-            "If omitted, uses bayeseor.default_template from config/runtime_paths.yaml, "
-            "otherwise defaults to validation_v1d0_template.yaml.\n"
+            "If omitted, uses pyuvsim.default_template from config/runtime_paths.yaml, "
+            "otherwise defaults to default_template.yaml.\n"
             "To list shipped templates, use --list-templates."
         ),
     )
     parser.add_argument(
         "--list-templates",
         action="store_true",
-        help="List shipped BayesEoR templates and exit.",
+        help="List shipped pyuvsim templates and exit.",
     )
 
     parser.add_argument(
@@ -312,18 +273,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help=(
-            "Optional run label directory component. If not provided and a "
-            "perturbation frac is set, a label is automatically generated "
-            "(e.g. fwhm_1.0e-02 or antdiam_1.0e-02). "
-            "Otherwise defaults to 'default'."
+            "Optional run label directory component. If not provided and "
+            "--fwhm-perturb-frac is set, a label is automatically generated "
+            "(e.g. fwhm_1.0e-02). Otherwise defaults to 'default'."
         ),
     )
 
     parser.add_argument(
-        "--bayeseor-repo",
+        "--pyuvsim-repo",
         type=Path,
         default=None,
-        help="Path to local clone of BayesEoR (used to locate scripts/run-analysis.py).",
+        help="Path to local clone of pyuvsim (used for provenance and optional helper discovery).",
     )
 
     parser.add_argument(
@@ -336,7 +296,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--conda-env",
         type=str,
         default=None,
-        help="Conda env name containing BayesEoR.",
+        help="Conda env name containing pyuvsim.",
+    )
+
+    parser.add_argument(
+        "--no-conda-activate",
+        action="store_true",
+        help="Do not emit conda activation lines in the generated SLURM script.",
     )
 
     parser.add_argument(
@@ -347,73 +313,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override a top-level YAML key in the template (repeatable).",
     )
 
-    # SLURM options are primarily configured via runtime_paths.yaml, but we allow overrides.
+    # CPU / SLURM options only (pyuvsim has no GPU stage here)
     parser.add_argument(
         "--cpu-partition",
         type=str,
         default=None,
-        help="SLURM partition override for CPU stage.",
+        help="SLURM partition override for simulation stage.",
     )
     parser.add_argument(
         "--cpu-constraint",
         type=str,
         default=None,
-        help="SLURM constraint override for CPU stage.",
+        help="SLURM constraint override for simulation stage.",
     )
     parser.add_argument(
         "--cpu-time",
         type=str,
         default=None,
-        help="SLURM time override for CPU stage.",
+        help="SLURM time override for simulation stage.",
     )
     parser.add_argument(
         "--cpu-mem",
         type=str,
         default=None,
-        help="SLURM mem override for CPU stage.",
+        help="SLURM mem override for simulation stage.",
     )
     parser.add_argument(
         "--cpu-cpus-per-task",
         type=int,
         default=None,
-        help="SLURM cpus-per-task for CPU stage.",
-    )
-
-    parser.add_argument(
-        "--gpu-partition",
-        type=str,
-        default=None,
-        help="SLURM partition override for GPU stage.",
-    )
-    parser.add_argument(
-        "--gpu-constraint",
-        type=str,
-        default=None,
-        help="SLURM constraint override for GPU stage.",
-    )
-    parser.add_argument(
-        "--gpu-time",
-        type=str,
-        default=None,
-        help="SLURM time override for GPU stage.",
-    )
-    parser.add_argument(
-        "--gpu-mem",
-        type=str,
-        default=None,
-        help="SLURM mem override for GPU stage.",
-    )
-    parser.add_argument(
-        "--gpu-gres",
-        type=str,
-        default=None,
-        help="SLURM gres override for GPU stage.",
-    )
-    parser.add_argument(
-        "--gpu-cpus-per-task",
-        type=int,
-        default=None,
-        help="SLURM cpus-per-task for GPU stage.",
+        help="SLURM cpus-per-task for simulation stage.",
     )
 
     parser.add_argument(
@@ -451,23 +380,17 @@ def _parse_overrides(kvs: list[str]) -> dict[str, str]:
     return out
 
 
-def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
+def _slurm_defaults(runtime: dict[str, Any]) -> dict[str, Any]:
     """
-    Extract SLURM defaults from runtime_paths.yaml.
+    Extract SLURM defaults from runtime_paths.yaml for pyuvsim.
 
     Passes through ALL keys from the config to support any SBATCH directive.
-    Only truly universal defaults are set here; cluster-specific options
-    should be configured in runtime_paths.yaml.
     """
-    assert profile in {"cpu", "gpu"}
-    key = "slurm_defaults_cpu" if profile == "cpu" else "slurm_defaults_gpu"
-
-    cfg = _get_nested(runtime, "bayeseor", key)
+    cfg = _get_nested(runtime, "pyuvsim", "slurm_defaults_cpu")
     if not isinstance(cfg, dict):
-        cfg = _get_nested(runtime, "bayeseor", "slurm_defaults")
+        cfg = _get_nested(runtime, "pyuvsim", "slurm_defaults")
     cfg = cfg if isinstance(cfg, dict) else {}
 
-    # Start with universal defaults (can all be overridden to None in YAML)
     defaults = {
         "time": "12:00:00",
         "mem": "8G",
@@ -475,17 +398,11 @@ def _slurm_defaults(runtime: dict[str, Any], profile: str) -> dict[str, Any]:
         "nodes": 1,
         "ntasks": 1,
         "ntasks_per_node": 1,
-        "job_name_prefix": "bayeseor",
+        "job_name_prefix": "pyuvsim",
         "mpi": "pmi2",
     }
 
-    # Merge config on top of defaults (config wins, including None to suppress)
-    out = {**defaults, **cfg}
-
-    # No more hardcoded gres fallback - let the user configure gpus_per_task OR gres
-    # in their runtime_paths.yaml as appropriate for their cluster.
-
-    return out
+    return {**defaults, **cfg}
 
 
 def _parse_beam_sky(
@@ -496,9 +413,7 @@ def _parse_beam_sky(
 
     Deprecated: --scenario in the form '<beam>/<sky>' or '<beam>__<sky>'.
 
-    Returns (beam_model, sky_model, source_tag) where source_tag is one of:
-      - "CLI(--beam/--sky)"
-      - "DEPRECATED(--scenario)"
+    Returns (beam_model, sky_model, source_tag).
     """
     if beam and sky:
         b = beam.strip()
@@ -531,19 +446,9 @@ def _parse_beam_sky(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entrypoint for valska-bayeseor-prepare."""
+    """CLI entrypoint for valska-pyuvsim-prepare."""
     parser = build_parser()
     args = parser.parse_args(argv)
-    if (
-        args.fwhm_perturb_frac is not None
-        and args.antenna_diameter_perturb_frac is not None
-    ):
-        print(
-            "ERROR: choose only one perturbation mode. Pass either "
-            "--fwhm-perturb-frac or --antenna-diameter-perturb-frac.",
-            file=sys.stderr,
-        )
-        return 2
 
     if args.list_templates:
         for name in list_templates():
@@ -561,6 +466,18 @@ def main(argv: list[str] | None = None) -> int:
     pm = get_default_path_manager()
     runtime = pm.runtime_paths
 
+    valska_root = None
+    valska_root_src = None
+
+    if args.valska_root is not None:
+        valska_root = Path(args.valska_root).expanduser().resolve()
+        valska_root_src = "CLI"
+    else:
+        cfg_root = _get_nested(runtime, "pyuvsim", "valska_root")
+        if cfg_root:
+            valska_root = Path(str(cfg_root)).expanduser().resolve()
+            valska_root_src = "runtime_paths.yaml"
+
     # results_root
     if args.results_root is not None:
         results_root = Path(args.results_root).expanduser()
@@ -576,50 +493,48 @@ def main(argv: list[str] | None = None) -> int:
     # unique default via runtime_paths.yaml
     unique = bool(args.unique)
     if not args.unique:
-        cfg_unique = _get_nested(runtime, "bayeseor", "unique_by_default")
+        cfg_unique = _get_nested(runtime, "pyuvsim", "unique_by_default")
         if isinstance(cfg_unique, bool):
             unique = cfg_unique
 
-    # data resolution (supports data.named_roots.<key>, default, and legacy data.root)
-    try:
-        data_info = resolve_data_path_info(
-            args.data, runtime, data_root_key=args.data_root_key
-        )
-    except ValueError as e:
-        print(str(e), file=sys.stderr)
-        return 2
-    data_path = data_info.path
-    data_src = data_info.source
+    # beamdata resolution (optional)
+    beamdata_path: Path | None = None
+    beamdata_src: str | None = None
+    if args.beamdata is not None:
+        try:
+            beamdata_path = resolve_data_path(args.beamdata, runtime)
+            beamdata_src = "runtime_paths.yaml:data.root"
+        except Exception:
+            beamdata_path = Path(args.beamdata).expanduser()
+            beamdata_src = "CLI"
 
     # run_label
     if args.run_label is not None and str(args.run_label).strip():
         run_label = str(args.run_label).strip()
         run_label_src = "CLI(--run-label)"
-    elif args.fwhm_perturb_frac is not None:
-        run_label = _format_run_label_from_fwhm_frac(
-            float(args.fwhm_perturb_frac)
-        )
-        run_label_src = "auto(--fwhm-perturb-frac)"
-    elif args.antenna_diameter_perturb_frac is not None:
-        run_label = _format_run_label_from_antenna_diameter_frac(
-            float(args.antenna_diameter_perturb_frac)
-        )
-        run_label_src = "auto(--antenna-diameter-perturb-frac)"
     else:
-        run_label = "default"
-        run_label_src = "default"
+        if args.fwhm_perturb_frac is not None:
+            run_label = _format_run_label_from_fwhm_frac(
+                float(args.fwhm_perturb_frac)
+            )
+            run_label_src = "auto(--fwhm-perturb-frac)"
+        else:
+            run_label = "default"
+            run_label_src = "default"
 
-    # BayesEoR repo path
-    repo_path = args.bayeseor_repo
+    # pyuvsim repo path
+    repo_path = args.pyuvsim_repo
     repo_src = "CLI"
     if repo_path is None:
-        cfg_repo = _get_nested(runtime, "bayeseor", "repo_path")
+        cfg_repo = _get_nested(runtime, "pyuvsim", "repo_path")
         if cfg_repo:
             repo_path = Path(str(cfg_repo)).expanduser()
             repo_src = "runtime_paths.yaml"
+
     if repo_path is None:
         print(
-            "ERROR: BayesEoR repo path not provided. Pass --bayeseor-repo or set bayeseor.repo_path in config/runtime_paths.yaml.",
+            "ERROR: pyuvsim repo path not provided. Pass --pyuvsim-repo or set "
+            "pyuvsim.repo_path in config/runtime_paths.yaml.",
             flush=True,
         )
         return 2
@@ -629,38 +544,55 @@ def main(argv: list[str] | None = None) -> int:
     conda_env = args.conda_env
     conda_src = "CLI"
     if conda_sh is None:
-        cfg = _get_nested(runtime, "bayeseor", "conda_sh")
+        cfg = _get_nested(runtime, "pyuvsim", "conda_sh")
         if cfg:
             conda_sh = str(cfg)
             conda_src = "runtime_paths.yaml"
     if conda_env is None:
-        cfg = _get_nested(runtime, "bayeseor", "conda_env")
+        cfg = _get_nested(runtime, "pyuvsim", "conda_env")
         if cfg:
             conda_env = str(cfg)
             conda_src = "runtime_paths.yaml"
 
-    if conda_sh is None or conda_env is None:
-        print(
-            "ERROR: conda settings not fully specified. Provide --conda-sh and --conda-env or set bayeseor.conda_sh and bayeseor.conda_env in config/runtime_paths.yaml.",
-            flush=True,
-        )
-        return 2
+    if args.no_conda_activate:
+        conda_sh = None
+        conda_env = None
+        conda_src = "disabled(--no-conda-activate)"
+    else:
+        if conda_sh is None or conda_env is None:
+            print(
+                "ERROR: conda settings not fully specified. Provide --conda-sh and "
+                "--conda-env or set pyuvsim.conda_sh and pyuvsim.conda_env in "
+                "config/runtime_paths.yaml, or pass --no-conda-activate.",
+                flush=True,
+            )
+            return 2
 
     # Template
     template_arg = args.template
     template_src = "CLI"
     if template_arg is None:
-        cfg_t = _get_nested(runtime, "bayeseor", "default_template")
+        cfg_t = _get_nested(runtime, "pyuvsim", "default_template")
         if cfg_t:
             template_arg = str(cfg_t)
             template_src = "runtime_paths.yaml"
         else:
-            template_arg = "validation_v1d0_template.yaml"
+            template_arg = "default_template.yaml"
             template_src = "default"
 
     template_path = Path(str(template_arg)).expanduser()
+
     if template_path.exists():
         template_yaml = template_path
+
+    elif valska_root is not None:
+        candidate = (valska_root / template_path).resolve()
+
+        if candidate.exists():
+            template_yaml = candidate
+        else:
+            template_yaml = get_template_path(str(template_arg))
+
     else:
         template_yaml = get_template_path(str(template_arg))
 
@@ -673,10 +605,8 @@ def main(argv: list[str] | None = None) -> int:
         variant_src = "auto(template)"
 
     # SLURM defaults + overrides
-    slurm_cpu = _slurm_defaults(runtime, "cpu")
-    slurm_gpu = _slurm_defaults(runtime, "gpu")
+    slurm_cpu = _slurm_defaults(runtime)
 
-    # Apply CLI overrides (preserve existing behaviour)
     if args.cpu_partition is not None:
         slurm_cpu["partition"] = args.cpu_partition
     if args.cpu_constraint is not None:
@@ -687,19 +617,6 @@ def main(argv: list[str] | None = None) -> int:
         slurm_cpu["mem"] = args.cpu_mem
     if args.cpu_cpus_per_task is not None:
         slurm_cpu["cpus_per_task"] = args.cpu_cpus_per_task
-
-    if args.gpu_partition is not None:
-        slurm_gpu["partition"] = args.gpu_partition
-    if args.gpu_constraint is not None:
-        slurm_gpu["constraint"] = args.gpu_constraint
-    if args.gpu_time is not None:
-        slurm_gpu["time"] = args.gpu_time
-    if args.gpu_mem is not None:
-        slurm_gpu["mem"] = args.gpu_mem
-    if args.gpu_gres is not None:
-        slurm_gpu["gres"] = args.gpu_gres
-    if args.gpu_cpus_per_task is not None:
-        slurm_gpu["cpus_per_task"] = args.gpu_cpus_per_task
 
     try:
         overrides = _parse_overrides(args.override)
@@ -728,34 +645,37 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  unique:             {unique}")
         print(f"  template:           {template_yaml} [{template_src}]")
         print(f"  variant:            {variant} [{variant_src}]")
-        print(f"  data:               {data_path} [{data_src}]")
+        if valska_root is not None:
+            print(f"  valska_root:        {valska_root} [{valska_root_src}]")
+        else:
+            print("  valska_root:        (none)")
+        if beamdata_path is not None:
+            print(f"  beamdata:           {beamdata_path} [{beamdata_src}]")
+        else:
+            print("  beamdata:           (none)")
         if args.fwhm_perturb_frac is not None:
             print(f"  fwhm_perturb_frac:  {args.fwhm_perturb_frac:+.6g}")
         else:
             print("  fwhm_perturb_frac:  (none)")
-        if args.antenna_diameter_perturb_frac is not None:
-            print(
-                "  antenna_diameter_perturb_frac:  "
-                f"{args.antenna_diameter_perturb_frac:+.6g}"
-            )
+        if repo_path is not None:
+            print(f"  pyuvsim_repo:       {repo_path} [{repo_src}]")
         else:
-            print("  antenna_diameter_perturb_frac:  (none)")
-        print(f"  bayeseor_repo:      {repo_path} [{repo_src}]")
+            print("  pyuvsim_repo:       (none)")
         print(f"  conda:              env={conda_env} [{conda_src}]")
         print(f"  run_dir (preview):  {preview_run_dir}")
         print("\n[DRY RUN] SLURM defaults to be written:")
         print(f"  cpu: {slurm_cpu}")
-        print(f"  gpu: {slurm_gpu}")
         print("\n[DRY RUN] No files will be created.")
         return 0
 
-    install = BayesEoRInstall(repo_path=Path(repo_path))
+    install = pyuvsimInstall(install_path=Path(repo_path))
     runner = CondaRunner(conda_activate=conda_sh, env_name=conda_env)
 
-    out = prepare_bayeseor_run(
+    out = prepare_pyuvsim_run(
         template_yaml=Path(template_yaml),
         install=install,
         runner=runner,
+        valska_root=valska_root,
         results_root=Path(results_root),
         beam_model=beam_model,
         sky_model=sky_model,
@@ -764,15 +684,10 @@ def main(argv: list[str] | None = None) -> int:
         run_id=args.run_id,
         run_dir=None,  # single source of truth for canonical path construction
         unique=unique,
-        data_path=Path(data_path),
-        data_path_source=data_src,
-        data_root_key=data_info.data_root_key,
+        beamdata_path=beamdata_path,
         overrides=overrides,
         slurm_cpu=slurm_cpu,
-        slurm_gpu=slurm_gpu,
         fwhm_perturb_frac=args.fwhm_perturb_frac,
-        antenna_diameter_perturb_frac=args.antenna_diameter_perturb_frac,
-        hypothesis="both",
     )
 
     run_dir = Path(out["run_dir"])
@@ -787,43 +702,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  run_label:    {run_label}")
     print(f"  run_id:       {args.run_id}")
 
-    # ---------------------------------------------------------------------
-    # Next steps (recommended submit CLI + manual fallback)
-    # ---------------------------------------------------------------------
-    print("\nNext steps (typical BayesEoR two-stage workflow):")
-
+    print("\nNext steps:")
     print("  Option A) Submit via ValSKA (recommended):")
-    print(f"     valska-bayeseor-submit {run_dir}")
-    print("     # CPU only:")
-    print(f"     valska-bayeseor-submit {run_dir} --stage cpu")
-    print(
-        "     # GPU only (reuses completed CPU outputs if present, otherwise uses a recorded CPU job ID or --depend-afterok):"
-    )
-    print(f"     valska-bayeseor-submit {run_dir} --stage gpu")
-    print(
-        "     # If a job hits walltime, you can requeue easily (MultiNest should resume):"
-    )
-    print(f"     valska-bayeseor-submit {run_dir} --stage gpu --resubmit")
+    print(f"     valska-pyuvsim-submit {run_dir}")
 
-    print("\n  Option B) Manual submission (inspect scripts, then sbatch):")
-
-    cpu_key = "submit_sh_cpu_precompute"
-    if cpu_key in out:
-        print("     1) CPU precompute stage (shared):")
-        print(f"        sbatch {out[cpu_key]}")
-
-    gpu_cmds: list[str] = []
-    for hyp in ("signal_fit", "no_signal"):
-        kgpu = f"submit_sh_{hyp}_gpu_run"
-        if kgpu in out:
-            gpu_cmds.append(f"sbatch {out[kgpu]}")
-
-    if gpu_cmds:
-        print(
-            "     2) GPU run stage (after CPU stage completes successfully):"
-        )
-        for c in gpu_cmds:
-            print(f"        {c}")
+    if "submit_sh_simulate" in out:
+        print("\n  Option B) Manual submission:")
+        print(f"     sbatch {out['submit_sh_simulate']}")
 
     return 0
 

@@ -53,6 +53,7 @@ autodoc_mock_imports = [
     "ruamel",
     "ruamel.yaml",
     "rich",
+    "pyuvdata",
 ]
 
 templates_path = ["_templates"]

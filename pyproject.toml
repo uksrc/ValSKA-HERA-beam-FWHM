@@ -5,7 +5,7 @@
 # ---
 [build-system]
 # setuptools-scm must be available at build time for dynamic versioning from Git tags
-requires = ["setuptools>=68", "wheel", "setuptools-scm[toml]>=8"]
+requires = ["setuptools>=69", "wheel", "setuptools-scm[toml]>=9.2.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -14,7 +14,7 @@ name = "valska"
 dynamic = ["version"]
 description = "Validation tooling for SKA and precursor science workflows, including HERA beam perturbation studies."
 readme = "README.md"
-# requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { file = "LICENSE" }
 
 authors = [
@@ -30,13 +30,50 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Astronomy"
 ]
 
-# Dependencies are specified in valska_env.yaml not here
-# dependencies = []
+dependencies = [
+
+  # Core numerics
+  "numpy>=1.26",
+  "scipy>=1.17",
+  "pandas>=2.2,<2.4",
+  "lmfit>=1.3.4",
+
+  # Astronomy / domain
+  "astropy>=7.0",
+  "astropy-healpix>=1.1.3",
+  "pyuvdata>=3.2.5",
+
+  # Inference / pipeline
+  "anesthetic>=2.13",
+
+  # IO + utils
+  "h5py>=3.16.0",
+  "pyyaml>=6.0.3",
+  "ruamel.yaml>=0.19.1",
+  "jsonargparse>=4.40.2",
+
+  # Plotting / UX
+  "matplotlib>=3.10",
+  "rich>=14",
+  "tqdm>=4.67",
+
+  # Performance helpers
+  "threadpoolctl>=3.6.0",
+
+]
 
 # Version is derived from your Git tags by setuptools-scm
 # dynamic = ["version"]
 
 [project.optional-dependencies]
+mpi = [
+    "mpi4py>=4.1.1",
+]
+
+multinest = [
+    "pymultinest>=2.12",
+]
+
 dev = [
   # Testing
   "pytest>=9.0.2",
@@ -73,8 +110,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UKSRC/ValSKA"
-Issues = "https://github.com/UKSRC/ValSKA/issues"
+Homepage = "https://github.com/uksrc/ValSKA-HERA-beam-FWHM"
+Issues = "https://github.com/uksrc/ValSKA-HERA-beam-FWHM/issues"
 
 [project.scripts]
 # valska-beam-validate = "valska.cli:main"
@@ -92,6 +129,8 @@ valska-bayeseor-report-all = "valska.external_tools.bayeseor.cli_report_all:main
 valska-bayeseor-compare-sweeps = "valska.external_tools.bayeseor.cli_compare_sweeps:main"
 valska-bayeseor-cleanup = "valska.external_tools.bayeseor.cli_cleanup:main"
 valska-bayeseor-help = "valska.external_tools.bayeseor.cli_help:main"
+valska-pyuvsim-prepare = "valska.external_tools.pyuvsim.cli_prepare:main"
+valska-pyuvsim-submit  = "valska.external_tools.pyuvsim.cli_submit:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -104,6 +143,7 @@ valska = [
   "config/*.yaml",
   "external_tools/bayeseor/templates/*.yaml",
   "external_tools/bayeseor/plot_configs/*.yaml",
+  "external_tools/pyuvsim/templates/*.yaml",
 ]
 valska_hera_beam = [
   "config/*.yaml",
@@ -135,3 +175,6 @@ ignore = ["E501"]
 "src/valska/_version.py" = ["I001", "UP006", "UP007", "UP035"]
 "src/valska_hera_beam/*.py" = ["E402"]
 "src/valska_hera_beam/**/*.py" = ["E402"]
+
+[tool.coverage.run]
+omit = ["src/valska_hera_beam/*"]

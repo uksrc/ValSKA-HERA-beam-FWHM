@@ -1,12 +1,12 @@
 perturbation,log_evidence_fgeor,log_evidence_fgonly,log_bayes_factor,validation,interpretation
-antdiam_-1.0e-01,693867275357.0393,693867275218.883,138.15625,FAIL,Very strong evidence for model 1
-antdiam_-1.0e-02,693867277029.9042,693867277035.9951,-6.0909423828125,PASS,Very strong evidence for model 2
-antdiam_-2.0e-01,693867270210.2225,693867269334.5413,875.6812744140625,FAIL,Very strong evidence for model 1
-antdiam_-2.0e-02,693867276962.228,693867276968.3032,-6.0751953125,PASS,Very strong evidence for model 2
-antdiam_-5.0e-02,693867276577.2938,693867276570.1647,7.129150390625,FAIL,Very strong evidence for model 1
-antdiam_0.0e+00,693867277072.8606,693867277079.2853,-6.4246826171875,PASS,Very strong evidence for model 2
-antdiam_1.0e-01,693867276126.3354,693867276012.417,113.91845703125,FAIL,Very strong evidence for model 1
-antdiam_1.0e-02,693867277089.4965,693867277096.1809,-6.6844482421875,PASS,Very strong evidence for model 2
-antdiam_2.0e-01,693867273426.8114,693867273064.6135,362.1978759765625,FAIL,Very strong evidence for model 1
-antdiam_2.0e-02,693867277078.9972,693867277085.5626,-6.5654296875,PASS,Very strong evidence for model 2
-antdiam_5.0e-02,693867276889.7618,693867276883.6838,6.0780029296875,FAIL,Very strong evidence for model 1
+antdiam_-1.0e-01,693867275357.0555,693867275218.8901,138.1654052734375,FAIL,Very strong evidence for model 1
+antdiam_-1.0e-02,693867277029.215,693867277035.9973,-6.7823486328125,PASS,Very strong evidence for model 2
+antdiam_-2.0e-01,693867270210.4614,693867269334.56,875.9013671875,FAIL,Very strong evidence for model 1
+antdiam_-2.0e-02,693867276962.1707,693867276968.3036,-6.1329345703125,PASS,Very strong evidence for model 2
+antdiam_-5.0e-02,693867276576.5566,693867276570.1638,6.392822265625,FAIL,Very strong evidence for model 1
+antdiam_0.0e+00,693867277072.9259,693867277079.2833,-6.357421875,PASS,Very strong evidence for model 2
+antdiam_1.0e-01,693867276125.9507,693867276012.4178,113.5328369140625,FAIL,Very strong evidence for model 1
+antdiam_1.0e-02,693867277089.7683,693867277096.1771,-6.4088134765625,PASS,Very strong evidence for model 2
+antdiam_2.0e-01,693867273425.5604,693867273064.6105,360.949951171875,FAIL,Very strong evidence for model 1
+antdiam_2.0e-02,693867277079.4937,693867277085.5604,-6.0667724609375,PASS,Very strong evidence for model 2
+antdiam_5.0e-02,693867276890.2096,693867276883.679,6.5306396484375,FAIL,Very strong evidence for model 1

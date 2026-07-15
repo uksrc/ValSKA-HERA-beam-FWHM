@@ -5,14 +5,14 @@
 | Field | Value |
 | --- | --- |
 | Report title | UKSRC Airy beam BayesEoR validation report for `airy_diam14m` with `GSM_plus_GLEAM` |
-| Campaign identifier | `sweep_airy_init` |
+| Campaign identifier | `sweep_airy_v3` (v2 campaign; originally drafted against `sweep_airy_init`, see [Appendix H](#appendix-h-data-provenance-note)) |
 | Beam model | `airy_diam14m` |
 | Sky model | `GSM_plus_GLEAM` |
 | Validation target | Determine where the BayesEoR null test passes across the tested `antenna_diameter` sweep and use that pass window to set a provisional instrument-modelling accuracy specification |
 | Report owner | UKSRC Science Enabling - Science Validation Tooling; P. Sims |
-| Report date | 2026-04-25 |
-| ValSKA branch or commit | `validation-report-drafts` @ `b529253` |
-| External tool versions | Python 3.12.12; `bayeseor` 1.1.1.dev126+g00f53dd3a; `valska` 0.1.1.dev203+g8cd3cd12e.d20260410; `valska-hera-beam-fwhm` 0.1.1.dev135+gc9cdc4cb3.d20260301 |
+| Report date | 2026-04-25 (data refreshed to the v2 campaign 2026-07-15; see [Appendix H](#appendix-h-data-provenance-note)) |
+| ValSKA branch or commit | `validation-report-drafts` @ `b529253` (original draft); refreshed against `validation-report-drafts` @ `ff7d999` |
+| External tool versions | Python 3.12.12; `bayeseor` 1.1.1.dev126+g00f53dd3a; `valska` 0.1.1.dev310+gec8c89478 |
 | Report status | `draft` |
 
 ## Executive Summary
@@ -47,17 +47,17 @@ The generated complete-analysis outputs report 11 successful signal-fit versus n
 
 | Perturbation fraction | `Delta ln Z` | Validation |
 | --- | ---: | --- |
-| -0.20 | 874.77 | FAIL |
-| -0.10 | 136.62 | FAIL |
-| -0.05 | 5.55 | FAIL |
-| -0.02 | -7.63 | PASS |
-| -0.01 | -7.24 | PASS |
-| 0.00 | -7.74 | PASS |
-| +0.01 | -7.72 | PASS |
-| +0.02 | -7.55 | PASS |
-| +0.05 | 4.98 | FAIL |
-| +0.10 | 112.73 | FAIL |
-| +0.20 | 361.48 | FAIL |
+| -0.20 | 874.95 | FAIL |
+| -0.10 | 136.70 | FAIL |
+| -0.05 | 5.60 | FAIL |
+| -0.02 | -7.00 | PASS |
+| -0.01 | -7.76 | PASS |
+| 0.00 | -7.81 | PASS |
+| +0.01 | -8.01 | PASS |
+| +0.02 | -7.66 | PASS |
+| +0.05 | 4.92 | FAIL |
+| +0.10 | 112.54 | FAIL |
+| +0.20 | 360.44 | FAIL |
 
 *Table 1. Compact summary of complete-analysis results for the antenna-diameter sweep. The full generated table is available in [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv).*
 
@@ -88,21 +88,23 @@ Limitations relevant to the interpretation are summarised in [Appendix G](#appen
 
 | Input | Location or identifier | Notes |
 | --- | --- | --- |
-| Sweep directory | `validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init` | Campaign root recorded in `sweep_manifest.json` |
-| Report directory | `validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init/report` | Contains all generated artefacts used in this report |
-| Sweep manifest | `validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init/sweep_manifest.json` | Records 11 `antenna_diameter` points and creation time `2026-02-27T23:36:40Z` |
-| BayesEoR template YAML | `src/valska_hera_beam/external_tools/bayeseor/templates/validation_airy_diam14m.yaml` | Referenced directly by the sweep manifest |
-| Data product | `/shared/UKSRC-ST/ps550/BayesEoR/UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/diam14m/gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5` | Input visibility dataset recorded in the sweep manifest |
+| Sweep directory | `validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3` | Campaign root recorded in `sweep_manifest.json` |
+| Report directory | `validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report` | Contains all generated artefacts used in this report |
+| Sweep manifest | `validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/sweep_manifest.json` | Records 11 `antenna_diameter` points and creation time `2026-04-28T19:09:57Z` |
+| BayesEoR template YAML | `src/valska_hera_beam/external_tools/bayeseor/templates/validation_airy_diam14m.yaml` | Referenced directly by the sweep manifest (path recorded as-is; see [Appendix H](#appendix-h-data-provenance-note) on the `valska_hera_beam` naming) |
+| Data product | `/shared/UKSRC-ST/ps550/BayesEoR/UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/diam14m/gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5` | Input visibility dataset recorded in the sweep manifest (unchanged from the original campaign) |
 | Perturbation parameter | `antenna_diameter` | Sampled at 11 fractions from -0.20 to +0.20 |
 
 ## Appendix B: Reproducibility Commands
 
-The exact report-generation command for this campaign is:
+The report-generation command used for the v2 refresh is:
 
 ```bash
-python -m valska_hera_beam.external_tools.bayeseor.cli_report \
-  validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init \
+python -m valska.external_tools.bayeseor.cli_report \
+  validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3 \
   --include-plot-analysis-results \
+  --include-complete-analysis-table \
+  --export-report-assets docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets \
   --print-complete-analysis-table
 ```
 
@@ -110,12 +112,14 @@ If the ValSKA environment is already loaded, the equivalent CLI command is:
 
 ```bash
 valska-bayeseor-report \
-  validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init \
+  validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3 \
   --include-plot-analysis-results \
+  --include-complete-analysis-table \
+  --export-report-assets docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets \
   --print-complete-analysis-table
 ```
 
-For this draft, the equivalent `valska-bayeseor-report` command was observed to exit successfully in the current workspace.
+This command was run against the v2 sweep on 2026-07-15, exited successfully, and its `--export-report-assets` output (including `artefact_manifest.json`) is what populates this report's asset directory. The original draft's commands (against `sweep_airy_init`) are preserved in [Appendix H](#appendix-h-data-provenance-note) for the historical record.
 
 ## Appendix C: Campaign Completeness
 
@@ -158,6 +162,7 @@ Report-local copies of the completeness summaries are available at [sweep_report
 | Evidence-by-model plot | Supporting evidence diagnostic for hypothesis separation across the sweep; report-local copy used for embedding | [log_evidence_by_model_vs_perturb_frac.png](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/log_evidence_by_model_vs_perturb_frac.png) |
 | ValSKA analysis figure | Primary power-spectrum and posterior diagnostic; report-local copy used for embedding | [plot_analysis_results_signal_fit_valska.png](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/plot_analysis_results_signal_fit_valska.png) |
 | Legacy analysis figure | Comparison-only rendering retained for audit trail but not reproduced in the main text | [plot_analysis_results_signal_fit.png](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/plot_analysis_results_signal_fit.png) |
+| Artefact export manifest | Provenance record written by `--export-report-assets`, recording the source sweep/report directories and export timestamp for the assets above | [artefact_manifest.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/artefact_manifest.json) |
 
 ## Appendix F: Review Checklist
 
@@ -177,3 +182,24 @@ Report-local copies of the completeness summaries are available at [sweep_report
 | No per-k Bayesian evidence comparison | Detection and non-detection classification remains a proxy rather than a mode-by-mode evidence test | Add a future per-k Bayesian comparison if campaign sign-off requires mode-resolved claims |
 | Log-uniform-prior chains used for current posteriors | Classified non-detections are not calibrated 95 per cent upper limits | Run uniform-prior upper-limit chains for any bins that need publishable upper-limit statements |
 | The transition between the largest tested pass point and the first tested fail point is not sampled | The sweep bounds the provisional accuracy requirement but does not identify the exact threshold | Run a finer sweep between 2 per cent and 5 per cent in magnitude before freezing a final specification |
+
+## Appendix H: Data Provenance Note
+
+This report was originally drafted on 2026-04-25 against the historical campaign `sweep_airy_init` (created `2026-02-27T23:36:40Z`, under `validation_results/UKSRC/bayeseor/...`). On 2026-07-15, as part of a merge and refresh of the `validation-report-drafts` branch, the report's data, figures, and tables were updated to the v2 campaign `sweep_airy_v3` (created `2026-04-28T19:09:57Z`, under `validation_results/UKSRC/v2/bayeseor/...`), which uses the same beam model, sky model, input visibility dataset, and `antenna_diameter` sweep points as the original.
+
+Before updating this report, the following checks were performed to confirm the v2 campaign reproduces rather than changes the original result:
+
+- **Structural completeness:** All 11 v2 sweep points report `status: ok` with zero errors, and `complete_analysis_results.json` reports 11/11 successful signal-fit-versus-no-signal pairings — matching the original campaign's completeness.
+- **Point-by-point evidence comparison:** `delta_log_evidence` (`ins` source) was compared point-by-point between `sweep_airy_init` and `sweep_airy_v3`. Every point agrees to within approximately 0.05-1.0 nats (against magnitudes ranging from about 5 to 875 nats), consistent with expected nested-sampling stochasticity between independent runs of the same configuration rather than a methodology change. The PASS/FAIL classification (5 PASS at 0, ±1%, ±2%; 6 FAIL at ±5%, ±10%, ±20%) is identical between the two campaigns.
+- **Visual comparison:** The delta-log-evidence plot, the evidence-by-model plot, and the ValSKA-rendered signal-fit/posterior figure were compared between the two campaigns. All three show the same qualitative pattern (same PASS/FAIL point colouring, same posterior shapes per `k` bin, same asymmetry between the -20% and +20% tails).
+
+On this basis, the report's data, figures, and tables were refreshed to the v2 outputs using `valska-bayeseor-report ... --export-report-assets` (see [Appendix B](#appendix-b-reproducibility-commands)), and the resulting `artefact_manifest.json` is retained in [Appendix E](#appendix-e-artefact-register) as the record of that export. The report's scientific conclusions (Executive Summary, Conclusions) were **not** re-derived independently for this refresh; they are unchanged because the v2 numbers reproduce the same PASS/FAIL pattern and the same qualitative evidence trend as the original draft. This refresh does not constitute a scientific sign-off on the v2 campaign or on the plus-or-minus 2 per cent specification recommendation — that remains an open item, as recorded in Appendix D and Appendix F.
+
+The historical campaign's own reproducibility commands, for reference, were:
+
+```bash
+valska-bayeseor-report \
+  validation_results/UKSRC/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_init \
+  --include-plot-analysis-results \
+  --print-complete-analysis-table
+```

@@ -6,9 +6,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_-1.0e-01",
         "model_2": "FgOnly_antdiam_-1.0e-01",
-        "log_evidence_1": 693867275357.0393,
-        "log_evidence_2": 693867275218.883,
-        "log_bayes_factor": 138.15625,
+        "log_evidence_1": 693867275357.0555,
+        "log_evidence_2": 693867275218.8901,
+        "log_bayes_factor": 138.1654052734375,
         "interpretation": "Very strong evidence for model 1",
         "success": true,
         "error": null
@@ -21,9 +21,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_-1.0e-02",
         "model_2": "FgOnly_antdiam_-1.0e-02",
-        "log_evidence_1": 693867277029.9042,
-        "log_evidence_2": 693867277035.9951,
-        "log_bayes_factor": -6.0909423828125,
+        "log_evidence_1": 693867277029.215,
+        "log_evidence_2": 693867277035.9973,
+        "log_bayes_factor": -6.7823486328125,
         "interpretation": "Very strong evidence for model 2",
         "success": true,
         "error": null
@@ -36,9 +36,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_-2.0e-01",
         "model_2": "FgOnly_antdiam_-2.0e-01",
-        "log_evidence_1": 693867270210.2225,
-        "log_evidence_2": 693867269334.5413,
-        "log_bayes_factor": 875.6812744140625,
+        "log_evidence_1": 693867270210.4614,
+        "log_evidence_2": 693867269334.56,
+        "log_bayes_factor": 875.9013671875,
         "interpretation": "Very strong evidence for model 1",
         "success": true,
         "error": null
@@ -51,9 +51,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_-2.0e-02",
         "model_2": "FgOnly_antdiam_-2.0e-02",
-        "log_evidence_1": 693867276962.228,
-        "log_evidence_2": 693867276968.3032,
-        "log_bayes_factor": -6.0751953125,
+        "log_evidence_1": 693867276962.1707,
+        "log_evidence_2": 693867276968.3036,
+        "log_bayes_factor": -6.1329345703125,
         "interpretation": "Very strong evidence for model 2",
         "success": true,
         "error": null
@@ -66,9 +66,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_-5.0e-02",
         "model_2": "FgOnly_antdiam_-5.0e-02",
-        "log_evidence_1": 693867276577.2938,
-        "log_evidence_2": 693867276570.1647,
-        "log_bayes_factor": 7.129150390625,
+        "log_evidence_1": 693867276576.5566,
+        "log_evidence_2": 693867276570.1638,
+        "log_bayes_factor": 6.392822265625,
         "interpretation": "Very strong evidence for model 1",
         "success": true,
         "error": null
@@ -81,9 +81,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_0.0e+00",
         "model_2": "FgOnly_antdiam_0.0e+00",
-        "log_evidence_1": 693867277072.8606,
-        "log_evidence_2": 693867277079.2853,
-        "log_bayes_factor": -6.4246826171875,
+        "log_evidence_1": 693867277072.9259,
+        "log_evidence_2": 693867277079.2833,
+        "log_bayes_factor": -6.357421875,
         "interpretation": "Very strong evidence for model 2",
         "success": true,
         "error": null
@@ -96,9 +96,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_1.0e-01",
         "model_2": "FgOnly_antdiam_1.0e-01",
-        "log_evidence_1": 693867276126.3354,
-        "log_evidence_2": 693867276012.417,
-        "log_bayes_factor": 113.91845703125,
+        "log_evidence_1": 693867276125.9507,
+        "log_evidence_2": 693867276012.4178,
+        "log_bayes_factor": 113.5328369140625,
         "interpretation": "Very strong evidence for model 1",
         "success": true,
         "error": null
@@ -111,9 +111,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_1.0e-02",
         "model_2": "FgOnly_antdiam_1.0e-02",
-        "log_evidence_1": 693867277089.4965,
-        "log_evidence_2": 693867277096.1809,
-        "log_bayes_factor": -6.6844482421875,
+        "log_evidence_1": 693867277089.7683,
+        "log_evidence_2": 693867277096.1771,
+        "log_bayes_factor": -6.4088134765625,
         "interpretation": "Very strong evidence for model 2",
         "success": true,
         "error": null
@@ -126,9 +126,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_2.0e-01",
         "model_2": "FgOnly_antdiam_2.0e-01",
-        "log_evidence_1": 693867273426.8114,
-        "log_evidence_2": 693867273064.6135,
-        "log_bayes_factor": 362.1978759765625,
+        "log_evidence_1": 693867273425.5604,
+        "log_evidence_2": 693867273064.6105,
+        "log_bayes_factor": 360.949951171875,
         "interpretation": "Very strong evidence for model 1",
         "success": true,
         "error": null
@@ -141,9 +141,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_2.0e-02",
         "model_2": "FgOnly_antdiam_2.0e-02",
-        "log_evidence_1": 693867277078.9972,
-        "log_evidence_2": 693867277085.5626,
-        "log_bayes_factor": -6.5654296875,
+        "log_evidence_1": 693867277079.4937,
+        "log_evidence_2": 693867277085.5604,
+        "log_bayes_factor": -6.0667724609375,
         "interpretation": "Very strong evidence for model 2",
         "success": true,
         "error": null
@@ -156,9 +156,9 @@
       "bayes_factor_result": {
         "model_1": "FgEoR_antdiam_5.0e-02",
         "model_2": "FgOnly_antdiam_5.0e-02",
-        "log_evidence_1": 693867276889.7618,
-        "log_evidence_2": 693867276883.6838,
-        "log_bayes_factor": 6.0780029296875,
+        "log_evidence_1": 693867276890.2096,
+        "log_evidence_2": 693867276883.679,
+        "log_bayes_factor": 6.5306396484375,
         "interpretation": "Very strong evidence for model 1",
         "success": true,
         "error": null
@@ -175,89 +175,89 @@
   "successful_results": [
     {
       "perturbation": "antdiam_-1.0e-01",
-      "log_evidence_fgeor": 693867275357.0393,
-      "log_evidence_fgonly": 693867275218.883,
-      "log_bayes_factor": 138.15625,
+      "log_evidence_fgeor": 693867275357.0555,
+      "log_evidence_fgonly": 693867275218.8901,
+      "log_bayes_factor": 138.1654052734375,
       "validation": "FAIL",
       "interpretation": "Very strong evidence for model 1"
     },
     {
       "perturbation": "antdiam_-1.0e-02",
-      "log_evidence_fgeor": 693867277029.9042,
-      "log_evidence_fgonly": 693867277035.9951,
-      "log_bayes_factor": -6.0909423828125,
+      "log_evidence_fgeor": 693867277029.215,
+      "log_evidence_fgonly": 693867277035.9973,
+      "log_bayes_factor": -6.7823486328125,
       "validation": "PASS",
       "interpretation": "Very strong evidence for model 2"
     },
     {
       "perturbation": "antdiam_-2.0e-01",
-      "log_evidence_fgeor": 693867270210.2225,
-      "log_evidence_fgonly": 693867269334.5413,
-      "log_bayes_factor": 875.6812744140625,
+      "log_evidence_fgeor": 693867270210.4614,
+      "log_evidence_fgonly": 693867269334.56,
+      "log_bayes_factor": 875.9013671875,
       "validation": "FAIL",
       "interpretation": "Very strong evidence for model 1"
     },
     {
       "perturbation": "antdiam_-2.0e-02",
-      "log_evidence_fgeor": 693867276962.228,
-      "log_evidence_fgonly": 693867276968.3032,
-      "log_bayes_factor": -6.0751953125,
+      "log_evidence_fgeor": 693867276962.1707,
+      "log_evidence_fgonly": 693867276968.3036,
+      "log_bayes_factor": -6.1329345703125,
       "validation": "PASS",
       "interpretation": "Very strong evidence for model 2"
     },
     {
       "perturbation": "antdiam_-5.0e-02",
-      "log_evidence_fgeor": 693867276577.2938,
-      "log_evidence_fgonly": 693867276570.1647,
-      "log_bayes_factor": 7.129150390625,
+      "log_evidence_fgeor": 693867276576.5566,
+      "log_evidence_fgonly": 693867276570.1638,
+      "log_bayes_factor": 6.392822265625,
       "validation": "FAIL",
       "interpretation": "Very strong evidence for model 1"
     },
     {
       "perturbation": "antdiam_0.0e+00",
-      "log_evidence_fgeor": 693867277072.8606,
-      "log_evidence_fgonly": 693867277079.2853,
-      "log_bayes_factor": -6.4246826171875,
+      "log_evidence_fgeor": 693867277072.9259,
+      "log_evidence_fgonly": 693867277079.2833,
+      "log_bayes_factor": -6.357421875,
       "validation": "PASS",
       "interpretation": "Very strong evidence for model 2"
     },
     {
       "perturbation": "antdiam_1.0e-01",
-      "log_evidence_fgeor": 693867276126.3354,
-      "log_evidence_fgonly": 693867276012.417,
-      "log_bayes_factor": 113.91845703125,
+      "log_evidence_fgeor": 693867276125.9507,
+      "log_evidence_fgonly": 693867276012.4178,
+      "log_bayes_factor": 113.5328369140625,
       "validation": "FAIL",
       "interpretation": "Very strong evidence for model 1"
     },
     {
       "perturbation": "antdiam_1.0e-02",
-      "log_evidence_fgeor": 693867277089.4965,
-      "log_evidence_fgonly": 693867277096.1809,
-      "log_bayes_factor": -6.6844482421875,
+      "log_evidence_fgeor": 693867277089.7683,
+      "log_evidence_fgonly": 693867277096.1771,
+      "log_bayes_factor": -6.4088134765625,
       "validation": "PASS",
       "interpretation": "Very strong evidence for model 2"
     },
     {
       "perturbation": "antdiam_2.0e-01",
-      "log_evidence_fgeor": 693867273426.8114,
-      "log_evidence_fgonly": 693867273064.6135,
-      "log_bayes_factor": 362.1978759765625,
+      "log_evidence_fgeor": 693867273425.5604,
+      "log_evidence_fgonly": 693867273064.6105,
+      "log_bayes_factor": 360.949951171875,
       "validation": "FAIL",
       "interpretation": "Very strong evidence for model 1"
     },
     {
       "perturbation": "antdiam_2.0e-02",
-      "log_evidence_fgeor": 693867277078.9972,
-      "log_evidence_fgonly": 693867277085.5626,
-      "log_bayes_factor": -6.5654296875,
+      "log_evidence_fgeor": 693867277079.4937,
+      "log_evidence_fgonly": 693867277085.5604,
+      "log_bayes_factor": -6.0667724609375,
       "validation": "PASS",
       "interpretation": "Very strong evidence for model 2"
     },
     {
       "perturbation": "antdiam_5.0e-02",
-      "log_evidence_fgeor": 693867276889.7618,
-      "log_evidence_fgonly": 693867276883.6838,
-      "log_bayes_factor": 6.0780029296875,
+      "log_evidence_fgeor": 693867276890.2096,
+      "log_evidence_fgonly": 693867276883.679,
+      "log_bayes_factor": 6.5306396484375,
       "validation": "FAIL",
       "interpretation": "Very strong evidence for model 1"
     }

@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from ast import literal_eval
 from copy import deepcopy
 from pathlib import Path
 
 import astropy.units as units
 import numpy
-from astropy.coordinates import EarthLocation
+from astropy.coordinates import Angle
 from astropy.time import Time
 from ruamel.yaml.comments import CommentedSeq
 
 from valska.catalog import write_skyh5
-from valska.utils_yaml import load_yaml
+from valska.simulation_config import SimulationConfig
 
 # -----------------------------------------------------------------------------
 # Beam check config
@@ -60,10 +59,10 @@ def _adjust_time_array(
     return cfg
 
 
-def _lst_at_time(jd: float, location: EarthLocation) -> float:
+def _lst_at_time(jd: float, longitude: Angle) -> float:
     t = Time(jd, format="jd", scale="utc")
     return float(
-        t.sidereal_time("apparent", longitude=location.lon).to(units.deg).value
+        t.sidereal_time("apparent", longitude=longitude).to(units.deg).value
         % 360.0
     )
 
@@ -90,42 +89,6 @@ def _read_config_times(cfg: dict):
     return time_array
 
 
-def read_config_location(cfg: dict, template_dir: Path | None = None):
-
-    telescope = cfg.get("telescope")
-    if (
-        not isinstance(telescope, dict)
-        or "telescope_config_name" not in telescope
-    ):
-        raise ValueError("Config does not contain telescope_config_name")
-
-    tel_cfg_path = Path(telescope["telescope_config_name"])
-
-    if not tel_cfg_path.is_absolute() and template_dir is not None:
-        tel_cfg_path = template_dir / tel_cfg_path
-
-    if not tel_cfg_path.exists():
-        raise FileNotFoundError(
-            f"Telescope config {tel_cfg_path} does not exist. "
-            "If using a template, was valska_root supplied?"
-        )
-
-    tel_cfg = load_yaml(tel_cfg_path)
-
-    location = tel_cfg.get("telescope_location")
-    if location is None:
-        raise ValueError("Telescope config missing 'telescope_location'")
-    lat, lon, height = literal_eval(location)
-
-    earth_location = EarthLocation(
-        lat=lat * units.deg,
-        lon=lon * units.deg,
-        height=height * units.m,
-    )
-
-    return earth_location
-
-
 def prepare_beam_check_cfg(
     cfg: dict,
     run_dir: Path,
@@ -143,10 +106,10 @@ def prepare_beam_check_cfg(
     new_cfg = deepcopy(cfg)
 
     # 1. Load the observation time and telescope location from config
+    simulation_config = SimulationConfig(cfg, template_dir=template_dir)
+
     time_array = _read_config_times(cfg)
     t_mid = 0.5 * (time_array[0] + time_array[-1])
-
-    earth_location = read_config_location(cfg, template_dir)
 
     # 2. Build minimal sky catalogue
     zenith_sky_path = run_dir / "catalog_files" / "zenith_single_source.skyh5"
@@ -155,8 +118,8 @@ def prepare_beam_check_cfg(
     # Set RA/Dec so that source transits zenith at t_mid
     write_skyh5(
         filename=zenith_sky_path,
-        ra_deg=[_lst_at_time(t_mid, earth_location)],
-        dec_deg=[earth_location.lat.deg],
+        ra_deg=[_lst_at_time(t_mid, simulation_config.longitude.deg)],
+        dec_deg=[simulation_config.latitude.deg],
         stokes_I=[1.0],
     )
 

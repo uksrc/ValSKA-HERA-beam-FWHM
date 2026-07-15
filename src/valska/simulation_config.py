@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import astropy.units as units
-from astropy.coordinates import Angle, EarthLocation
+from astropy.coordinates import Angle
 from pyradiosky import SkyModel
 
 from valska.catalog import read_skyh5_catalogue
@@ -129,20 +129,24 @@ class SimulationConfig:
         return self.catalog.ra
 
     @property
+    def longitude(self) -> Angle:
+
+        location = self.telescope_config.get("telescope_location")
+        if location is None:
+            raise ValueError("Telescope config missing 'telescope_location'")
+        _, lon, _ = literal_eval(location)
+
+        return Angle(lon, unit="deg")
+
+    @property
     def latitude(self) -> Angle:
 
         location = self.telescope_config.get("telescope_location")
         if location is None:
             raise ValueError("Telescope config missing 'telescope_location'")
-        lat, lon, height = literal_eval(location)
+        lat, _, _ = literal_eval(location)
 
-        earth_location = EarthLocation(
-            lat=lat * units.deg,
-            lon=lon * units.deg,
-            height=height * units.m,
-        )
-
-        return earth_location.lat
+        return Angle(lat, unit="deg")
 
     @property
     def beam_shape(self) -> str:

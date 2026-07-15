@@ -308,14 +308,10 @@ def test_prepare_beam_check_cfg_does_not_alter_times(
     original_template = Path(_pyuvsim_config["template_yaml"])
 
     # Recreate the expected directory layout.
-    telescope_dir = tmp_path / "telescope_config"
-    telescope_dir.mkdir()
-
-    shutil.copy(
-        original_template.parent
-        / "telescope_config"
-        / "hex-37-14.6m-gauss-fwhm9.3.yml",
-        telescope_dir,
+    shutil.copytree(
+        original_template.parent,
+        tmp_path,
+        dirs_exist_ok=True,
     )
 
     template = tmp_path / "long_time_template.yaml"

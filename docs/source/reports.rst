@@ -1,5 +1,5 @@
 Reports
-=======
+-------
 
 .. toctree::
    :maxdepth: 1

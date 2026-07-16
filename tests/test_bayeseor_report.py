@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from valska import evidence
 from valska.external_tools.bayeseor import cli_report
 from valska.external_tools.bayeseor.analysis_plot import (
     BayesEoRPlotConfig,
@@ -18,6 +19,8 @@ from valska.external_tools.bayeseor.report import (
     generate_sweep_report,
     parse_data_stats_evidence,
 )
+
+from .constants import mock_read_chains
 
 
 def _write_data_stats(
@@ -141,11 +144,99 @@ def test_generate_sweep_report_writes_outputs(tmp_path: Path) -> None:
     assert result.summary_csv.exists()
     assert result.summary_json.exists()
 
+    summary_csv_bytes = result.summary_csv.read_bytes()
+    assert b"\r" not in summary_csv_bytes
+    assert summary_csv_bytes.endswith(b"\n")
+
     payload = json.loads(result.summary_json.read_text(encoding="utf-8"))
     assert len(payload["points"]) == 2
     first = payload["points"][0]
     assert first["status"] == "ok"
     assert first["delta_log_evidence"] is not None
+
+
+def test_complete_analysis_csv_uses_lf_line_endings_when_empty(
+    tmp_path: Path,
+) -> None:
+    sweep_dir = tmp_path / "_sweeps" / "sweep_test"
+    point = sweep_dir / "validation" / "antdiam_0.0e+00"
+    _mk_point(point, signal_ns=21.0, no_signal_ns=20.0)
+    manifest = {
+        "points": [
+            {
+                "perturb_parameter": "antenna_diameter",
+                "perturb_frac": 0.0,
+                "run_label": "antdiam_0.0e+00",
+                "run_dir": str(point),
+            }
+        ]
+    }
+    sweep_dir.mkdir(parents=True, exist_ok=True)
+    (sweep_dir / "sweep_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+
+    # No anesthetic-readable chain files are present, so the complete
+    # analysis produces zero successful results and exercises the
+    # empty-table csv.writer branch.
+    result = generate_sweep_report(
+        sweep_dir=sweep_dir,
+        out_dir=None,
+        evidence_source="ins",
+        make_plots=False,
+        include_complete_analysis_table=True,
+    )
+
+    assert result.complete_analysis_csv is not None
+    raw = result.complete_analysis_csv.read_bytes()
+    assert b"\r" not in raw
+    assert raw.endswith(b"\n")
+    assert raw.count(b"\n") == 1
+
+
+def test_complete_analysis_csv_uses_lf_line_endings_when_populated(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(evidence, "read_chains", mock_read_chains)
+
+    sweep_dir = tmp_path / "_sweeps" / "sweep_test"
+    point = sweep_dir / "validation" / "antdiam_0.0e+00"
+    _mk_point(point, signal_ns=21.0, no_signal_ns=20.0)
+
+    signal_root = point / "output" / "signal_fit" / "MN-signal"
+    no_signal_root = point / "output" / "no_signal" / "MN-no-signal"
+    (signal_root / "data-").write_text("21.0", encoding="utf-8")
+    (no_signal_root / "data-").write_text("20.0", encoding="utf-8")
+
+    manifest = {
+        "points": [
+            {
+                "perturb_parameter": "antenna_diameter",
+                "perturb_frac": 0.0,
+                "run_label": "antdiam_0.0e+00",
+                "run_dir": str(point),
+            }
+        ]
+    }
+    sweep_dir.mkdir(parents=True, exist_ok=True)
+    (sweep_dir / "sweep_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+
+    result = generate_sweep_report(
+        sweep_dir=sweep_dir,
+        out_dir=None,
+        evidence_source="ins",
+        make_plots=False,
+        include_complete_analysis_table=True,
+    )
+
+    assert result.complete_analysis_csv is not None
+    raw = result.complete_analysis_csv.read_bytes()
+    assert b"\r" not in raw
+    assert raw.endswith(b"\n")
+    # Header plus at least one successful data row.
+    assert raw.count(b"\n") >= 2
 
 
 def test_export_report_artefacts_copies_outputs_and_writes_manifest(

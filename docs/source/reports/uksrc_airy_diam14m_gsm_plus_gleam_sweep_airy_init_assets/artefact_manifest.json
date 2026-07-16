@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-07-15T15:09:31.456739+00:00",
+  "created_utc": "2026-07-16T11:50:22.882199+00:00",
   "sweep_dir": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3",
   "report_dir": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report",
   "assets_dir": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets",

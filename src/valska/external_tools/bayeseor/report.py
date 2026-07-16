@@ -388,7 +388,9 @@ def _write_summary_csv(
         headers = list(payload[0].keys())
 
     with out_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=headers)
+        writer = csv.DictWriter(
+            handle, fieldnames=headers, lineterminator="\n"
+        )
         writer.writeheader()
         for row in payload:
             writer.writerow(row)
@@ -644,7 +646,9 @@ def generate_sweep_report(
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
             ) as handle:
-                dict_writer = csv.DictWriter(handle, fieldnames=headers)
+                dict_writer = csv.DictWriter(
+                    handle, fieldnames=headers, lineterminator="\n"
+                )
                 dict_writer.writeheader()
                 for complete_row in complete_analysis_rows:
                     dict_writer.writerow(complete_row)
@@ -652,7 +656,7 @@ def generate_sweep_report(
             with complete_analysis_csv.open(
                 "w", encoding="utf-8", newline=""
             ) as handle:
-                csv_writer = csv.writer(handle)
+                csv_writer = csv.writer(handle, lineterminator="\n")
                 csv_writer.writerow(
                     [
                         "perturbation",

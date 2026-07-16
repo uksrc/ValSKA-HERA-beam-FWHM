@@ -208,6 +208,9 @@ def _write_simulation(
     runner: CondaRunner | ContainerRunner,
     install: pyuvsimInstall | None,
     slurm_cpu: Mapping[str, object] | None,
+    postprocess_runner: CondaRunner | ContainerRunner = CondaRunner(
+        None, None
+    ),
     postprocess_cmd: str | None = None,
 ):
     """
@@ -225,6 +228,7 @@ def _write_simulation(
             run_dir=run_dir,
             slurm=slurm_cpu,
             mode="simulate",
+            postprocess_runner=postprocess_runner,
             postprocess_cmd=postprocess_cmd,
         ),
         encoding="utf-8",
@@ -257,7 +261,8 @@ def prepare_pyuvsim_run(
     unique: bool = False,
     fwhm_perturb_frac: float | None = None,
     make_beam_check: bool = False,
-    check_min_hours: float = 2.0,
+    hours_each_side: float | None = None,
+    beamcheck_runner: CondaRunner | ContainerRunner = CondaRunner(None, None),
 ) -> dict[str, Path]:
     """
     Prepare a pyuvsim run directory containing a single simulation-stage artefact set.
@@ -377,7 +382,7 @@ def prepare_pyuvsim_run(
         outputs["submit_sh_beamcheck"] = run_dir / "submit_beamcheck.sh"
 
         beam_check_cfg = prepare_beam_check_cfg(
-            cfg, run_dir, template_yaml.parent, min_hours=check_min_hours
+            cfg, run_dir, template_yaml.parent, hours_each_side
         )
 
         beamcheck_uvh5 = (
@@ -407,6 +412,7 @@ def prepare_pyuvsim_run(
             runner=runner,
             install=install,
             slurm_cpu=slurm_cpu,
+            postprocess_runner=beamcheck_runner,
             postprocess_cmd=postprocess_cmd,
         )
 

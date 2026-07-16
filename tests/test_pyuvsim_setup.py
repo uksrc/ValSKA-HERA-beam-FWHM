@@ -225,7 +225,7 @@ def test_prepare_pyuvsim_run_beamcheck_extends_time_array(
     prepare_pyuvsim_run(
         **_pyuvsim_config,
         make_beam_check=True,
-        check_min_hours=2.0,
+        hours_each_side=2.0,
     )
 
     beam_cfg = load_yaml(_run_dir / "obsparam_beamcheck.yaml")
@@ -297,6 +297,7 @@ def test_prepare_beam_check_cfg_does_not_modify_input(
         cfg,
         run_dir=tmp_path,
         template_dir=template.parent,
+        hours_each_side=None,
     )
 
     assert cfg == original
@@ -332,7 +333,7 @@ def test_prepare_beam_check_cfg_does_not_alter_times(
         cfg,
         run_dir=tmp_path,
         template_dir=tmp_path,
-        min_hours=None,
+        hours_each_side=None,
     )
 
     assert numpy.allclose(

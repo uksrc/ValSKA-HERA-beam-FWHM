@@ -117,6 +117,12 @@ pyuvsim:
   # Default template if --template is not provided
   default_template: fov-19.4-oscar-sm.yml
   
+  # Diagnostic check of beam profile
+  beamcheck:
+    run_beamcheck: true
+    conda_env: valska
+    hours_each_side: 2
+
   slurm_defaults:
     # partition: <partition_name>     # optional (omit on constraint-based sites)
     # constraint: <constraint_name>   # optional

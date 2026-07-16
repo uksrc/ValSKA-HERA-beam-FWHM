@@ -100,7 +100,7 @@ class BeamMetrics:
     def write_report(self):
         """Write report and collect results"""
 
-        log.info("***** Beam Check Report *****\n\n")
+        log.info("***** Beam Check Report *****\n")
         log.info("Generated at %s\n", datetime.now(UTC).isoformat())
         log.info("uvh5 file: %s", self.uv_filename)
         log.info("config yaml: %s", self.config_yaml)
@@ -111,12 +111,19 @@ class BeamMetrics:
             self.lsts_hours[-1],
         )
         log.info(
+            "Time step: %s sec",
+            (self.lsts_hours[1] - self.lsts_hours[0]) * 3600.0,
+        )
+        log.info(
             "Freq range: %0.1f - %0.1f MHz\n",
             self.freq_array[0] / 1e6,
             self.freq_array[-1] / 1e6,
         )
 
-        log.info("Fitting for %s\n", self.simulation_config.beam_shape)
+        log.info(
+            "Fitting for %s at central frequency\n",
+            self.simulation_config.beam_shape,
+        )
         self.results["beam_shape"] = self.simulation_config.beam_shape
 
         f_mid_idx = self.freq_array.shape[0] // 2
@@ -179,7 +186,7 @@ class BeamMetrics:
             )
 
         if "correlation" in self.results["chromaticity"].keys():
-            log.info("\nVariation with frequency:\n")
+            log.info("\nRelative variation with frequency:\n")
             log.info(
                 "   Std deviation = %.3f %%\n"
                 "   Gradient of fitted line = %.3f %%\n"
@@ -522,28 +529,33 @@ def chromaticity_test(
     inv_freq = 1.0 / freq_array
     valid = ~numpy.isnan(test_param)
 
+    # Measure variation across frequency
+    if numpy.sum(valid) > 1:
+        freq_std = numpy.std(test_param[valid]) / numpy.mean(test_param[valid])
+        p = numpy.polyfit(
+            freq_array[valid], numpy.abs(test_param[valid]), deg=1
+        )
+        freq_grad = p[0] / numpy.mean(test_param[valid])
+        trend = numpy.polyval(p, freq_array[valid])
+        residual = test_param[valid] - trend
+        frac_resid = numpy.std(residual) / numpy.mean(test_param[valid])
+    else:
+        freq_std = 0.0
+        freq_grad = 0.0
+        frac_resid = 0.0
+
     # Correlation to frequency
     if numpy.sum(valid) > CORR_SAMPLES and not numpy.isclose(
         numpy.std(test_param[valid]), 0.0
     ):
-        # Measure variation across frequency
-        freq_std = numpy.std(test_param[valid]) / numpy.mean(test_param[valid])
-        p = numpy.polyfit(
-            freq_array[valid], numpy.abs(test_param[valid]), deg=2
-        )
-        freq_grad = p[1] / numpy.mean(test_param[valid])
-        trend = numpy.polyval(p, freq_array[valid])
-        residual = test_param[valid] - trend
-        frac_resid = numpy.std(residual) / numpy.mean(test_param[valid])
-
         corr = numpy.corrcoef(test_param[valid], inv_freq[valid])[0, 1]
-
-        chromaticity["freq_std"] = freq_std
-        chromaticity["freq_grad"] = freq_grad
-        chromaticity["frac_resid"] = frac_resid
-        chromaticity["correlation"] = corr
     else:
-        log.info("  Not enough valid test parameters")
+        corr = numpy.nan
+
+    chromaticity["freq_std"] = freq_std
+    chromaticity["freq_grad"] = freq_grad
+    chromaticity["frac_resid"] = frac_resid
+    chromaticity["correlation"] = corr
 
     return chromaticity
 
@@ -593,7 +605,7 @@ def plot_beam_shape(
 
     ax.set_xlabel("Angle (deg)")
     ax.set_ylabel("Stokes I (XX+YY) Amplitude (Jy)")
-    ax.set_title(f"Autocorrelation beam profile ({freq / 1e6} MHz)")
+    ax.set_title(f"Autocorrelation beam profile ({freq / 1e6:0.1f} MHz)")
 
     ax.legend()
 
@@ -695,7 +707,7 @@ def plot_baseline_heatmap(
 
     ax.set_xlabel("Baseline index")
     ax.set_ylabel("LST (hours)")
-    ax.set_title(f"Autocorr per baseline at {freq / 1e6} MHz")
+    ax.set_title(f"Autocorr per baseline at {freq / 1e6:0.1f} MHz")
     ax.xaxis.set_major_locator(MultipleLocator(1))
 
     return ax
@@ -752,7 +764,7 @@ def plot_2d_lst_deg(
 
     cbar = plt.colorbar(im, ax=ax, pad=0.16)
     vmin, vmax = im.get_clim()
-    ticks = [vmin + i * (vmax - vmin) / 5 for i in range(6)]
+    ticks = numpy.round(numpy.linspace(vmin, vmax, 6), decimals=2).tolist()
     cbar.set_ticks(ticks)
     cbar.ax.set_title("Stokes I", fontsize=8)
 

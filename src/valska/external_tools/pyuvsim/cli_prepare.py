@@ -79,16 +79,23 @@ import argparse
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from valska.external_tools.pyuvsim import (
     CondaRunner,
+    ContainerRunner,
     get_template_path,
     list_templates,
     prepare_pyuvsim_run,
     pyuvsimInstall,
 )
 from valska.utils import get_default_path_manager, resolve_data_path
+
+
+class BeamCheckArgs(TypedDict, total=False):
+    make_beam_check: bool
+    hours_each_side: float | None
+    beamcheck_runner: CondaRunner | ContainerRunner
 
 
 def _utc_stamp() -> str:
@@ -353,20 +360,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--no-beamcheck",
-        dest="make_beam_check",
-        action="store_false",
-        default=True,
+        dest="disable_beam_check",
+        action="store_true",
+        default=False,
         help="Disable the beam check simulation (enabled by default).",
     )
 
     parser.add_argument(
-        "--beamcheck-min-hours",
-        dest="check_min_hours",
+        "--beamcheck-hours",
+        dest="check_hours",
         type=float,
-        default=2.0,
         help=(
-            "Minimum duration in hours either side of transit for beam check simulation. "
-            "Default: 2.0"
+            "Duration in hours either side of transit for beam check simulation."
         ),
     )
 
@@ -654,6 +659,29 @@ def main(argv: list[str] | None = None) -> int:
         unique=unique,
     )
 
+    # Beamcheck arguments
+    beamcheck_args: BeamCheckArgs = {}
+    if not args.disable_beam_check:
+        cfg_beamcheck = _get_nested(runtime, "pyuvsim", "beamcheck") or {}
+        check_hours = (
+            args.check_hours
+            if args.check_hours is not None
+            else cfg_beamcheck.get("hours_each_side")
+        )
+        beamcheck_env = cfg_beamcheck.get("conda_env")
+        if beamcheck_env is not None:
+            beamcheck_args = {
+                "make_beam_check": True,
+                "hours_each_side": check_hours,
+                "beamcheck_runner": CondaRunner(
+                    conda_activate=conda_sh, env_name=beamcheck_env
+                ),
+            }
+        else:
+            print(
+                "Beam check requested but no conda_env configured in runtime_paths.yaml."
+            )
+
     if args.dry_run:
         print("\n[DRY RUN] Prepare would be executed with:")
         print(f"  results_root:       {results_root} [{results_root_src}]")
@@ -682,11 +710,12 @@ def main(argv: list[str] | None = None) -> int:
             print("  pyuvsim_repo:       (none)")
         print(f"  conda:              env={conda_env} [{conda_src}]")
         print(f"  run_dir (preview):  {preview_run_dir}")
-        print(
-            f"\n[DRY RUN] Additional beam check simulation: {args.make_beam_check}"
-        )
-        if args.make_beam_check:
-            print(f"  min hours each side of transit: {args.check_min_hours}")
+        if beamcheck_args.get("make_beam_check") is not None:
+            print("\n[DRY RUN] Additional beam checks enabled:")
+            print(f"  beamcheck conda enviroment: {beamcheck_env}")
+            print(f"  hours each side of transit: {check_hours}")
+        else:
+            print("\n[DRY RUN] Additional beam checks disabled")
         print("\n[DRY RUN] SLURM defaults to be written:")
         print(f"  cpu: {slurm_cpu}")
         print("\n[DRY RUN] No files will be created.")
@@ -712,8 +741,7 @@ def main(argv: list[str] | None = None) -> int:
         overrides=overrides,
         slurm_cpu=slurm_cpu,
         fwhm_perturb_frac=args.fwhm_perturb_frac,
-        make_beam_check=args.make_beam_check,
-        check_min_hours=args.check_min_hours,
+        **beamcheck_args,
     )
 
     run_dir = Path(out["run_dir"])
@@ -728,7 +756,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  run_label:    {run_label}")
     print(f"  run_id:       {args.run_id}")
 
-    if args.make_beam_check:
+    if not args.disable_beam_check:
         print("\nAlso prepared 'beam check' run with single source at zenith")
 
     print("\nNext steps:")

@@ -214,9 +214,7 @@ def _merge_jobs_record(
 
     new_jobs = new_result.get("jobs")
     if isinstance(new_jobs, dict):
-        sim = new_jobs.get("simulate")
-        if isinstance(sim, dict):
-            merged_jobs["simulate"] = sim
+        merged_jobs.update(new_jobs)
 
     merged["jobs"] = merged_jobs
     merged["submitted_utc"] = new_result.get(

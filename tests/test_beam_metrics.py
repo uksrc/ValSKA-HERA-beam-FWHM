@@ -227,7 +227,7 @@ def test_chromaticity_ignores_nan_values():
     assert numpy.isclose(result["correlation"], expected, equal_nan=True)
 
 
-def test_chromaticity_returns_empty_dict_when_not_enough_samples():
+def test_chromaticity_returns_nan_when_not_enough_samples():
     """
     If the number of valid samples is <= CORR_SAMPLES,
     the function should return NaN.
@@ -237,7 +237,10 @@ def test_chromaticity_returns_empty_dict_when_not_enough_samples():
 
     result = beam_metrics.chromaticity_test(freq, param)
 
-    assert result == {}
+    assert numpy.isclose(result["correlation"], numpy.nan, equal_nan=True)
+    assert numpy.isclose(result["freq_std"], 0.5 / 1.5)
+    assert numpy.isclose(result["freq_grad"], 1.0 / 1.5)
+    assert numpy.isclose(result["frac_resid"], 0.0)
 
 
 def test_chromaticity_all_nan_input():
@@ -249,19 +252,25 @@ def test_chromaticity_all_nan_input():
 
     result = beam_metrics.chromaticity_test(freq, param)
 
-    assert result == {}
+    assert numpy.isclose(result["correlation"], numpy.nan, equal_nan=True)
+    assert numpy.isclose(result["freq_std"], 0.0)
+    assert numpy.isclose(result["freq_grad"], 0.0)
+    assert numpy.isclose(result["frac_resid"], 0.0)
 
 
 def test_chromaticity_constant_parameter():
     """
-    Constant parameter arrays produce undefined correlation.
+    Constant parameter arrays produce zero slope and undefined correlation.
     """
     freq = numpy.array([1, 2, 3, 4, 5, 6], dtype=float)
     param = numpy.ones(6)
 
     result = beam_metrics.chromaticity_test(freq, param)
 
-    assert result == {}
+    assert numpy.isclose(result["correlation"], numpy.nan, equal_nan=True)
+    assert numpy.isclose(result["freq_std"], 0.0)
+    assert numpy.isclose(result["freq_grad"], 0.0)
+    assert numpy.isclose(result["frac_resid"], 0.0)
 
 
 def test_plot_beam_shape_basic():

@@ -93,7 +93,7 @@ def prepare_beam_check_cfg(
     cfg: dict,
     run_dir: Path,
     template_dir: Path,
-    min_hours: float = 2.0,
+    hours_each_side: float | None,
 ):
     """
     1. Read the telescope latitude,
@@ -127,9 +127,9 @@ def prepare_beam_check_cfg(
     new_cfg["sources"]["catalog"] = str(zenith_sky_path)
 
     # 4. Optional time extension
-    if min_hours is not None:
+    if hours_each_side is not None:
         new_cfg = _adjust_time_array(
-            new_cfg, time_array, hours_each_side=min_hours
+            new_cfg, time_array, hours_each_side=hours_each_side
         )
 
     # 5. Update output filename

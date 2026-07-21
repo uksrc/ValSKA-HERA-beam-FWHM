@@ -393,8 +393,8 @@ def prepare_pyuvsim_run(
                 f"{beam_check_cfg['filing']['output_format']}"
             )
         )
-        beamcheck_log_suffix = ".beamcheck.log"
-        beamcheck_fig_suffix = ".beamcheck.png"
+        beamcheck_log_suffix = ".log"
+        beamcheck_fig_suffix = ".png"
 
         # Postprocessing command to run beam diagnostics
         postprocess_cmd = (

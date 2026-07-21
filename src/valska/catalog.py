@@ -8,7 +8,7 @@ from astropy.coordinates import SkyCoord
 from pyradiosky import SkyModel
 
 
-def write_skyh5(
+def write_skyh5_catalogue(
     *,
     filename,
     ra_deg,

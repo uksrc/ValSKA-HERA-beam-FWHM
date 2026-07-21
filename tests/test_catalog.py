@@ -3,13 +3,13 @@ import numpy
 import pytest
 from pyradiosky import SkyModel
 
-from valska.catalog import write_skyh5
+from valska.catalog import write_skyh5_catalogue
 
 
 def test_write_skyh5_creates_file(tmp_path):
     outfile = tmp_path / "test.skyh5"
 
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=outfile,
         ra_deg=[180.0],
         dec_deg=[-30.0],
@@ -26,7 +26,7 @@ def test_write_skyh5_roundtrip(tmp_path):
     dec = numpy.array([-30.0, -31.2])
     flux = numpy.array([1.5, 2.3])
 
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=outfile,
         ra_deg=ra,
         dec_deg=dec,
@@ -45,7 +45,7 @@ def test_write_skyh5_source_names(tmp_path):
 
     names = numpy.array(["CasA", "CygA"])
 
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=outfile,
         ra_deg=[10.0, 20.0],
         dec_deg=[30.0, 40.0],
@@ -61,7 +61,7 @@ def test_write_skyh5_source_names(tmp_path):
 def test_default_source_names(tmp_path):
     outfile = tmp_path / "test.skyh5"
 
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=outfile,
         ra_deg=[10.0, 20.0, 30.0],
         dec_deg=[0.0, 1.0, 2.0],
@@ -80,7 +80,7 @@ def test_spectral_indices(tmp_path):
 
     alpha = numpy.array([-0.8, -0.5])
 
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=outfile,
         ra_deg=[0.0, 1.0],
         dec_deg=[0.0, 1.0],
@@ -98,7 +98,7 @@ def test_reference_frequency(tmp_path):
 
     ref_freq = 200e6
 
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=outfile,
         ra_deg=[10.0],
         dec_deg=[20.0],
@@ -115,7 +115,7 @@ def test_mismatched_array_lengths(tmp_path):
     outfile = tmp_path / "test.skyh5"
 
     with pytest.raises(ValueError):
-        write_skyh5(
+        write_skyh5_catalogue(
             filename=outfile,
             ra_deg=[0.0, 1.0],
             dec_deg=[0.0],

@@ -11,7 +11,7 @@ from astropy.coordinates import Angle
 from astropy.time import Time
 from ruamel.yaml.comments import CommentedSeq
 
-from valska.catalog import write_skyh5
+from valska.catalog import write_skyh5_catalogue
 from valska.simulation_config import SimulationConfig
 
 # -----------------------------------------------------------------------------
@@ -24,7 +24,7 @@ def _adjust_time_array(
     time_array: numpy.typing.NDArray,
     time_step_seconds: float = 10.0,
     hours_each_side: float = 2.0,
-) -> dict:
+) -> tuple[numpy.typing.NDArray, dict]:
     """
     Adjust the observation span to be ``hours_each_side`` either side
     of the observation midpoint.
@@ -56,10 +56,33 @@ def _adjust_time_array(
     # Ensure time array will be written in flow style
     time_cfg["time_array"].fa.set_flow_style()
 
-    return cfg
+    return new_times, cfg
+
+
+def _update_baselines(cfg: dict, num_antennas: int):
+    """Set autocorrelation baselines"""
+
+    # Set up list of all autocorrelation baselines
+    baselines = [(ant, ant) for ant in range(num_antennas)]
+
+    select_cfg = cfg.get("select")
+    if not isinstance(select_cfg, dict):
+        raise ValueError(
+            "Setting up baselines: Config contains no 'select' section."
+        )
+
+    if "bls" not in select_cfg:
+        raise NotImplementedError(
+            "Beam-check requires an explicit select.bls "
+            "section to set autocorrelation baselines."
+        )
+    select_cfg["bls"] = CommentedSeq(baselines)
+    # Ensure time array will be written in flow style
+    select_cfg["bls"].fa.set_flow_style()
 
 
 def _lst_at_time(jd: float, longitude: Angle) -> float:
+    """Get LST at a time in Julian Days"""
     t = Time(jd, format="jd", scale="utc")
     return float(
         t.sidereal_time("apparent", longitude=longitude).to(units.deg).value
@@ -67,9 +90,11 @@ def _lst_at_time(jd: float, longitude: Angle) -> float:
     )
 
 
-def _read_config_times(cfg: dict):
+def _get_config_times(cfg: dict) -> numpy.typing.NDArray:
+    """Get times from the config dictionary"""
 
-    # Include other options for time too!
+    # Are there any other options for specifying time that need to
+    # be covered?
 
     time_cfg = cfg.get("time")
 
@@ -93,46 +118,53 @@ def prepare_beam_check_cfg(
     cfg: dict,
     run_dir: Path,
     template_dir: Path,
-    hours_each_side: float | None,
+    hours_each_side: float | None = None,
 ):
     """
-    1. Read the telescope latitude,
-    2. Generate catalog with single source at zenith,
-    3. Point the catalogue path in cfg to that file,
-    4. Optionally modify the observing times.
-    5. Update output filename
+    Prepare configuration for beam check simulation
+
+    Generate catalog with single source at zenith
+    Optionally modify the observing times.
     """
 
     new_cfg = deepcopy(cfg)
 
-    # 1. Load the observation time and telescope location from config
-    simulation_config = SimulationConfig(cfg, template_dir=template_dir)
-
-    time_array = _read_config_times(cfg)
+    # Get the observation times
+    time_array = _get_config_times(cfg)
     t_mid = 0.5 * (time_array[0] + time_array[-1])
 
-    # 2. Build minimal sky catalogue
+    # Load telescope config and catalogue files
+    simulation_config = SimulationConfig(cfg, template_dir=template_dir)
+
+    # Build minimal sky catalogue
     zenith_sky_path = run_dir / "catalog_files" / "zenith_single_source.skyh5"
     zenith_sky_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Set RA/Dec so that source transits zenith at t_mid
-    write_skyh5(
+    write_skyh5_catalogue(
         filename=zenith_sky_path,
         ra_deg=[_lst_at_time(t_mid, simulation_config.longitude.deg)],
         dec_deg=[simulation_config.latitude.deg],
-        stokes_I=[1.0],
+        stokes_I=[1.3],
     )
 
-    # 3. Point config at new catalogue
+    # Point config at new catalogue
     new_cfg["sources"]["catalog"] = str(zenith_sky_path)
 
-    # 4. Optional time extension
+    # Set up all autocorrelation baselines
+    _update_baselines(new_cfg, simulation_config.num_antennas)
+
+    # Optional: specify new time array
     if hours_each_side is not None:
-        new_cfg = _adjust_time_array(
+        time_array, new_cfg = _adjust_time_array(
             new_cfg, time_array, hours_each_side=hours_each_side
         )
 
-    # 5. Update output filename
-    new_cfg["filing"]["outfile_name"] += ".beamcheck"
+    # Update output filename
+    lst_start = _lst_at_time(time_array[0], simulation_config.longitude.deg)
+    lst_end = _lst_at_time(time_array[-1], simulation_config.longitude.deg)
+    new_cfg["filing"]["outfile_name"] = (
+        f"beamcheck_zenith_single_source_{lst_start:0.1f}_{lst_end:0.1f}"
+    )
 
     return new_cfg

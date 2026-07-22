@@ -1,5 +1,14 @@
 # UKSRC Airy Beam BayesEoR Validation Report: airy_diam14m / GSM_plus_GLEAM / sweep_airy_v3
 
+> **Data provenance warning (2026-07-22):** the input mock-visibility data used throughout this
+> sweep was independently confirmed to be simulated with a **Gaussian** truth beam
+> (`hex-37-14.6m-gauss-fwhm9.3.yml`), not an Airy beam, despite the `airy_diam14m` naming
+> everywhere in this report. As a result, the previously stated plus-or-minus 2 per cent
+> `antenna_diameter` accuracy specification is **not supported** and has been withdrawn; the
+> numerical results below are retained as valid computational outputs but are reinterpreted as an
+> Airy-model-vs-Gaussian-truth mismatch test, not an Airy-vs-Airy diameter-tolerance test. See
+> [Appendix H](#appendix-h-data-provenance-note) for the full finding.
+
 ## Contents
 
 - [Report Metadata](#report-metadata)
@@ -27,7 +36,7 @@
 | Campaign identifier | `sweep_airy_v3` (v2 campaign; originally drafted against `sweep_airy_init`, see [Appendix H](#appendix-h-data-provenance-note)) |
 | Beam model | `airy_diam14m` |
 | Sky model | `GSM_plus_GLEAM` |
-| Validation target | Determine where the BayesEoR null test passes across the tested `antenna_diameter` sweep and use that pass window to set a provisional instrument-modelling accuracy specification |
+| Validation target | Determine where the BayesEoR null test passes across the tested `antenna_diameter` sweep. **Originally intended** to use that pass window to set a provisional instrument-modelling accuracy specification for the Airy beam; this use is withdrawn, see the provenance warning above and [Appendix H](#appendix-h-data-provenance-note) |
 | Report owner | UKSRC Science Enabling - Science Validation Tooling; P. Sims |
 | Report date | 2026-04-25 (data refreshed to the v2 campaign 2026-07-15; see [Appendix H](#appendix-h-data-provenance-note)) |
 | ValSKA branch or commit | `validation-report-drafts` @ `b529253` (original draft); refreshed against `validation-report-drafts` @ `ff7d999` |
@@ -38,19 +47,23 @@
 
 ## Executive Summary
 
-This report assesses the UKSRC Airy beam BayesEoR validation sweep `sweep_airy_v3` (the v2 campaign), which perturbs `antenna_diameter` for the `airy_diam14m` beam with the `GSM_plus_GLEAM` sky model. The report was originally drafted against the historical campaign `sweep_airy_init`; see [Appendix H](#appendix-h-data-provenance-note) for that history and for why this file keeps the `sweep_airy_init` filename and asset-directory slug. The purpose of the campaign is to determine where the validation null test passes and to use that pass region to inform an instrument-modelling accuracy specification. All 11 sweep points completed successfully according to `sweep_report_summary.json`, and all 11 signal-fit versus no-signal pairings were processed successfully according to `complete_analysis_results.json`.
+This report assesses the UKSRC Airy beam BayesEoR validation sweep `sweep_airy_v3` (the v2 campaign), which perturbs the BayesEoR forward model's assumed `antenna_diameter` for the `airy_diam14m` beam with the `GSM_plus_GLEAM` sky model. The report was originally drafted against the historical campaign `sweep_airy_init`; see [Appendix H](#appendix-h-data-provenance-note) for that history and for why this file keeps the `sweep_airy_init` filename and asset-directory slug. All 11 sweep points completed successfully according to `sweep_report_summary.json`, and all 11 signal-fit versus no-signal pairings were processed successfully according to `complete_analysis_results.json`.
 
-Draft interpretation: the current sweep identifies a provisional pass window and a failure region. The null test passes at all sampled perturbations from -2 per cent to +2 per cent and fails at all sampled perturbations with magnitude 5 per cent or larger. This suggests that a plus or minus 2 per cent specification is sufficient for the null test to pass in this campaign. A slightly more relaxed tolerance between 2 per cent and 5 per cent may be possible, but it would require additional testing to establish.
+**The campaign's original purpose — using the null-test pass window to set an Airy antenna-diameter accuracy specification — is not achievable with this data.** A `valska-data-preflight` scan of `UKSRC_val_mock_vis` on 2026-07-20, independently confirmed against the file's own `pyuvsim` history via `h5py`, found that the mock visibility dataset used at every point in this sweep (`gsm_plus_gleam-...-airy_quentin.uvh5`) was in fact simulated against the telescope config `hex-37-14.6m-gauss-fwhm9.3.yml` — a **Gaussian** truth beam — not an Airy beam. The `antenna_diameter` parameter varied across the 11 sweep points is therefore only a property of the BayesEoR Airy *forward model*; the simulated data itself never changed and was never Airy. See [Appendix H](#appendix-h-data-provenance-note) for the full finding.
+
+Reinterpreted in light of this, the sweep instead shows: the null test passes when the BayesEoR forward model assumes an `airy_diam14m` beam within -2 per cent to +2 per cent of its nominal diameter, and fails once the assumed diameter departs by 5 per cent or more, **when the data being analysed actually has a Gaussian truth beam of comparable nominal size**. This characterises how well an Airy model of a given diameter statistically mimics a fixed Gaussian beam under this pipeline — a model-family degeneracy result — not the sensitivity of an Airy null test to genuine Airy-diameter error. It cannot be used to set an Airy antenna-diameter accuracy specification; doing so would require rerunning this sweep against mock data with a confirmed Airy truth beam.
 
 Inputs, reproducibility commands, campaign completeness, and assumptions are recorded in [Appendices A-D](#appendix-a-inputs).
 
 ## Scope
 
-The campaign tests how sensitive the BayesEoR null-test outcome is to perturbations in the Airy beam antenna diameter. The scientific objective is to identify the perturbation range over which the `airy_diam14m` beam configuration remains consistent with the no-signal hypothesis when analysing the `GSM_plus_GLEAM` mock visibility data recorded in the sweep manifest, and then to use that pass range to inform an instrument-modelling accuracy specification.
+The campaign tests how sensitive the BayesEoR null-test outcome is to perturbations in the BayesEoR forward model's assumed `airy_diam14m` antenna diameter, analysing the fixed `GSM_plus_GLEAM` mock visibility data recorded in the sweep manifest. The original scientific objective was to identify the perturbation range over which the null test remains consistent with the no-signal hypothesis and to use that pass range to inform an instrument-modelling accuracy specification for the Airy beam.
+
+**That objective is not achievable with the current data.** As detailed in [Appendix H](#appendix-h-data-provenance-note), the mock visibility data analysed throughout this sweep was independently confirmed to be simulated with a Gaussian truth beam, not an Airy beam. Only the BayesEoR forward model's assumed diameter varies across the 11 points; the underlying data does not. This report therefore reframes the sweep as a test of Airy-forward-model-versus-Gaussian-truth mismatch tolerance under this pipeline, and does not use it to set an Airy antenna-diameter accuracy specification.
 
 The component under test is the BayesEoR evidence response to the beam-model perturbation parameter `antenna_diameter`. The sweep samples 11 perturbations from -20 per cent to +20 per cent, with finer spacing around the nominal model.
 
-The decision enabled by this report is whether the current evidence is sufficient to define a provisional antenna-diameter accuracy specification directly, or whether finer sampling is needed to resolve the transition between the largest tested pass point and the first tested fail point.
+The decision enabled by this report is limited to characterising where this model-mismatch null test passes and fails; it does not, on its own, support defining an Airy antenna-diameter accuracy specification. Doing so would require rerunning an equivalent sweep against mock data with a confirmed Airy truth beam.
 
 ## Evidence Diagnostics
 
@@ -58,9 +71,9 @@ The decision enabled by this report is whether the current evidence is sufficien
 
 ![Signal-fit and no-signal log evidences versus antenna-diameter perturbation fraction for the UKSRC Airy beam sweep](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/log_evidence_by_model_vs_perturb_frac.png)
 
-*Figures 1 and 2. Top panel: delta log evidence versus perturbation fraction. Bottom panel: signal-fit and no-signal log evidences versus perturbation fraction. These two views present the same underlying Bayesian evidence data. Together they show that the null test passes for all sampled perturbations from -2 per cent to +2 per cent and fails for all sampled perturbations with magnitude 5 per cent or larger, which supports a plus or minus 2 per cent specification as sufficient for the null test to pass in this campaign.*
+*Figures 1 and 2. Top panel: delta log evidence versus perturbation fraction. Bottom panel: signal-fit and no-signal log evidences versus perturbation fraction. These two views present the same underlying Bayesian evidence data. Together they show that the null test passes for all sampled perturbations from -2 per cent to +2 per cent and fails for all sampled perturbations with magnitude 5 per cent or larger. As detailed in [Appendix H](#appendix-h-data-provenance-note), the analysed data has a Gaussian, not Airy, truth beam, so this pattern reflects Airy-model-versus-Gaussian-truth mismatch tolerance and does not support an Airy antenna-diameter specification.*
 
-The trend is not perfectly symmetric: the negative extreme at -20 per cent is more severe than the positive extreme at +20 per cent, but both tails show the same qualitative behaviour. This leaves open the possibility that a slightly more relaxed tolerance between 2 per cent and 5 per cent may also pass, which would require additional testing to establish. A smooth fit to the `Delta ln Z` curve may also be worth exploring in future work as a way to estimate the boundary between sampled points.
+The trend is not perfectly symmetric: the negative extreme at -20 per cent is more severe than the positive extreme at +20 per cent, but both tails show the same qualitative behaviour. This leaves open the possibility that a slightly more relaxed mismatch tolerance between 2 per cent and 5 per cent may also pass, which would require additional testing to establish — though, per the provenance finding above, any such follow-up should first confirm it is being tested against genuinely Airy-truth data. A smooth fit to the `Delta ln Z` curve may also be worth exploring in future work as a way to estimate the boundary between sampled points.
 
 ## Complete-Analysis Summary
 
@@ -84,7 +97,7 @@ A second, independent computation is available in [complete_analysis_successful.
 
 *Table 1. `Delta ln Z` (`ins`-selected evidence difference) and PASS/FAIL classification per antenna-diameter perturbation, from [sweep_report_summary.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.csv). The independently computed BayesEoR-delegated log-Bayes-factor, which gives the same classification with different numeric values, is available in [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv).*
 
-Taken at face value, these results identify a null-consistent region centred on the nominal beam diameter. For specification setting, the directly supported statement is that a plus or minus 2 per cent specification is sufficient for the null test to pass. A more relaxed tolerance between 2 per cent and 5 per cent may be possible and would require additional testing to establish.
+Taken at face value, these results identify a null-consistent region centred on the nominal assumed beam diameter. However, per [Appendix H](#appendix-h-data-provenance-note), the analysed data has a confirmed Gaussian truth beam rather than an Airy one, so this is a mismatch-tolerance result for an Airy forward model against Gaussian-truth data, not an Airy-versus-Airy diameter accuracy specification. No Airy antenna-diameter specification is supported by this table.
 
 ## Power-Spectrum and Posterior Diagnostics
 
@@ -102,10 +115,10 @@ Limitations relevant to the interpretation are summarised in [Appendix G](#appen
 
 ## Conclusions
 
-- **Conclusion:** Draft interpretation: the current sweep identifies a provisional pass window and a failure region. All 11 sweep points completed successfully. The null test passes at every tested point from -2 per cent to +2 per cent and fails at every tested point with magnitude 5 per cent or larger. On that basis, a plus or minus 2 per cent specification is sufficient for the null test to pass in this campaign.
-- **Evidence basis:** [sweep_report_summary.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.csv), [sweep_report_summary.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.json), [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv), and [complete_analysis_results.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_results.json) all support the same 5 PASS / 6 FAIL split, while Figures 1 and 2 show the same behaviour visually.
-- **Residual risk:** A slightly more relaxed tolerance between 2 per cent and 5 per cent may be possible, but it is not established by the sampled points.
-- **Recommended action:** Record a plus or minus 2 per cent specification as sufficient for the null test to pass in this campaign, and use finer sampling or a smooth fit to the `Delta ln Z` curve in future work if a less conservative threshold is needed.
+- **Conclusion:** All 11 sweep points completed successfully. The null test passes at every tested point from -2 per cent to +2 per cent and fails at every tested point with magnitude 5 per cent or larger. This pattern is well established computationally, but **it does not support an Airy antenna-diameter accuracy specification**: the mock visibility data analysed at every sweep point was independently confirmed to have a Gaussian, not Airy, truth beam (see [Appendix H](#appendix-h-data-provenance-note)). The result is instead a mismatch-tolerance characterisation between the BayesEoR Airy forward model and Gaussian-truth data under this pipeline. The plus-or-minus-2-per-cent specification stated in earlier drafts of this report is **withdrawn**.
+- **Evidence basis:** [sweep_report_summary.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.csv), [sweep_report_summary.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.json), [complete_analysis_successful.csv](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv), and [complete_analysis_results.json](uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_results.json) all support the same 5 PASS / 6 FAIL split, while Figures 1 and 2 show the same behaviour visually. The Gaussian-truth finding is established by the `valska-data-preflight` `beam_type_consistency` check and independently confirmed via the file's own `pyuvsim` history (see [Appendix H](#appendix-h-data-provenance-note)).
+- **Residual risk:** No Airy antenna-diameter specification currently exists for this beam/sky combination. A slightly more relaxed mismatch tolerance between 2 per cent and 5 per cent may also pass, but establishing either that or a genuine Airy-diameter specification requires data with a confirmed Airy truth beam, which does not yet exist for this campaign.
+- **Recommended action:** Do not record or use a plus-or-minus-2-per-cent (or any other) Airy antenna-diameter specification from this campaign. Before any such specification can be set, regenerate (or otherwise obtain) mock visibility data with a confirmed Airy truth beam for the `airy_diam14m` configuration and rerun this sweep against it. Retain the current `sweep_airy_v3` results as a valid, separate model-mismatch characterisation.
 
 ## Appendix A: Inputs
 
@@ -115,7 +128,7 @@ Limitations relevant to the interpretation are summarised in [Appendix G](#appen
 | Report directory | `validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report` | Contains all generated artefacts used in this report |
 | Sweep manifest | `validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/sweep_manifest.json` | Records 11 `antenna_diameter` points and creation time `2026-04-28T19:09:57Z` |
 | BayesEoR template YAML | `src/valska_hera_beam/external_tools/bayeseor/templates/validation_airy_diam14m.yaml` | Referenced directly by the sweep manifest (path recorded as-is; see [Appendix H](#appendix-h-data-provenance-note) on the `valska_hera_beam` naming) |
-| Data product | `/shared/UKSRC-ST/ps550/BayesEoR/UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/diam14m/gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5` | Input visibility dataset recorded in the sweep manifest (unchanged from the original campaign) |
+| Data product | `/shared/UKSRC-ST/ps550/BayesEoR/UKSRC_val_mock_vis/initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/diam14m/gsm_plus_gleam-158.30-167.10-MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin.uvh5` | Input visibility dataset recorded in the sweep manifest (unchanged from the original campaign). **Despite the `airy` filename, this file's own `pyuvsim` history cites `hex-37-14.6m-gauss-fwhm9.3.yml`, a Gaussian beam config** — see [Appendix H](#appendix-h-data-provenance-note) |
 | Perturbation parameter | `antenna_diameter` | Sampled at 11 fractions from -0.20 to +0.20 |
 
 ## Appendix B: Reproducibility Commands
@@ -165,13 +178,14 @@ Report-local copies of the completeness summaries are available at [sweep_report
 
 | Assumption | Why it matters | Status |
 | --- | --- | --- |
+| The input mock visibility data has an Airy truth beam matching `airy_diam14m` | Required for this sweep to characterise Airy antenna-diameter accuracy rather than Airy-versus-Gaussian model mismatch | **`failed`** — `valska-data-preflight` (2026-07-20) and an independent `h5py` history check both confirm the data's cited telescope config is `hex-37-14.6m-gauss-fwhm9.3.yml` (Gaussian); see [Appendix H](#appendix-h-data-provenance-note) |
 | Signal-fit and no-signal chains are paired correctly for each perturbation label | The PASS and FAIL summary is only meaningful if each comparison matches like with like | `tested` via 11 successful pairings in `complete_analysis_results.json` |
 | The `ins` evidence source is the intended source for sweep-level interpretation | The reported `Delta ln Z` values come from the selected evidence source in the summary outputs | `tested` via `selected_source = ins` for all 11 points in `sweep_report_summary.json` |
 | Incomplete runs do not bias the interpretation | Missing points could distort the apparent safe region | `tested` because no incomplete points are reported |
 | The expected noise-power reference drawn in the analysis figures is appropriate for this campaign | The visual significance of posterior and spectrum offsets depends on that reference | `open` in this draft |
 | Current posterior summaries use log-uniform-prior chains | This constrains how non-detections may be described | `accepted` |
 | Classified non-detections are not calibrated upper limits unless uniform-prior chains are run | Prevents overstating the result as a 95 per cent upper-limit statement | `accepted` |
-| Using the largest tested pass point to guide a provisional specification is acceptable for this draft | The report uses the pass window to inform a modelling-accuracy bound rather than to infer an exact threshold | `open` pending campaign sign-off |
+| Using the largest tested pass point to guide a provisional Airy antenna-diameter specification is acceptable for this draft | The report uses the pass window to inform a modelling-accuracy bound rather than to infer an exact threshold | **`failed`** — blocked by the Gaussian-truth-data finding above; no Airy antenna-diameter specification can be set from this campaign until it is rerun against confirmed Airy-truth data |
 
 ## Appendix E: Artefact Register
 
@@ -198,14 +212,16 @@ Report-local copies of the completeness summaries are available at [sweep_report
 - [x] Known limitations are not hidden in prose.
 - [x] An equivalent `valska-bayeseor-report` reproducibility command completed successfully in this workspace.
 - [x] The report-generation environment version and the BayesEoR analysis version (which produced the chains) are recorded separately, and their difference between campaigns is noted rather than assumed benign.
+- [x] The input data's actual beam type was checked against its filename/label claim (via `valska-data-preflight`, independently confirmed via `h5py`), rather than assumed from naming; see [Appendix H](#appendix-h-data-provenance-note).
 
 ## Appendix G: Limitations
 
 | Limitation | Consequence | Follow-up |
 | --- | --- | --- |
+| The input mock visibility data has a confirmed Gaussian, not Airy, truth beam | No Airy antenna-diameter accuracy specification can be derived from this campaign; the PASS/FAIL pattern instead reflects Airy-model-versus-Gaussian-truth mismatch tolerance | Regenerate (or source) mock visibility data with a confirmed Airy truth beam for `airy_diam14m` and rerun this sweep before attempting any Airy antenna-diameter specification |
 | No per-k Bayesian evidence comparison | Detection and non-detection classification remains a proxy rather than a mode-by-mode evidence test | Add a future per-k Bayesian comparison if campaign sign-off requires mode-resolved claims |
 | Log-uniform-prior chains used for current posteriors | Classified non-detections are not calibrated 95 per cent upper limits | Run uniform-prior upper-limit chains for any bins that need publishable upper-limit statements |
-| The transition between the largest tested pass point and the first tested fail point is not sampled | The sweep bounds the provisional accuracy requirement but does not identify the exact threshold | Run a finer sweep between 2 per cent and 5 per cent in magnitude before freezing a final specification |
+| The transition between the largest tested pass point and the first tested fail point is not sampled | The sweep bounds the model-mismatch tolerance region but does not identify the exact threshold, and (per the row above) does not by itself support any Airy antenna-diameter specification | Run a finer sweep between 2 per cent and 5 per cent in magnitude, against confirmed Airy-truth data, before freezing a final specification |
 
 ## Appendix H: Data Provenance Note
 
@@ -229,3 +245,43 @@ valska-bayeseor-report \
   --include-plot-analysis-results \
   --print-complete-analysis-table
 ```
+
+### Update 2026-07-22: input data beam-type mismatch
+
+A `valska-data-preflight` scan of `UKSRC_val_mock_vis` run on 2026-07-20 (see
+`temp/tmp/airy_data_investigation_20260716/preflight_scan_summary.md` and the accompanying
+`preflight_scan_UKSRC_val_mock_vis.json`) flagged the data product listed in
+[Appendix A](#appendix-a-inputs) with a `beam_type_consistency` **FAIL**: the file's name and
+directory claim an Airy beam, but its cited telescope config, `hex-37-14.6m-gauss-fwhm9.3.yml`,
+declares a Gaussian beam. This is one of 31 files flagged FAIL in that scan, all under
+`initial_data_set_from_Quentin/pyuvsims_airy_10022026/vis/`.
+
+This finding was independently re-confirmed for this report by reading the file's `pyuvsim`
+history directly with `h5py` rather than relying on the scan output alone:
+
+```
+Simulated with pyuvsim version: 1.4.1.dev96+g6b946d3.dirty. Sources from source list(s):
+[gleam-158.30-167.10-MHz-nf-38-pld-mean-2.82-std-0.19-fov-19.4deg-circ-field-1.skyh5].
+Based on config files: fov-19.4-oscar-sm.yml, telescope_config/hex-37-14.6m-gauss-fwhm9.3.yml,
+telescope_config/hex-37-14.6m.csv Npus = 8. ...
+```
+
+`sweep_manifest.json` for `sweep_airy_v3` was also re-checked directly and confirms all 11
+sweep points (`perturb_parameter: antenna_diameter`) use this exact `data_path`. Because this
+report's own "structural completeness" and "point-by-point evidence comparison" checks
+(above) already established that `sweep_airy_v3` reuses the same input data product as the
+original `sweep_airy_init` campaign, this Gaussian-truth finding applies identically to both —
+it is not a `sweep_airy_v3`-specific regression, and it was not caught by the earlier v2 refresh
+because that refresh (see above) deliberately checked reproduction of the historical numeric
+result rather than re-deriving the underlying beam-type assumption from first principles.
+
+**Impact:** the `antenna_diameter` parameter sampled across all 11 points of this sweep is a
+property of the BayesEoR Airy forward model only; the simulated visibility data itself has a
+fixed Gaussian truth beam at every point and never varies. The PASS/FAIL pattern in
+[Table 1](#complete-analysis-summary) is therefore valid as a computed result but does not test
+what the Executive Summary, Scope, and Conclusions previously claimed (an Airy-versus-Airy
+diameter accuracy specification). This report has been updated throughout to reframe the result
+as an Airy-forward-model-versus-Gaussian-truth mismatch-tolerance characterisation, and the
+previously stated plus-or-minus-2-per-cent specification is withdrawn. See the provenance
+warning at the top of this report, the Executive Summary, Scope, Appendix D, and Appendix G for
+the corresponding updates.

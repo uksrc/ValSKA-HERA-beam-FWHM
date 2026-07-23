@@ -320,9 +320,8 @@ def test_metadata_summary_reports_header_fields() -> None:
     assert result.details["vis_units"] == "Jy"
 
 
-def test_metadata_summary_warns_on_incomplete_header() -> None:
-    # A header missing several expected fields (e.g. an older or
-    # partially-written file) should not be reported as a clean PASS.
+def test_metadata_summary_fails_on_incomplete_header() -> None:
+    # A partially-written header must be rejected in strict mode.
     ctx = CheckContext(
         path=Path("dummy.uvh5"),
         header={
@@ -332,15 +331,15 @@ def test_metadata_summary_warns_on_incomplete_header() -> None:
         },
     )
     result = checks_module.check_metadata_summary(ctx)
-    assert result.status is CheckStatus.WARN
+    assert result.status is CheckStatus.FAIL
     assert "nbls" in result.message
     assert "vis_units" in result.message
 
 
-def test_metadata_summary_warns_on_empty_header() -> None:
+def test_metadata_summary_fails_on_empty_header() -> None:
     ctx = CheckContext(path=Path("dummy.uvh5"), header={})
     result = checks_module.check_metadata_summary(ctx)
-    assert result.status is CheckStatus.WARN
+    assert result.status is CheckStatus.FAIL
 
 
 # ---------------------------------------------------------------------
@@ -559,6 +558,7 @@ def test_main_end_to_end_flags_real_incident_pattern(
     assert code == 0  # advisory by default, even on FAIL
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["schema_version"] == 1
     assert payload["missing_paths"] == []
     reports = payload["reports"]
     assert len(reports) == 1
@@ -605,6 +605,23 @@ def test_main_returns_error_when_no_files_found(
     assert "no .uvh5 files found" in captured.err
 
 
+def test_main_empty_directory_emits_json(tmp_path: Path, capsys) -> None:
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+
+    code = main([str(empty_dir), "--json"])
+
+    assert code == 2
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload == {
+        "schema_version": 1,
+        "missing_paths": [],
+        "reports": [],
+    }
+    assert "no .uvh5 files found" in captured.err
+
+
 def test_main_returns_error_for_missing_path_only(
     tmp_path: Path, capsys
 ) -> None:
@@ -612,6 +629,22 @@ def test_main_returns_error_for_missing_path_only(
     code = main([str(missing_path)])
     assert code == 3
     captured = capsys.readouterr()
+    assert str(missing_path) in captured.err
+
+
+def test_main_missing_path_only_emits_json(tmp_path: Path, capsys) -> None:
+    missing_path = tmp_path / "does_not_exist.uvh5"
+
+    code = main([str(missing_path), "--json"])
+
+    assert code == 3
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload == {
+        "schema_version": 1,
+        "missing_paths": [str(missing_path)],
+        "reports": [],
+    }
     assert str(missing_path) in captured.err
 
 
@@ -629,6 +662,7 @@ def test_main_processes_valid_files_despite_missing_path(
     assert str(missing_path) in captured.err
 
     payload = json.loads(captured.out)
+    assert payload["schema_version"] == 1
     assert payload["missing_paths"] == [str(missing_path)]
     assert len(payload["reports"]) == 1
     assert payload["reports"][0]["path"] == str(present)
@@ -662,6 +696,27 @@ def test_main_continues_past_read_errors_to_report_other_files(
     assert reports[str(bad)]["error"] is not None
     assert reports[str(good)]["error"] is None
     assert reports[str(good)]["checks"]
+
+
+def test_main_strict_fails_on_missing_required_header_field(
+    tmp_path: Path, capsys
+) -> None:
+    uvh5_path = tmp_path / "incomplete.uvh5"
+    _write_minimal_uvh5_header(uvh5_path, history="no config references here")
+    with h5py.File(uvh5_path, "a") as handle:
+        del handle["Header"]["Nbls"]
+
+    code = main([str(uvh5_path), "--strict", "--json"])
+
+    assert code == 1
+    payload = json.loads(capsys.readouterr().out)
+    metadata_check = next(
+        check
+        for check in payload["reports"][0]["checks"]
+        if check["check_id"] == "metadata_summary"
+    )
+    assert metadata_check["status"] == "fail"
+    assert "nbls" in metadata_check["message"]
 
 
 def test_build_parser_accepts_repeated_config_search_dir() -> None:

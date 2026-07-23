@@ -40,6 +40,7 @@ _STATUS_ORDER = {
     CheckStatus.SKIP: 2,
     CheckStatus.PASS: 3,
 }
+_JSON_SCHEMA_VERSION = 1
 
 
 def default_config_search_dirs() -> tuple[Path, ...]:
@@ -221,6 +222,19 @@ def _print_text(reports: list[dict[str, Any]]) -> None:
             print(f"  - {path}")
 
 
+def _print_json(missing: list[Path], reports: list[dict[str, Any]]) -> None:
+    print(
+        json.dumps(
+            {
+                "schema_version": _JSON_SCHEMA_VERSION,
+                "missing_paths": [str(path) for path in missing],
+                "reports": reports,
+            },
+            indent=2,
+        )
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI.
 
@@ -254,6 +268,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: input path does not exist: {path}", file=sys.stderr)
 
     if not files:
+        if args.json_out:
+            _print_json(missing, [])
         if missing:
             return 3
         print(
@@ -273,15 +289,7 @@ def main(argv: list[str] | None = None) -> int:
     ]
 
     if args.json_out:
-        print(
-            json.dumps(
-                {
-                    "missing_paths": [str(p) for p in missing],
-                    "reports": reports,
-                },
-                indent=2,
-            )
-        )
+        _print_json(missing, reports)
     else:
         _print_text(reports)
 

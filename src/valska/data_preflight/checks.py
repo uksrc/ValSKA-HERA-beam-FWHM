@@ -147,7 +147,7 @@ def check_metadata_summary(ctx: CheckContext) -> CheckResult:
     that is missing from the header entirely. A field with an
     unreadable/non-numeric value causes ``read_uvh5_header`` itself to
     raise, which is surfaced as a file-level read error rather than a
-    WARN/FAIL from this check.
+    FAIL from this check.
     """
 
     header = ctx.header
@@ -171,9 +171,9 @@ def check_metadata_summary(ctx: CheckContext) -> CheckResult:
     if missing:
         return CheckResult(
             check_id="metadata_summary",
-            status=CheckStatus.WARN,
+            status=CheckStatus.FAIL,
             message=(
-                "header is missing expected field(s): " + ", ".join(missing)
+                "header is missing required field(s): " + ", ".join(missing)
             ),
             details=details,
         )

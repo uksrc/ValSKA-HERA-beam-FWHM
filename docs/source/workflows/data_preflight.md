@@ -32,6 +32,10 @@ advisory only by default: a run always exits `0` regardless of PASS/WARN/FAIL/SK
 results. Pass `--strict` to exit non-zero if any scientific check result is FAIL,
 for use as a script-level gate.
 
+`metadata_summary` reports `FAIL` when any required UVH5 header field is absent.
+This remains advisory without `--strict`, while strict mode can therefore reject
+structurally incomplete files.
+
 **Input-discovery and file-read problems are a separate matter** and always
 produce a non-zero exit, independent of `--strict`, so they cannot be silently
 missed:
@@ -110,6 +114,7 @@ Prints a single JSON object instead of text:
 
 ```json
 {
+  "schema_version": 1,
   "missing_paths": ["path/to/nonexistent.uvh5"],
   "reports": [
     {
@@ -128,9 +133,15 @@ Prints a single JSON object instead of text:
 }
 ```
 
+`schema_version` identifies the machine-readable output contract. Consumers
+should reject unsupported versions rather than assuming a compatible shape.
 `missing_paths` lists any requested path that did not exist. Each entry in
 `reports` corresponds to one discovered file; `error` is non-null (and
 `checks` empty) if the file could not be read at all.
+
+The JSON object is still emitted when no files can be inspected, including
+missing-only inputs (exit `3`) and existing paths containing no `.uvh5` files
+(exit `2`). In those cases, `reports` is empty.
 
 ### Strict mode (script-level gate)
 

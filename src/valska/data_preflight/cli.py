@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """Pre-flight inspection of UVH5 data files.
 
-Runs cheap consistency checks (currently: does a file's name agree with
-what its cited telescope config actually declares as the beam type)
-against one or more files, or every ``*.uvh5`` file under a directory,
-before they are used in an expensive analysis.
+Runs cheap metadata/provenance-consistency checks (currently: does a
+file's name agree with the beam type declared by the telescope config
+its cited history references) against one or more files, or every
+``*.uvh5`` file under a directory, before they are used in an
+expensive analysis.
 
-This is advisory only: it reports findings and, by default, always
-exits 0. Pass --strict to exit non-zero when any check FAILs, e.g. for
-use as a script-level gate later.
+These checks compare recorded metadata against itself; they cannot
+confirm what a file's data actually contain, only whether its recorded
+provenance is internally consistent.
+
+The scientific checks are advisory only: by default, a run always
+exits 0 regardless of PASS/WARN/FAIL/SKIP results, unless --strict is
+passed, which exits non-zero if any check FAILed. Input-discovery and
+file-read failures are a separate matter and always cause a non-zero
+exit, independent of --strict; see ``main`` for the exact exit codes.
 """
 
 from __future__ import annotations
@@ -50,14 +57,42 @@ def default_config_search_dirs() -> tuple[Path, ...]:
         return ()
 
 
-def discover_uvh5_files(paths: list[Path]) -> list[Path]:
+def discover_uvh5_files(
+    paths: list[Path],
+) -> tuple[list[Path], list[Path]]:
+    """Resolve requested paths to concrete ``.uvh5`` files.
+
+    Returns ``(files, missing)``: ``missing`` lists any requested path
+    that is neither an existing file nor an existing directory, in the
+    order given. A requested path that is an existing but empty
+    directory (or one with no ``.uvh5`` files) is not "missing" — it
+    was found, it simply contributed no files.
+
+    A file reachable via more than one requested path (passed
+    directly and also matched by scanning a parent directory, or
+    passed twice) is only included once, keeping first-seen order.
+    """
+
     files: list[Path] = []
+    seen: set[Path] = set()
+    missing: list[Path] = []
+
+    def _add(candidate: Path) -> None:
+        resolved = candidate.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            files.append(candidate)
+
     for path in paths:
         if path.is_dir():
-            files.extend(sorted(path.rglob("*.uvh5")))
+            for found in sorted(path.rglob("*.uvh5")):
+                _add(found)
         elif path.is_file():
-            files.append(path)
-    return files
+            _add(path)
+        else:
+            missing.append(path)
+
+    return files, missing
 
 
 def inspect_file(
@@ -144,9 +179,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict",
         action="store_true",
         help=(
-            "Exit with a non-zero status if any check result is FAIL. "
-            "Default is advisory-only: always exits 0 (I/O errors "
-            "aside)."
+            "Exit 1 if any scientific check result is FAIL. Default "
+            "is advisory-only for scientific checks (always exits 0 "
+            "for them). Missing input paths or file-read failures "
+            "always cause a non-zero exit (2 or 3) regardless of "
+            "--strict; see the CLI documentation for exact codes."
         ),
     )
     return parser
@@ -185,14 +222,40 @@ def _print_text(reports: list[dict[str, Any]]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the CLI.
+
+    Exit codes:
+
+    - ``0`` — clean run: every requested path existed, every
+      discovered file was read successfully, and (if ``--strict``)
+      no check FAILed.
+    - ``1`` — ``--strict`` was passed and at least one scientific
+      check FAILed. Only checked when there were no missing paths or
+      read errors (those take precedence, below).
+    - ``2`` — every requested path existed, but none contained (or
+      was) a ``.uvh5`` file, so there was nothing to check.
+    - ``3`` — one or more requested paths did not exist, and/or one
+      or more discovered files failed to read. This is independent
+      of ``--strict``: it reflects a problem finding or reading
+      inputs, not a scientific check outcome. Other requested paths
+      that did exist, and other files that did read successfully,
+      are still processed and reported.
+    """
+
     args = build_parser().parse_args(argv)
 
     search_dirs = default_config_search_dirs()
     if args.config_search_dirs:
         search_dirs = tuple(args.config_search_dirs) + search_dirs
 
-    files = discover_uvh5_files(args.paths)
+    files, missing = discover_uvh5_files(args.paths)
+
+    for path in missing:
+        print(f"ERROR: input path does not exist: {path}", file=sys.stderr)
+
     if not files:
+        if missing:
+            return 3
         print(
             "ERROR: no .uvh5 files found among the given paths",
             file=sys.stderr,
@@ -210,16 +273,28 @@ def main(argv: list[str] | None = None) -> int:
     ]
 
     if args.json_out:
-        print(json.dumps(reports, indent=2))
+        print(
+            json.dumps(
+                {
+                    "missing_paths": [str(p) for p in missing],
+                    "reports": reports,
+                },
+                indent=2,
+            )
+        )
     else:
         _print_text(reports)
+
+    read_errors = any(report["error"] for report in reports)
+    if missing or read_errors:
+        return 3
 
     if args.strict:
         any_fail = any(
             check["status"] == "fail"
             for report in reports
             for check in report["checks"]
-        ) or any(report["error"] for report in reports)
+        )
         if any_fail:
             return 1
 

@@ -2,8 +2,10 @@
 
 Runs cheap, self-contained checks against a data file (e.g. a UVH5
 visibility file) before it is used in an expensive analysis such as a
-BayesEoR sweep, so mismatches between what a file claims to be and
-what it actually contains can be caught early.
+BayesEoR sweep, so that mismatches between a file's recorded claims
+about itself (filename, cited config) can be caught early. These
+checks compare recorded metadata for internal consistency; they are
+not a guarantee of what the file's data actually contain.
 """
 
 from __future__ import annotations

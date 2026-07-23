@@ -10,6 +10,7 @@ deprecated compatibility shim for downstream users migrating existing code.
    :recursive:
 
    valska.beam_metrics
+   valska.data_preflight
    valska.evidence
    valska.notebook_helpers
    valska.plotting

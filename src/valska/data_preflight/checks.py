@@ -127,9 +127,28 @@ def locate_config(filename: str, search_dirs: tuple[Path, ...]) -> Path | None:
     return None
 
 
+_REQUIRED_METADATA_FIELDS = (
+    "nants_telescope",
+    "nants_data",
+    "nbls",
+    "ntimes",
+    "nfreqs",
+    "npols",
+    "vis_units",
+)
+
+
 @register_check("metadata_summary", CheckTier.FAST)
 def check_metadata_summary(ctx: CheckContext) -> CheckResult:
-    """Always-informational dump of key header fields. Never fails."""
+    """Report key ``/Header`` fields, flagging any that are absent.
+
+    This reports on what ``inspect.read_uvh5_header`` already found; it
+    cannot detect a header field that is present but wrong, only one
+    that is missing from the header entirely. A field with an
+    unreadable/non-numeric value causes ``read_uvh5_header`` itself to
+    raise, which is surfaced as a file-level read error rather than a
+    WARN/FAIL from this check.
+    """
 
     header = ctx.header
     details = {
@@ -143,27 +162,60 @@ def check_metadata_summary(ctx: CheckContext) -> CheckResult:
         "byte_size": header.get("byte_size"),
         "history_tail": (header.get("history") or "")[-500:],
     }
+
+    missing = [
+        field_name
+        for field_name in _REQUIRED_METADATA_FIELDS
+        if header.get(field_name) is None
+    ]
+    if missing:
+        return CheckResult(
+            check_id="metadata_summary",
+            status=CheckStatus.WARN,
+            message=(
+                "header is missing expected field(s): " + ", ".join(missing)
+            ),
+            details=details,
+        )
+
     return CheckResult(
         check_id="metadata_summary",
         status=CheckStatus.PASS,
-        message="metadata read successfully",
+        message="all expected header fields are present",
         details=details,
     )
 
 
 @register_check("beam_type_consistency", CheckTier.FAST)
 def check_beam_type_consistency(ctx: CheckContext) -> CheckResult:
-    """Does this file's own name agree with what its cited telescope
-    config actually declares as the beam type?
+    """Does this file's own name agree with the beam type declared by
+    the telescope config its recorded history cites?
 
-    This is the check that would have caught the incident this module
-    exists because of: a file named with "airy" whose cited
-    telescope_config actually declared a Gaussian beam.
+    This compares two pieces of recorded metadata (the filename and the
+    history-cited config's declared beam type) for consistency. It is a
+    provenance-consistency check, not proof of what the file's data
+    actually contain: the history string may itself be inaccurate or
+    stale, and a config file located by name in the search directories
+    may not be byte-identical to whatever was in effect at simulation
+    time. Agreement between the two is useful supporting evidence, not
+    a guarantee; disagreement is a strong, actionable signal to
+    investigate before using the file.
     """
 
     history = ctx.header.get("history") or ""
     cited = find_cited_telescope_configs(history)
     claimed = path_claimed_beam_types(ctx.path)
+
+    if len(claimed) > 1:
+        return CheckResult(
+            check_id="beam_type_consistency",
+            status=CheckStatus.FAIL,
+            message=(
+                f"file name claims multiple distinct beam types "
+                f"{sorted(claimed)}, which is internally inconsistent"
+            ),
+            details={"path_claimed_beam_types": sorted(claimed)},
+        )
 
     if not cited:
         return CheckResult(
@@ -227,8 +279,7 @@ def check_beam_type_consistency(ctx: CheckContext) -> CheckResult:
             status=CheckStatus.FAIL,
             message=(
                 f"file name claims beam type(s) {sorted(claimed)}, but "
-                f"its cited telescope config actually declares "
-                f"'{declared}'"
+                f"its cited telescope config declares '{declared}'"
             ),
             details=details,
         )
@@ -250,9 +301,9 @@ def check_beam_type_consistency(ctx: CheckContext) -> CheckResult:
             check_id="beam_type_consistency",
             status=CheckStatus.WARN,
             message=(
-                f"declared beam type '{declared}' is consistent with "
-                f"available evidence, but config(s) {unresolved} could "
-                "not be located to fully confirm"
+                f"file name and the located config(s) agree on beam "
+                f"type '{declared}', but config(s) {unresolved} cited "
+                "in the history could not be located to check as well"
             ),
             details=details,
         )
@@ -260,6 +311,9 @@ def check_beam_type_consistency(ctx: CheckContext) -> CheckResult:
     return CheckResult(
         check_id="beam_type_consistency",
         status=CheckStatus.PASS,
-        message=f"declared beam type '{declared}' is consistent",
+        message=(
+            f"file name and its cited telescope config agree on beam "
+            f"type '{declared}'"
+        ),
         details=details,
     )

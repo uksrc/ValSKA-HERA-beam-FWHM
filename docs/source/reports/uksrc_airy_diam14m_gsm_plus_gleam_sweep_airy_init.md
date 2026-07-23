@@ -1,4 +1,4 @@
-# UKSRC Airy Beam BayesEoR Validation Report: airy_diam14m / GSM_plus_GLEAM / sweep_airy_v3
+# UKSRC Airy Forward-Model BayesEoR Validation Report: airy_diam14m / GSM_plus_GLEAM / sweep_airy_v3
 
 > **Data provenance warning (2026-07-22):** the input mock-visibility data's own recorded
 > `pyuvsim` history cites the telescope config `hex-37-14.6m-gauss-fwhm9.3.yml`, which declares a
@@ -34,7 +34,7 @@
 
 | Field | Value |
 | --- | --- |
-| Report title | UKSRC Airy beam BayesEoR validation report for `airy_diam14m` with `GSM_plus_GLEAM` |
+| Report title | UKSRC Airy forward-model BayesEoR validation report for `airy_diam14m` with `GSM_plus_GLEAM` |
 | Campaign identifier | `sweep_airy_v3` (v2 campaign; originally drafted against `sweep_airy_init`, see [Appendix H](#appendix-h-data-provenance-note)) |
 | Beam model | `airy_diam14m` — the BayesEoR **forward-model** beam assumption swept over this campaign. The input data's own recorded configuration is listed separately below and is **not** this value; see [Appendix H](#appendix-h-data-provenance-note) |
 | Input data recorded beam configuration | `hex-37-14.6m-gauss-fwhm9.3.yml`, which declares `type: 'gaussian'` — cited in the input file's own `pyuvsim` history (see [Appendix A](#appendix-a-inputs) and [Appendix H](#appendix-h-data-provenance-note)) |
@@ -289,13 +289,6 @@ independently establish that the recorded history is itself accurate, that the l
 configuration file is byte-identical to whatever configuration was in effect at simulation
 time, or that no Airy-beam component was combined into this file by some other path not
 reflected in the history. Producer-side confirmation of the simulation remains outstanding.
-
-This finding was first surfaced by a `valska-data-preflight` scan of `UKSRC_val_mock_vis`
-(2026-07-20), a pre-flight consistency-checking tool developed on a separate, still-open branch
-(PR #49) not yet merged to `main`. That scan is not required to follow the argument above: the
-history quotation, the configuration declaration, and the manifest excerpt above are all
-reproducible directly from files already present in this repository and in
-`UKSRC_val_mock_vis`, independent of that tool.
 
 Because this report's own "structural completeness" and "point-by-point evidence comparison"
 checks (above) already established that `sweep_airy_v3` reuses the same input data product as

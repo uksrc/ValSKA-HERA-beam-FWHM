@@ -113,9 +113,8 @@ The `beam_metrics` module contains methods to check simulated UV data (`uvh5` fo
 ```
 import valska.beam_metrics as beam_metrics
 
-bm = beam_metrics.BeamMetrics("<uvh5_filename>")
-bm.read_simulation_config("<pyuvsim_config.yaml>")
-bm.check_beam()
+bm = beam_metrics.BeamMetrics("<uvh5_filename>", "<pyuvsim_config.yaml>", template_dir="<template_dir>")
+bm.check_beam(show=True)
 ```
 
 To save the diagnostic figure for batch validation, pass a file path and
@@ -125,6 +124,9 @@ disable interactive display:
 bm.check_beam(save_path="beam_metrics.png", show=False)
 ```
 
+- `uvh5_filename` is the path and filename to the simulated dataset
+- `pyuvsim_config.yaml` is the main pyuvsim configuration file (which specifies paths to telescope configuration and catalogue)
+- `template_dir` is an optional template directory containing the specified telescope configuration and catalogue files
 
 ## Contributing
 

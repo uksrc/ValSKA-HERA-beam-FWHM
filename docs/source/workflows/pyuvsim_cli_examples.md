@@ -41,7 +41,7 @@ pyuvsim input configuration:
 
 ### Minimal first run
 
-This minimal first run uses the default simulation parameter template (located in the repository at `external_tools/pyuvsim/templates/`) to produce a reference simulation.
+This minimal first run uses the default simulation parameter template (located in the repository at `external_tools/pyuvsim/templates/`) to produce a reference simulation, with additional beam check simulation and logs.
 
 After activating the ValSKA environment, run:
 
@@ -66,15 +66,30 @@ In order to submit the Slurm script that was created in the prepare command (`su
 ```bash
 valska-pyuvsim-submit /path/to/run_dir
 ```
+### Beam check
+
+A beam check simulation is calculated as a separate job after the main simulation is completed. This uses a minimal catalogue with a single point source that passes zenith at the telescope latitude at the mid-point of the observation. [Beam metrics](../../../README.md#beam-metrics) checks are performed on the beam check simulation to verify the beam shape used for the main simulation. The results of the beam check are stored in a log file and plots that give the fitted beam and its variation with frequency.
+
+The beam check is enabled by default, and sets up a simulation to observe a single 1 Jy source 2 hours either side of transit, with a time step of 10 seconds. All autocorrelation baselines are simulated.
+
+### Run directory and outputs
+
+The `run_dir` is where configuration, slurm scripts, tracking files and outputs are collected. It is constructed as follows:
+
+`<results_root>/pyuvsim/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>/`
+
+The output simulation is saved as a uvh5 file in the run directory in a sub-directory as specified in the pyuvsim configuration file.
+The beam check simulation, logs and plots are also saved into the same output directory.
 
 
 ## Definitions
 
 - a run is one pyuvsim simulation, controlled from the run directory
-- a run directory contains the pyuvsim configuration, Slurm submit script, manifest, and later `jobs.json`
+- a run directory contains the pyuvsim configuration, Slurm submit script, manifest, and later `jobs.json` and the outputs
 - the simulate stage is the pyuvsim execution stage that generates simulated visibility data, written out to the results directory specified in `runtime_paths.yaml`.
 - `manifest.json` records what ValSKA prepared
 - `jobs.json` records what ValSKA submitted to Slurm
+- beamcheck is a second simulation lauched to verify the beamshape - it uses a minimal catalogue with a single source that passes zenith at the mid-point of the observation
 
 ## Which command should I use?
 
@@ -117,6 +132,7 @@ This command:
 - copies or renders the pyuvsim template YAML
 - writes `manifest.json`
 - writes a Slurm submit script for the `simulate` stage
+- writes a Slurm submit script for the `beamcheck` stage
 - prints suggested next steps
 
 ### Common options
@@ -145,6 +161,18 @@ Optional override for the results root configured in `runtime_paths.yaml`.
 
 Preview resolved paths and configuration without creating files.
 
+`--no-beamcheck`
+
+Disable the additional beamcheck simulation and tests.
+
+`--beamcheck-hours`
+
+Set the duration in hours either side of transit for the beam check simulation.
+
+`--beamcheck-step_seconds`
+
+Set the time step in seconds for the beam check simulation.
+
 ## valska-pyuvsim-submit
 
 This command:
@@ -152,6 +180,7 @@ This command:
 - validates that the run directory was prepared by ValSKA
 - reads `manifest.json`
 - submits the `submit_simulate.sh` script to Slurm
+- submits the `submit_beamcheck.sh` script to Slurm
 - writes `jobs.json` with the submitted job ID and command
 - supports dry-run submission previews
 

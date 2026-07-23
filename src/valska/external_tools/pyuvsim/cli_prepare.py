@@ -95,6 +95,7 @@ from valska.utils import get_default_path_manager, resolve_data_path
 class BeamCheckArgs(TypedDict, total=False):
     make_beam_check: bool
     hours_each_side: float | None
+    step_seconds: float | None
     beamcheck_runner: CondaRunner | ContainerRunner
 
 
@@ -373,6 +374,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Duration in hours either side of transit for beam check simulation."
         ),
+    )
+
+    parser.add_argument(
+        "--beamcheck-step_seconds",
+        dest="step_seconds",
+        type=float,
+        help=("Time step in seconds for beam check simulation."),
     )
 
     return parser
@@ -668,11 +676,17 @@ def main(argv: list[str] | None = None) -> int:
             if args.check_hours is not None
             else cfg_beamcheck.get("hours_each_side")
         )
+        step_seconds = (
+            args.step_seconds
+            if args.step_seconds is not None
+            else cfg_beamcheck.get("step_seconds")
+        )
         beamcheck_env = cfg_beamcheck.get("conda_env")
         if beamcheck_env is not None:
             beamcheck_args = {
                 "make_beam_check": True,
                 "hours_each_side": check_hours,
+                "step_seconds": step_seconds,
                 "beamcheck_runner": CondaRunner(
                     conda_activate=conda_sh, env_name=beamcheck_env
                 ),
@@ -714,6 +728,7 @@ def main(argv: list[str] | None = None) -> int:
             print("\n[DRY RUN] Additional beam checks enabled:")
             print(f"  beamcheck conda enviroment: {beamcheck_env}")
             print(f"  hours each side of transit: {check_hours}")
+            print(f"  time step in seconds: {step_seconds}")
         else:
             print("\n[DRY RUN] Additional beam checks disabled")
         print("\n[DRY RUN] SLURM defaults to be written:")

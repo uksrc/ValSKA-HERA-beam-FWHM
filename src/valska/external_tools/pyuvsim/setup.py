@@ -262,6 +262,7 @@ def prepare_pyuvsim_run(
     fwhm_perturb_frac: float | None = None,
     make_beam_check: bool = False,
     hours_each_side: float | None = None,
+    step_seconds: float | None = None,
     beamcheck_runner: CondaRunner | ContainerRunner = CondaRunner(None, None),
 ) -> dict[str, Path]:
     """
@@ -382,7 +383,11 @@ def prepare_pyuvsim_run(
         outputs["submit_sh_beamcheck"] = run_dir / "submit_beamcheck.sh"
 
         beam_check_cfg = prepare_beam_check_cfg(
-            cfg, run_dir, template_yaml.parent, hours_each_side
+            cfg,
+            run_dir,
+            template_yaml.parent,
+            hours_each_side,
+            step_seconds,
         )
 
         beamcheck_uvh5 = (

@@ -22,13 +22,17 @@ from valska.simulation_config import SimulationConfig
 def _adjust_time_array(
     cfg: dict,
     time_array: numpy.typing.NDArray,
-    time_step_seconds: float = 10.0,
+    time_step_seconds: float | None = None,
     hours_each_side: float = 2.0,
 ) -> tuple[numpy.typing.NDArray, dict]:
     """
     Adjust the observation span to be ``hours_each_side`` either side
     of the observation midpoint.
     """
+
+    # Default to 10 second steps
+    if time_step_seconds is None:
+        time_step_seconds = 10.0
 
     midpoint = 0.5 * (time_array[0] + time_array[-1])
 
@@ -135,6 +139,7 @@ def prepare_beam_check_cfg(
     run_dir: Path,
     template_dir: Path,
     hours_each_side: float | None = None,
+    step_seconds: float | None = None,
 ) -> dict:
     """
     Prepare configuration for beam check simulation
@@ -182,7 +187,10 @@ def prepare_beam_check_cfg(
     # Optional: specify new time array
     if hours_each_side is not None:
         time_array, new_cfg = _adjust_time_array(
-            new_cfg, time_array, hours_each_side=hours_each_side
+            new_cfg,
+            time_array,
+            hours_each_side=hours_each_side,
+            time_step_seconds=step_seconds,
         )
 
     # Update output filename

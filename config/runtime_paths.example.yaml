@@ -119,9 +119,9 @@ pyuvsim:
   
   # Diagnostic check of beam profile
   beamcheck:
-    run_beamcheck: true
     conda_env: valska
     hours_each_side: 2
+    step_seconds: 10
 
   slurm_defaults:
     # partition: <partition_name>     # optional (omit on constraint-based sites)

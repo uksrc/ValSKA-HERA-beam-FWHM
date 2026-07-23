@@ -169,7 +169,7 @@ Disable the additional beamcheck simulation and tests.
 
 Set the duration in hours either side of transit for the beam check simulation.
 
-`--beamcheck-step_seconds`
+`--beamcheck-step-seconds`
 
 Set the time step in seconds for the beam check simulation.
 

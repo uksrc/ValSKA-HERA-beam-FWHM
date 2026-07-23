@@ -377,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--beamcheck-step_seconds",
+        "--beamcheck-step-seconds",
         dest="step_seconds",
         type=float,
         help=("Time step in seconds for beam check simulation."),

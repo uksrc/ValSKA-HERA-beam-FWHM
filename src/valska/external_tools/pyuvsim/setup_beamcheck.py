@@ -114,12 +114,28 @@ def _get_config_times(cfg: dict) -> numpy.typing.NDArray:
     return time_array
 
 
+def get_ra_dec_at_mid_time(
+    time_array: numpy.typing.NDArray, lon_deg: float, lat_deg: float
+) -> tuple[float, float]:
+    """
+    Construct RA/Dec such that source will be overhead at
+    the mid point of the time array at the telescope
+    lon/lat
+    """
+    t_mid = 0.5 * (time_array[0] + time_array[-1])
+
+    ra = _lst_at_time(t_mid, lon_deg)
+    dec = lat_deg
+
+    return ra, dec
+
+
 def prepare_beam_check_cfg(
     cfg: dict,
     run_dir: Path,
     template_dir: Path,
     hours_each_side: float | None = None,
-):
+) -> dict:
     """
     Prepare configuration for beam check simulation
 
@@ -131,21 +147,30 @@ def prepare_beam_check_cfg(
 
     # Get the observation times
     time_array = _get_config_times(cfg)
-    t_mid = 0.5 * (time_array[0] + time_array[-1])
 
     # Load telescope config and catalogue files
     simulation_config = SimulationConfig(cfg, template_dir=template_dir)
 
     # Build minimal sky catalogue
-    zenith_sky_path = run_dir / "catalog_files" / "zenith_single_source.skyh5"
+    # Set RA/Dec so that source transits zenith at t_mid
+    ra, dec = get_ra_dec_at_mid_time(
+        time_array,
+        simulation_config.longitude.deg,
+        simulation_config.latitude.deg,
+    )
+
+    zenith_sky_path = (
+        run_dir
+        / "catalog_files"
+        / f"zenith_single_source_{ra:0.2f}_{dec:0.2f}.skyh5"
+    )
     zenith_sky_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Set RA/Dec so that source transits zenith at t_mid
     write_skyh5_catalogue(
         filename=zenith_sky_path,
-        ra_deg=[_lst_at_time(t_mid, simulation_config.longitude.deg)],
-        dec_deg=[simulation_config.latitude.deg],
-        stokes_I=[1.3],
+        ra_deg=[ra],
+        dec_deg=[dec],
+        stokes_I=[1.0],
     )
 
     # Point config at new catalogue
@@ -161,10 +186,14 @@ def prepare_beam_check_cfg(
         )
 
     # Update output filename
-    lst_start = _lst_at_time(time_array[0], simulation_config.longitude.deg)
-    lst_end = _lst_at_time(time_array[-1], simulation_config.longitude.deg)
+    lst_start_hours = (
+        _lst_at_time(time_array[0], simulation_config.longitude.deg) / 15.0
+    )
+    lst_end_hours = (
+        _lst_at_time(time_array[-1], simulation_config.longitude.deg) / 15.0
+    )
     new_cfg["filing"]["outfile_name"] = (
-        f"beamcheck_zenith_single_source_{lst_start:0.1f}_{lst_end:0.1f}"
+        f"beamcheck_zenith_single_source_{lst_start_hours:0.1f}_{lst_end_hours:0.1f}"
     )
 
     return new_cfg

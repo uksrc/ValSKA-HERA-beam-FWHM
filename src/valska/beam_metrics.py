@@ -9,7 +9,6 @@ import matplotlib.axes
 import matplotlib.lines
 import matplotlib.pyplot as plt
 import numpy
-from astropy.coordinates import Angle
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from pyuvdata import UVData
 from scipy.constants import c as speed_of_light
@@ -111,7 +110,7 @@ class BeamMetrics:
             self.lsts_hours[-1],
         )
         log.info(
-            "Time step: %s sec",
+            "Time step: %0.3f sec",
             (self.lsts_hours[1] - self.lsts_hours[0]) * 3600.0,
         )
         log.info(
@@ -175,30 +174,45 @@ class BeamMetrics:
 
         self.results["fit_spread"] = numpy.nanstd(self.fit_vs_freq)
         log.info(
-            "\n   Fit-parameter scatter over frequency: %.4f",
+            "   Fit-parameter scatter over frequency: %.4f",
             self.results["fit_spread"],
         )
         if numpy.any(~numpy.isnan(self.chi2_vs_freq)):
             log.info(
-                "   mean χ²: %.3g (%.3g)",
+                "   mean χ²: %.3g (%.3g)\n",
                 numpy.nanmean(self.chi2_vs_freq),
                 numpy.nanstd(self.chi2_vs_freq),
             )
 
         if "correlation" in self.results["chromaticity"].keys():
-            log.info("\nRelative variation with frequency:\n")
+            log.info("Relative variation with frequency:\n")
             log.info(
-                "   Std deviation = %.3f %%\n"
-                "   Gradient of fitted line = %.3f %%\n"
-                "   Residual chromaticity = %.3f %%\n",
+                "   Fractional scatter across frequency band = %.3f %%",
                 100 * self.results["chromaticity"]["freq_std"],
+            )
+            log.info(
+                "   Fractional linear trend with frequency = %.3f %%",
                 100 * self.results["chromaticity"]["freq_grad"],
+            )
+            log.info(
+                "   Fractional residual after removing linear trend = %.3f %%\n",
                 100 * self.results["chromaticity"]["frac_resid"],
             )
-            log.info(
-                "   Correlation with 1/frequency: %.3f\n",
-                self.results["chromaticity"]["correlation"],
-            )
+            corr = self.results["chromaticity"]["correlation"]
+            if numpy.isnan(corr):
+                log.info(
+                    "   Correlation with 1/frequency could not be determined"
+                )
+            elif corr > 0.95:
+                log.info(
+                    "   Frequency variation is strongly correlated with 1/frequency (r=%.3f)",
+                    corr,
+                )
+            else:
+                log.info(
+                    "   Not a strong correlation with 1/frequency (r=%.3f)",
+                    corr,
+                )
 
         return self.results
 
@@ -260,23 +274,21 @@ class BeamMetrics:
             stokes_I[:, :, f_mid_idx]
         )  # (Ntimes, Nbls_per_time)
 
-        # Hour angle calculated from LST relative to mean LST
-        lsts_angle = Angle(self.lsts_hours, unit="hourangle")
-        hour_angle = lsts_angle - self.simulation_config.source_ra[0]
-
-        # self.simulation_config.source_ra.[0]
-        # hour_angle = numpy.deg2rad(
-        #     (self.lsts_hours - numpy.mean(self.lsts_hours)) * 15.0
-        # )
+        # Hour angle calculated from LST relative to source RA
+        hour_angle_hours = (
+            self.lsts_hours - self.simulation_config.source_ra.hour[0]
+        )
+        hour_angle_hours = (hour_angle_hours + 12) % 24 - 12
+        hour_angle_rad = numpy.deg2rad(hour_angle_hours * 15)
 
         # Convert to real angle on the sky
         lat = self.simulation_config.latitude.rad
         cos_theta = numpy.sin(lat) ** 2 + numpy.cos(lat) ** 2 * numpy.cos(
-            hour_angle.rad
+            hour_angle_rad
         )
 
         # Get the sign correct so that it measures angle around mean LST
-        self.theta_deg = numpy.sign(hour_angle) * numpy.rad2deg(
+        self.theta_deg = numpy.sign(hour_angle_hours) * numpy.rad2deg(
             numpy.arccos(cos_theta)
         )
 
@@ -526,7 +538,7 @@ def chromaticity_test(
 
     chromaticity = {}
 
-    inv_freq = 1.0 / freq_array
+    inv_freq = 1 / freq_array
     valid = ~numpy.isnan(test_param)
 
     # Measure variation across frequency
@@ -708,7 +720,21 @@ def plot_baseline_heatmap(
     ax.set_xlabel("Baseline index")
     ax.set_ylabel("LST (hours)")
     ax.set_title(f"Autocorr per baseline at {freq / 1e6:0.1f} MHz")
-    ax.xaxis.set_major_locator(MultipleLocator(1))
+    nbase = len(bl_counts)
+
+    if nbase <= 10:
+        major = 1
+    elif nbase <= 20:
+        major = 2
+    elif nbase <= 50:
+        major = 5
+    elif nbase <= 100:
+        major = 10
+    else:
+        major = 20
+
+    ax.xaxis.set_major_locator(MultipleLocator(major))
+    ax.xaxis.set_minor_locator(MultipleLocator(1))
 
     return ax
 
@@ -733,6 +759,8 @@ def plot_2d_lst_deg(
         aspect="auto",
         extent=extent,
         cmap=cmap,
+        interpolation="none",
+        resample=False,
     )
 
     ax.yaxis.set_major_formatter(FuncFormatter(lst_formatter))

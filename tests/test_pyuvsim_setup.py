@@ -4,6 +4,7 @@ from copy import deepcopy
 from importlib.resources import path
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -209,13 +210,19 @@ def test_prepare_pyuvsim_run_beamcheck_preserves_main_configuration(
     # The catalogue should only be changed for the beam-check run.
     assert main_cfg["sources"]["catalog"] != beam_cfg["sources"]["catalog"]
 
-    assert beam_cfg["sources"]["catalog"].endswith(
-        "catalog_files/zenith_single_source.skyh5"
+    assert (
+        beam_cfg["sources"]["catalog"].count(
+            "catalog_files/zenith_single_source"
+        )
+        == 1
     )
 
     # The main configuration should still point at the original catalogue.
-    assert not main_cfg["sources"]["catalog"].endswith(
-        "catalog_files/zenith_single_source.skyh5"
+    assert (
+        main_cfg["sources"]["catalog"].count(
+            "catalog_files/zenith_single_source"
+        )
+        == 0
     )
 
 
@@ -240,12 +247,25 @@ def test_prepare_pyuvsim_run_beamcheck_extends_time_array(
 def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
     _pyuvsim_config, _run_dir
 ):
-    prepare_pyuvsim_run(
-        **_pyuvsim_config,
-        make_beam_check=True,
-    )
 
-    sky_path = _run_dir / "catalog_files" / "zenith_single_source.skyh5"
+    expected_dec = -30.72152777777791
+    expected_ra = 2.2234363
+
+    with patch(
+        "valska.external_tools.pyuvsim.setup_beamcheck._lst_at_time"
+    ) as mock_lst:
+        mock_lst.side_effect = [expected_ra, 1.2, 4.7]
+
+        prepare_pyuvsim_run(
+            **_pyuvsim_config,
+            make_beam_check=True,
+        )
+
+    sky_path = (
+        _run_dir
+        / "catalog_files"
+        / f"zenith_single_source_{expected_ra:0.2f}_{expected_dec:0.2f}.skyh5"
+    )
 
     assert sky_path.exists()
 
@@ -254,7 +274,7 @@ def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
     assert len(sky.ra) == 1
     assert len(sky.dec) == 1
 
-    assert numpy.isclose(sky.dec[0].deg, -30.72152777777791)
+    assert numpy.isclose(sky.dec[0].deg, expected_dec)
 
 
 def test_prepare_pyuvsim_run_beamcheck_missing_telescope_config(

@@ -264,7 +264,7 @@ def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
     sky_path = (
         _run_dir
         / "catalog_files"
-        / f"zenith_single_source_{expected_ra:0.2f}_{expected_dec:0.2f}.skyh5"
+        / f"zenith_single_source_ra{expected_ra:0.2f}_dec{expected_dec:0.2f}.skyh5"
     )
 
     assert sky_path.exists()

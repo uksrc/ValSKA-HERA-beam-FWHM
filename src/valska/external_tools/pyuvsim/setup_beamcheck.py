@@ -167,7 +167,7 @@ def prepare_beam_check_cfg(
     zenith_sky_path = (
         run_dir
         / "catalog_files"
-        / f"zenith_single_source_{ra:0.2f}_{dec:0.2f}.skyh5"
+        / f"zenith_single_source_ra{ra:0.2f}_dec{dec:0.2f}.skyh5"
     )
     zenith_sky_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -194,6 +194,7 @@ def prepare_beam_check_cfg(
         )
 
     # Update output filename
+    step_seconds = (time_array[1] - time_array[0]) * 86400
     lst_start_hours = (
         _lst_at_time(time_array[0], simulation_config.longitude.deg) / 15.0
     )
@@ -201,7 +202,8 @@ def prepare_beam_check_cfg(
         _lst_at_time(time_array[-1], simulation_config.longitude.deg) / 15.0
     )
     new_cfg["filing"]["outfile_name"] = (
-        f"beamcheck_zenith_single_source_{lst_start_hours:0.1f}_{lst_end_hours:0.1f}"
+        f"beamcheck_zenith_single_source_ra{ra:0.2f}_dec{dec:0.2f}"
+        f"_lst{lst_start_hours:0.1f}h_{lst_end_hours:0.1f}h_step{step_seconds:0.1f}s"
     )
 
     return new_cfg

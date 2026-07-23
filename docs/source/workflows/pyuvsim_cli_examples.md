@@ -68,7 +68,7 @@ valska-pyuvsim-submit /path/to/run_dir
 ```
 ### Beam check
 
-A beam check simulation is calculated as a separate job after the main simulation is completed. This uses a minimal catalogue with a single point source that passes zenith at the telescope latitude at the mid-point of the observation. [Beam metrics](../../../README.md#beam-metrics) checks are performed on the beam check simulation to verify the beam shape used for the main simulation. The results of the beam check are stored in a log file and plots that give the fitted beam and its variation with frequency.
+A beam check simulation is calculated as a separate job after the main simulation is completed. This uses a minimal catalogue with a single point source that passes zenith at the telescope latitude at the mid-point of the observation. {ref}`Beam metrics <beam-metrics>` checks are performed on the beam check simulation to verify the beam shape used for the main simulation. The results of the beam check are stored in a log file and plots that give the fitted beam and its variation with frequency.
 
 The beam check is enabled by default, and sets up a simulation to observe a single 1 Jy source 2 hours either side of transit, with a time step of 10 seconds. All autocorrelation baselines are simulated.
 

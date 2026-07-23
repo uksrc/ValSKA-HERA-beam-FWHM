@@ -708,9 +708,10 @@ def plot_baseline_heatmap(
     if ax is None:
         _, ax = plt.subplots(figsize=(6, 4))
 
+    n_baselines = bl_counts.max()
     extent = (
         -0.5,
-        bl_counts.max() - 0.5,
+        n_baselines - 0.5,
         lsts_hours.min(),
         lsts_hours.max(),
     )
@@ -720,20 +721,19 @@ def plot_baseline_heatmap(
     ax.set_xlabel("Baseline index")
     ax.set_ylabel("LST (hours)")
     ax.set_title(f"Autocorr per baseline at {freq / 1e6:0.1f} MHz")
-    nbase = len(bl_counts)
 
-    if nbase <= 10:
-        major = 1
-    elif nbase <= 20:
-        major = 2
-    elif nbase <= 50:
-        major = 5
-    elif nbase <= 100:
-        major = 10
+    if n_baselines <= 10:
+        major_tick_step = 1
+    elif n_baselines <= 20:
+        major_tick_step = 2
+    elif n_baselines <= 50:
+        major_tick_step = 5
+    elif n_baselines <= 100:
+        major_tick_step = 10
     else:
-        major = 20
+        major_tick_step = 20
 
-    ax.xaxis.set_major_locator(MultipleLocator(major))
+    ax.xaxis.set_major_locator(MultipleLocator(major_tick_step))
     ax.xaxis.set_minor_locator(MultipleLocator(1))
 
     return ax

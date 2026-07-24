@@ -16,7 +16,6 @@ from scipy.special import j1
 
 from valska.simulation_config import SimulationConfig
 
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 CORR_SAMPLES = 5

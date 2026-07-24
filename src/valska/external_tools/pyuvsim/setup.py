@@ -403,10 +403,10 @@ def prepare_pyuvsim_run(
 
         # Postprocessing command to run beam diagnostics
         postprocess_cmd = (
-            f"valska.beam_metrics {beamcheck_uvh5} "
-            f"{outputs['obsparam_beamcheck_yaml']} "
-            f"--log-suffix {beamcheck_log_suffix} "
-            f"--fig-suffix {beamcheck_fig_suffix}"
+            f'valska.beam_metrics "{beamcheck_uvh5}" '
+            f'"{outputs["obsparam_beamcheck_yaml"]}" '
+            f'--log-suffix "{beamcheck_log_suffix}" '
+            f'--fig-suffix "{beamcheck_fig_suffix}"'
         )
 
         _write_simulation(

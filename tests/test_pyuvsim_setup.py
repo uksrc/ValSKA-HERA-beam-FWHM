@@ -4,7 +4,6 @@ from copy import deepcopy
 from importlib.resources import path
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 import numpy
 import pytest
@@ -248,18 +247,13 @@ def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
     _pyuvsim_config, _run_dir
 ):
 
-    expected_dec = -30.72152777777791
-    expected_ra = 2.2234363
+    expected_dec = -30.803418402688553
+    expected_ra = 30.51832412194913
 
-    with patch(
-        "valska.external_tools.pyuvsim.setup_beamcheck._lst_at_time"
-    ) as mock_lst:
-        mock_lst.side_effect = [expected_ra, 1.2, 4.7]
-
-        prepare_pyuvsim_run(
-            **_pyuvsim_config,
-            make_beam_check=True,
-        )
+    prepare_pyuvsim_run(
+        **_pyuvsim_config,
+        make_beam_check=True,
+    )
 
     sky_path = (
         _run_dir

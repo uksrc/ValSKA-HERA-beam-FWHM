@@ -68,7 +68,7 @@ def test_loads_config_from_mapping(config, monkeypatch):
 
     sim = SimulationConfig(config)
 
-    assert sim.num_antennas == 3
+    assert sim.ref_antenna == 0
     assert sim.catalog == "catalog"
     assert sim.telescope_config["beam_paths"][0]["sigma"] == 0.2
 
@@ -87,7 +87,7 @@ def test_loads_config_from_yaml(tmp_path, config, monkeypatch):
 
     sim = SimulationConfig(yaml_path)
 
-    assert sim.num_antennas == 3
+    assert sim.ref_antenna == 0
 
 
 def test_missing_required_section(tmp_path):
@@ -163,14 +163,14 @@ def test_missing_files_are_reported_together(tmp_path):
     assert "missing.skyh5" in message
 
 
-def test_get_num_antennas_ignores_comments(tmp_path):
+def test_get_ref_antenna_ignores_comments(tmp_path):
     layout = tmp_path / "layout.txt"
     layout.write_text(
         "Name Number BeamID E N U\n# comment\nANT0 0 0 0 0 0\n\nANT1 1 0 1 1 1"
     )
     sim = SimulationConfig.__new__(SimulationConfig)
 
-    assert sim._get_num_antennas(layout) == 2
+    assert sim._find_reference_antenna(layout) == 0
 
 
 def test_source_ra():

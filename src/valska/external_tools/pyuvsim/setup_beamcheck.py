@@ -7,7 +7,7 @@ from pathlib import Path
 
 import astropy.units as units
 import numpy
-from astropy.coordinates import Angle
+from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord
 from astropy.time import Time
 from ruamel.yaml.comments import CommentedSeq
 
@@ -28,6 +28,9 @@ def _adjust_time_array(
     """
     Adjust the observation span to be ``hours_each_side`` either side
     of the observation midpoint.
+
+    From pyuvsim: The entries in the time_array indicate the center
+    of each time step in Julian date.
     """
 
     # Default to 10 second steps
@@ -63,11 +66,11 @@ def _adjust_time_array(
     return new_times, cfg
 
 
-def _update_baselines(cfg: dict, num_antennas: int):
-    """Set autocorrelation baselines"""
+def _update_baselines(cfg: dict, ref_antenna: int):
+    """Set autocorrelation baseline for reference antenna"""
 
     # Set up list of all autocorrelation baselines
-    baselines = [(ant, ant) for ant in range(num_antennas)]
+    baselines = [[ref_antenna, ref_antenna]]
 
     select_cfg = cfg.get("select")
     if not isinstance(select_cfg, dict):
@@ -94,7 +97,7 @@ def _lst_at_time(jd: float, longitude: Angle) -> float:
     )
 
 
-def _get_config_times(cfg: dict) -> numpy.typing.NDArray:
+def get_config_times(cfg: dict) -> numpy.typing.NDArray:
     """Get times from the config dictionary"""
 
     # Are there any other options for specifying time that need to
@@ -119,19 +122,58 @@ def _get_config_times(cfg: dict) -> numpy.typing.NDArray:
 
 
 def get_ra_dec_at_mid_time(
-    time_array: numpy.typing.NDArray, lon_deg: float, lat_deg: float
+    time_array: numpy.typing.NDArray, longitude: Angle, latitude: Angle
 ) -> tuple[float, float]:
     """
     Construct RA/Dec such that source will be overhead at
     the mid point of the time array at the telescope
     lon/lat
+    This is the simple HA zenith method
+    uses geodetic latitude from config file
+    (GPS style on Earth ellipsoid)
     """
     t_mid = 0.5 * (time_array[0] + time_array[-1])
 
-    ra = _lst_at_time(t_mid, lon_deg)
-    dec = lat_deg
+    ra = _lst_at_time(t_mid, longitude)
+    dec = latitude
 
     return ra, dec
+
+
+def zenith_radec(
+    time_array: numpy.typing.NDArray,
+    longitude: Angle,
+    latitude: Angle,
+    height: units.Quantity,
+) -> tuple[float, float]:
+    """
+    Full calculation of RA and Dec to place source at
+    celestial zenith
+    Different to the simple HA method due to
+    - geocentric latitude
+    - Earth ellipsoid flattening
+    - the exact Earth orientation transformation
+    """
+    location = EarthLocation(
+        lat=latitude,
+        lon=longitude,
+        height=height,
+    )
+
+    obstime = Time(time_array, format="jd", scale="utc")
+
+    altaz = SkyCoord(
+        alt=90,
+        az=0,
+        unit="deg",
+        frame=AltAz(
+            obstime=obstime, location=location, pressure=0 * units.hPa
+        ),
+    )
+
+    icrs = altaz.icrs
+
+    return icrs.ra.deg[0], icrs.dec.deg[0]
 
 
 def prepare_beam_check_cfg(
@@ -151,17 +193,30 @@ def prepare_beam_check_cfg(
     new_cfg = deepcopy(cfg)
 
     # Get the observation times
-    time_array = _get_config_times(cfg)
+    time_array = get_config_times(cfg)
 
     # Load telescope config and catalogue files
     simulation_config = SimulationConfig(cfg, template_dir=template_dir)
 
+    # Set up all autocorrelation baselines
+    _update_baselines(new_cfg, simulation_config.ref_antenna)
+
+    # Optional: specify new time array
+    if hours_each_side is not None:
+        time_array, new_cfg = _adjust_time_array(
+            new_cfg,
+            time_array,
+            hours_each_side=hours_each_side,
+            time_step_seconds=step_seconds,
+        )
+
     # Build minimal sky catalogue
     # Set RA/Dec so that source transits zenith at t_mid
-    ra, dec = get_ra_dec_at_mid_time(
+    ra, dec = zenith_radec(
         time_array,
-        simulation_config.longitude.deg,
-        simulation_config.latitude.deg,
+        simulation_config.longitude,
+        simulation_config.latitude,
+        simulation_config.height,
     )
 
     zenith_sky_path = (
@@ -181,25 +236,13 @@ def prepare_beam_check_cfg(
     # Point config at new catalogue
     new_cfg["sources"]["catalog"] = str(zenith_sky_path)
 
-    # Set up all autocorrelation baselines
-    _update_baselines(new_cfg, simulation_config.num_antennas)
-
-    # Optional: specify new time array
-    if hours_each_side is not None:
-        time_array, new_cfg = _adjust_time_array(
-            new_cfg,
-            time_array,
-            hours_each_side=hours_each_side,
-            time_step_seconds=step_seconds,
-        )
-
     # Update output filename
     step_seconds = (time_array[1] - time_array[0]) * 86400
     lst_start_hours = (
-        _lst_at_time(time_array[0], simulation_config.longitude.deg) / 15.0
+        _lst_at_time(time_array[0], simulation_config.longitude) / 15.0
     )
     lst_end_hours = (
-        _lst_at_time(time_array[-1], simulation_config.longitude.deg) / 15.0
+        _lst_at_time(time_array[-1], simulation_config.longitude) / 15.0
     )
     new_cfg["filing"]["outfile_name"] = (
         f"beamcheck_zenith_single_source_ra{ra:0.2f}_dec{dec:0.2f}"

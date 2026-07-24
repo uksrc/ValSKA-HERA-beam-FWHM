@@ -3,7 +3,7 @@ import numpy
 import pytest
 from pyradiosky import SkyModel
 
-from valska.catalog import write_skyh5_catalogue
+from valska.catalog import read_skyh5_catalogue, write_skyh5_catalogue
 
 
 def test_write_skyh5_creates_file(tmp_path):
@@ -121,3 +121,32 @@ def test_mismatched_array_lengths(tmp_path):
             dec_deg=[0.0],
             stokes_I=[1.0, 2.0],
         )
+
+
+def test_skyh5_ra_dec_roundtrip(tmp_path):
+    """RA/Dec should survive a SkyH5 write/read to machine precision."""
+
+    ra = 157.12345678901234
+    dec = -26.78901234567890
+
+    filename = tmp_path / "roundtrip.skyh5"
+
+    write_skyh5_catalogue(
+        filename=filename,
+        ra_deg=[ra],
+        dec_deg=[dec],
+        stokes_I=[1.0],
+    )
+
+    sky = read_skyh5_catalogue(filename)
+
+    ra_read = sky.ra.deg[0]
+    dec_read = sky.dec.deg[0]
+
+    print(f"Written RA : {ra:.15f}")
+    print(f"Read RA    : {ra_read:.15f}")
+    print(f"Written Dec: {dec:.15f}")
+    print(f"Read Dec   : {dec_read:.15f}")
+
+    numpy.testing.assert_allclose(ra_read, ra, rtol=0.0, atol=1e-13)
+    numpy.testing.assert_allclose(dec_read, dec, rtol=0.0, atol=1e-13)

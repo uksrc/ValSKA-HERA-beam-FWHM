@@ -89,7 +89,7 @@ The beam check simulation, logs and plots are also saved into the same output di
 - the simulate stage is the pyuvsim execution stage that generates simulated visibility data, written out to the results directory specified in `runtime_paths.yaml`.
 - `manifest.json` records what ValSKA prepared
 - `jobs.json` records what ValSKA submitted to Slurm
-- beamcheck is a second simulation lauched to verify the beamshape - it uses a minimal catalogue with a single source that passes zenith at the mid-point of the observation
+- beamcheck is a second simulation launched to verify the beamshape - it uses a minimal catalogue with a single source that passes zenith at the mid-point of the observation
 
 ## Which command should I use?
 

@@ -39,7 +39,7 @@ class SubmitPlan:
     run_dir: Path
     manifest_path: Path
     simulate_script: Path
-    beamcheck_script: Path
+    beamcheck_script: Path | None
 
 
 def _utc_now_iso() -> str:

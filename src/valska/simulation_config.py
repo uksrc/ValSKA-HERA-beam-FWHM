@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import astropy.units as units
+import numpy
 from astropy.coordinates import Angle
 from pyradiosky import SkyModel
 
@@ -28,7 +29,7 @@ class SimulationConfig:
     catalog_path: Path
 
     telescope_config: dict[str, Any]
-    num_antennas: int
+    ref_antenna: int
     catalog: SkyModel
 
     def __init__(
@@ -58,8 +59,8 @@ class SimulationConfig:
                 ),
                 "array_layout": (
                     "array_layout_path",
-                    "num_antennas",
-                    self._get_num_antennas,
+                    "ref_antenna",
+                    self._find_reference_antenna,
                 ),
             },
             "sources": {
@@ -114,14 +115,44 @@ class SimulationConfig:
                 + "\n".join(f"  - {msg}" for msg in missing_files)
             )
 
-    def _get_num_antennas(self, path: Path) -> int:
-        with path.open() as f:
-            next(f)  # Header
-            return sum(
-                1
-                for line in f
-                if line.strip() and not line.lstrip().startswith("#")
+    def _find_reference_antenna(self, path: Path, atol: float = 1e-9) -> int:
+        """Return antenna number at the array reference position."""
+
+        rows = []
+
+        with path.open() as file:
+            next(file)  # skip header
+
+            for line in file:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+
+                parts = line.split()
+
+                # Name Number BeamID E N U
+                number = int(parts[1])
+                east = float(parts[3])
+                north = float(parts[4])
+                up = float(parts[5])
+
+                rows.append((number, east, north, up))
+
+        rows_array = numpy.asarray(rows)
+
+        mask = (
+            numpy.isclose(rows_array[:, 1], 0.0, atol=atol)
+            & numpy.isclose(rows_array[:, 2], 0.0, atol=atol)
+            & numpy.isclose(rows_array[:, 3], 0.0, atol=atol)
+        )
+
+        refs = rows_array[mask, 0].astype(int)
+
+        if len(refs) != 1:
+            raise ValueError(
+                f"Expected exactly one reference antenna, found {len(refs)}"
             )
+
+        return int(refs[0])
 
     @property
     def source_ra(self) -> Angle:
@@ -147,6 +178,16 @@ class SimulationConfig:
         lat, _, _ = literal_eval(location)
 
         return Angle(lat, unit="deg")
+
+    @property
+    def height(self) -> Angle:
+
+        location = self.telescope_config.get("telescope_location")
+        if location is None:
+            raise ValueError("Telescope config missing 'telescope_location'")
+        _, _, height = literal_eval(location)
+
+        return height * units.m
 
     @property
     def beam_shape(self) -> str:

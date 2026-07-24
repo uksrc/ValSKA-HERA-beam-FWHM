@@ -16,6 +16,7 @@ from scipy.special import j1
 
 from valska.simulation_config import SimulationConfig
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 CORR_SAMPLES = 5
@@ -140,14 +141,13 @@ class BeamMetrics:
                 self.results["beam_sigma_deg"],
             )
 
-            if self.simulation_config.beam_sigma.deg is not None:
+            if self.simulation_config.beam_sigma is not None:
+                beam_sigma_deg = self.simulation_config.beam_sigma.deg
                 self.results["expected_fwhm_deg"] = (
-                    2
-                    * numpy.sqrt(numpy.log(2))
-                    * self.simulation_config.beam_sigma.deg
+                    2 * numpy.sqrt(numpy.log(2)) * beam_sigma_deg
                 )
                 self.results["expected_sigma_deg"] = (
-                    self.simulation_config.beam_sigma.deg / numpy.sqrt(2)
+                    beam_sigma_deg / numpy.sqrt(2)
                 )
 
                 log.info(
@@ -156,7 +156,7 @@ class BeamMetrics:
                     self.results["expected_sigma_deg"],
                 )
 
-        if self.simulation_config.beam_shape == "Airy":
+        if self.simulation_config.beam_shape == "AiryBeam":
             self.results["dish_diameter"] = self.fit_vs_freq[f_mid_idx]
             log.info(
                 "   Airy at %0.1f MHz: Diameter = %0.3f m",

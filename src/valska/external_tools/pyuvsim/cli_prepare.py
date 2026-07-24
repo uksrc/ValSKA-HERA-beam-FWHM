@@ -726,7 +726,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  run_dir (preview):  {preview_run_dir}")
         if beamcheck_args.get("make_beam_check") is not None:
             print("\n[DRY RUN] Additional beam checks enabled:")
-            print(f"  beamcheck conda enviroment: {beamcheck_env}")
+            print(f"  beamcheck conda environment: {beamcheck_env}")
             print(f"  hours each side of transit: {check_hours}")
             print(f"  time step in seconds: {step_seconds}")
         else:
@@ -771,7 +771,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  run_label:    {run_label}")
     print(f"  run_id:       {args.run_id}")
 
-    if not args.disable_beam_check:
+    if "submit_sh_beamcheck" in out:
         print("\nAlso prepared 'beam check' run with single source at zenith")
 
     print("\nNext steps:")

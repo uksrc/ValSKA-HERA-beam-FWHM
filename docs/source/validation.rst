@@ -128,7 +128,7 @@ These tests can be done at multiple levels:
 
 | 
 
-The Role of UKSRC Science Validation Tools
+**The Role of UKSRC Science Validation Tools**
 
 As described in detail below, the UKSRC Science Validation and Tooling Team provides support to the community by:
 
@@ -158,9 +158,10 @@ Validation provides **evidence-based confidence** that:
 
 | 
 
-Impact
+**Impact**
 
-Through access to a state-of-the-art validation framework, the UKSRC science community -- and the global community more broadly -- will be best positioned to maximise the scientific return from SKA data (see `How Stakeholder Benefit <https://confluence.skatelescope.org/display/SRCSC/Validation+Primer#ValidationPrimer-%F0%9F%A4%9D7.HowStakeholdersBenefit>`__).
+Through access to a state-of-the-art validation framework, the UKSRC science community -- and the global community more broadly -- will be best positioned to maximise the scientific return from SKA data
+(see :ref:`How Stakeholders Benefit <stakeholder-benefit-label>`).
 
 By leading the development of these frameworks, UKSRC fosters local expertise and capability in a key element of precision astrophysics and cosmology pipelines, strengthening the UK’s contribution to global SKA science.
 
@@ -186,17 +187,15 @@ We perform controlled, unit-style validation on individual simulation and modell
 
 - Testing ``pyuvsim`` and ``Oscar`` against known visibility solutions (e.g. point sources, Gaussian beams).
 
-  - 
+  - `STV-SDS-001: Telescope Simulation - Basic Validation <https://confluence.skatelescope.org/display/SRCSC/STV-SDS-001%3A+Telescope+Simulation+-+Basic+Validation>`__
 
 - Verifying beam model perturbations produce expected changes in effective FWHM
 
-  - 
-
-  | 
+  - `SAPP-161: STV-QADS-004: Documentation and Knowledge Transfer <https://confluence.skatelescope.org/display/SRCSC/SAPP-161%3A+STV-QADS-004%3A+Documentation+and+Knowledge+Transfer>`__
 
 - Cross-checks between ``pyuvsim``, ``OSKAR`` and ``fftvis`` for sky model consistency
 
-  - 
+  - `STV-SDS-001: Telescope Simulation - Basic Validation <https://confluence.skatelescope.org/display/SRCSC/STV-SDS-001%3A+Telescope+Simulation+-+Basic+Validation>`__
 
 --------------
 
@@ -336,13 +335,13 @@ Validation requires reproducibility, scalability, and traceability. We use a mod
 +===================================+=========================================================================================================================================+
 | **Computing**                     | HPC access via **Azimuth** and **Galahad** (incl. CPU and GPU nodes for accelerated computation )                                       |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-| **Versioning**                    | All validation code tracked in UKSRC GitHub repos (e.g. ```ValSKA-HERA-beam-FWHM`` <https://github.com/uksrc/ValSKA-HERA-beam-FWHM>`__) |
+| **Versioning**                    | All validation code tracked in UKSRC GitHub repos (e.g. `ValSKA-HERA-beam-FWHM <https://github.com/uksrc/ValSKA-HERA-beam-FWHM>`__)     |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Workflow**                      | Notebooks for exploratory work, containers (Docker/Singularity) for reproducibility                                                     |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 | **Agile Tracking**                | .. container:: content-wrapper                                                                                                          |
 |                                   |                                                                                                                                         |
-|                                   |    Work organized via JIRA Epics and Stories (e.g. SKAO Jiraad75ab71-1245-3349-8713-12bcc32bca7cSAPP-146)                               |
+|                                   |    Work organized via JIRA Epics and Stories (e.g. `SAPP-146 <https://jira.skatelescope.org/browse/SAPP-146>`__)                        |
 +-----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
 
 --------------
@@ -421,6 +420,8 @@ Transparency and community reusability are core principles of our validation app
 
    **In short:** making validation open and reusable strengthens trust, fosters collaboration, and maximises the scientific value of our work.
 
+|
+
 🧠 5. Key Concepts
 ==================
 
@@ -484,11 +485,11 @@ Composite models are required for realism -- but they can **hide biases** if com
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | Bayesian evidence quantifies how well a model fits the data *on average* over its parameter space.
-| The **Bayes factor**, B\_\\mathrm{AB}, compares the evidence of two models:
+| The **Bayes factor**, B\ :sub:`AB`\, compares the evidence of two models:
 
-- B\_\\mathrm{AB} > 1: model A preferred
+- B\ :sub:`AB`\ > 1: model A preferred
 
-- B\_\\mathrm{AB} < 1: model B preferred
+- B\ :sub:`AB`\ < 1: model B preferred
 
 Bayes factors are used in **Bayesian model comparison** (BFBMC), but this alone doesn’t guarantee accurate SOI recovery (see next concept).
 
@@ -562,15 +563,12 @@ Detecting and Correcting for Signal Loss
 
 This flowchart shows a schematic representation of the HERA validation pipeline. Simulation and analysis flow from left to right, and top to bottom where applicable, as indicated by the black arrows. Broadly, the output of the **Input Data** step is sky and beam models in image space, which are then input to the **Visibility Simulation** step, which produces mock visibilities, spanning 24 hr of LST and the full frequency coverage of the instrument. At the **Systematic Simulation** step, these visibilities are transformed into the actual time sampling of the HERA observations over multiple days, downselected to the observed LST range, and have multiplicative and additive systematic and instrument effects applied. The input to the **Analysis Pipeline** step is then equivalent in format to the raw observed data, and the processing proceeds as if the simulated data were real, including using the same configuration parameters (e.g., smoothing scales and in-painting tolerances). At the **PSpec Pipeline** stage, further averaging and data selection occur before the estimation of the power spectrum in selected frequency (redshift) bands and LST ranges. (Figure credit: `Aguirre+2022 <https://arxiv.org/abs/2104.09547>`__)
 
-| 
-
 --------------
 
 These concepts form the **intellectual backbone** of our validation framework -- combining physical realism, statistical rigour, and practical insight to support trustworthy SKA science.
 
 | 
 
-| 
 
 🧰 6. Tools We Use
 ==================
@@ -682,7 +680,8 @@ This toolset is **modular, extensible, and FAIR-aligned**, allowing us to scale 
 
 | 
 
-| 
+
+.. _stakeholder-benefit-label:
 
 🤝 7. How Stakeholders Benefit
 ==============================

@@ -6,9 +6,18 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
+
+from valska.external_tools.common.submit import (
+    InvalidArgumentError,
+    MissingDependencyError,
+    SbatchError,
+    SubmissionError,
+    SubmitPlan,
+    load_manifest,
+)
+from valska.external_tools.common.utils import utc_now_iso
 
 _STAGE = Literal["cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
@@ -22,66 +31,17 @@ _CPU_MATRIX_MARKERS: dict[str, tuple[str, ...]] = {
 }
 
 
-class SubmissionError(RuntimeError):
-    """Raised when submission cannot proceed safely or sbatch fails."""
-
-
-class InvalidArgumentError(SubmissionError):
-    """Raised when CLI arguments are invalid for submission."""
-
-
-class MissingDependencyError(SubmissionError):
-    """Raised when required inputs or artefacts are missing."""
-
-
-class SbatchError(SubmissionError):
-    """Raised when sbatch fails or returns unparseable output."""
-
-
 @dataclass(frozen=True)
-class SubmitPlan:
+class BayesEoRSubmitPlan(SubmitPlan):
     """Resolved paths needed to submit a prepared BayesEoR run."""
 
-    run_dir: Path
-    manifest_path: Path
     cpu_script: Path
     gpu_signal_fit_script: Path | None
     gpu_no_signal_script: Path | None
     cpu_precompute_driver_hypothesis: str | None
 
 
-def _utc_now_iso() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def load_manifest(run_dir: Path) -> dict[str, Any]:
-    """
-    Load and parse manifest.json from a prepared run directory.
-
-    Parameters
-    ----------
-    run_dir
-        Prepared run directory containing manifest.json.
-
-    Returns
-    -------
-    dict
-        Parsed manifest content.
-    """
-    manifest_path = run_dir / "manifest.json"
-    if not manifest_path.exists():
-        raise MissingDependencyError(
-            f"Missing manifest.json in run_dir: {run_dir}"
-        )
-    try:
-        return json.loads(manifest_path.read_text(encoding="utf-8"))
-    except Exception as e:  # pragma: no cover
-        raise MissingDependencyError(
-            f"Failed to parse manifest.json: {manifest_path}\n{e}"
-        ) from e
-
-
-def build_submit_plan(run_dir: Path) -> SubmitPlan:
+def build_submit_plan(run_dir: Path) -> BayesEoRSubmitPlan:
     """
     Create a submission plan from an existing prepared run_dir.
 
@@ -128,7 +88,7 @@ def build_submit_plan(run_dir: Path) -> SubmitPlan:
     gpu_signal = _normalise(gpu_signal)
     gpu_nosig = _normalise(gpu_nosig)
 
-    return SubmitPlan(
+    return BayesEoRSubmitPlan(
         run_dir=run_dir,
         manifest_path=manifest_path,
         cpu_script=cpu_script,  # type: ignore[arg-type]
@@ -445,7 +405,7 @@ def submit_bayeseor_run(
     result: dict[str, Any] = {
         "run_dir": str(plan.run_dir),
         "manifest": str(plan.manifest_path),
-        "submitted_utc": _utc_now_iso(),
+        "submitted_utc": utc_now_iso(),
         "sbatch": sbatch_exe,
         "dry_run": bool(dry_run),
         "stage": stage,

@@ -13,16 +13,11 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from valska.external_tools.bayeseor.runner import BayesEoRInstall
 from valska.external_tools.common.slurm import render_submit_script
+from valska.external_tools.common.utils import utc_now_compact
 
 from ... import __version__
 from ..common.runner import CondaRunner, ContainerRunner
 from . import TOOL_NAME
-
-
-def _utc_stamp() -> str:
-    """Return a UTC timestamp suitable for directory naming."""
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-
 
 # -----------------------------------------------------------------------------
 # YAML IO (ruamel.yaml)
@@ -391,7 +386,7 @@ def prepare_bayeseor_run(
             / run_label
             / run_id
         )
-        run_dir = base_dir / _utc_stamp() if unique else base_dir
+        run_dir = base_dir / utc_now_compact() if unique else base_dir
     else:
         run_dir = Path(run_dir).expanduser().resolve()
 

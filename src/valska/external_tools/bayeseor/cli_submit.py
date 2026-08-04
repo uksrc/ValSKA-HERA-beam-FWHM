@@ -5,22 +5,21 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .submit import (
+from valska.external_tools.common.submit import (
     InvalidArgumentError,
     MissingDependencyError,
     SbatchError,
     SubmissionError,
+)
+from valska.external_tools.common.utils import utc_now_compact
+
+from .submit import (
     _find_completed_cpu_precompute_matrix_dir,
     submit_bayeseor_run,
 )
-
-
-def _utc_now_compact() -> str:
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _load_runtime_paths_yaml() -> dict[str, Any]:
@@ -187,7 +186,7 @@ def _archive_jobs_json(run_dir: Path) -> Path | None:
     jobs_path = run_dir / "jobs.json"
     if not jobs_path.exists():
         return None
-    archived = run_dir / f"jobs_{_utc_now_compact()}.json"
+    archived = run_dir / f"jobs_{utc_now_compact()}.json"
     jobs_path.rename(archived)
     return archived
 

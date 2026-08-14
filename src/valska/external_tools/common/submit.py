@@ -5,10 +5,17 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, TypedDict
+
+from valska.external_tools.common.utils import utc_now_iso
+
+_RECORD = Literal["jobs.json", "manifest"]
+_HYP = Literal["signal_fit", "no_signal", "both"]
+_STAGE = Literal["cpu", "gpu", "all"]
 
 _JOBID_RE = re.compile(r"Submitted\s+batch\s+job\s+(\d+)\s*$", re.IGNORECASE)
 
@@ -29,8 +36,44 @@ class SbatchError(SubmissionError):
     """Raised when sbatch fails or returns unparseable output."""
 
 
-class Stage(Enum):
-    """Type to inherit for each tool's own Stage class"""
+class Stage(TypedDict):
+    """Holds details about a stage and points to the method which does any setup before submission"""
+
+    name: str
+    method: Callable
+    script: str
+
+
+class StageType(Enum):
+    """Container type to inherit for each tool's own StageType class"""
+
+
+class JobsFile:
+    """Fields found in a jobs.json file"""
+
+    # TODO replace this class with a Pydantic model so the whole schema can be verified, not just the fields
+    common_fields = [
+        "run_dir",
+        "manifest",
+        "sbatch",
+        "dry_run",
+        "history",
+        "jobs",
+        "submitted_utc",
+        "stage",
+        "commands",
+    ]
+
+    # Fields that can be merged and their defaults
+    mergeable_fields = [
+        ("sbatch", "sbatch"),
+        ("dry_run", False),
+        ("submitted_utc", ""),
+        ("stage", ""),
+        ("commands", []),
+    ]
+
+    extra_fields: list[tuple[str, ...]] = []
 
 
 @dataclass()
@@ -38,11 +81,16 @@ class SubmitPlan:
     """Resolved paths, config, and methods needed to submit a prepared run."""
 
     run_dir: Path
-    stage: Stage
+    # TODO should be a Stage object
+    stage: str
+    requested_stages: list[Stage] = field(init=False)
     manifest_path: Path = field(init=False)
+    jobs_path: Path = field(init=False)
+    jobs_file: JobsFile = field(init=False)
 
     def __post_init__(self):
         self.manifest_path = self.run_dir / "manifest.json"
+        self.jobs_path = self.run_dir / "jobs.json"
 
     def load_manifest(self) -> dict[str, Any]:
         """
@@ -70,7 +118,7 @@ class SubmitPlan:
             ) from e
 
     def load_jobs(self) -> dict[str, Any] | None:
-        p = _jobs_path(self.run_dir)
+        p = self.jobs_path
         if not p.exists():
             return None
         try:
@@ -81,7 +129,10 @@ class SubmitPlan:
                 f"Failed to parse existing jobs.json: {p}\n{e}"
             ) from e
 
-    def merge_jobs_record(self, new_result: dict[str, Any]) -> dict[str, Any]:
+    def merge_jobs_record(
+        self,
+        new_result: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Merge a new submission result into an existing jobs.json record.
 
@@ -101,11 +152,6 @@ class SubmitPlan:
             if k in new_result:
                 merged[k] = new_result[k]
 
-        merged["sbatch"] = new_result.get(
-            "sbatch", merged.get("sbatch", "sbatch")
-        )
-        merged["dry_run"] = bool(new_result.get("dry_run", False))
-
         # Keep a full submission history (append-only)
         hist = merged.get("history")
         if not isinstance(hist, list):
@@ -122,35 +168,40 @@ class SubmitPlan:
 
         new_jobs = new_result.get("jobs")
         if isinstance(new_jobs, dict):
-            stage = new_jobs.get(self.stage.value)
-            if isinstance(stage, dict):
-                merged_jobs[self.stage.value] = stage
-
-            # # CPU stage record
-            # cpu = new_jobs.get("cpu_precompute")
-            # if isinstance(cpu, dict):
-            #     merged_jobs["cpu_precompute"] = cpu
-
-            # # GPU stage record
-            # gpu = new_jobs.get("gpu")
-            # if isinstance(gpu, dict):
-            #     merged_jobs["gpu"] = gpu
+            for requested_stage in self.requested_stages:
+                stage = new_jobs.get(requested_stage["name"])
+                if isinstance(stage, dict):
+                    merged_jobs[requested_stage["name"]] = stage
 
         merged["jobs"] = merged_jobs
 
-        # Keep latest submitted timestamp and commands for convenience
-        merged["submitted_utc"] = new_result.get(
-            "submitted_utc", merged.get("submitted_utc")
-        )
-        merged["stage"] = new_result.get("stage", merged.get("stage"))
-        merged["hypothesis"] = new_result.get(
-            "hypothesis", merged.get("hypothesis")
-        )
-        merged["commands"] = new_result.get(
-            "commands", merged.get("commands", [])
+        mergeable_fields = (
+            self.jobs_file.mergeable_fields + self.jobs_file.extra_fields
         )
 
+        for jobs_field, default in mergeable_fields:
+            merged[jobs_field] = new_result.get(
+                jobs_field, merged.get(jobs_field, default)
+            )
+
         return merged
+
+    def write_jobs(self, jobs: dict[str, Any]) -> Path:
+        p = self.jobs_path
+        p.write_text(json.dumps(jobs, indent=2), encoding="utf-8")
+        return p
+
+    def normalise_path(self, p: Path | None) -> Path | None:
+        if p is None:
+            return None
+        return (
+            (self.run_dir / p).resolve()
+            if not p.is_absolute()
+            else p.resolve()
+        )
+
+    def check_jobs_not_running(self, force):
+        """To be implemented by each tool"""
 
 
 def get_path_from_artefacts(
@@ -164,12 +215,6 @@ def get_path_from_artefacts(
             )
         return None
     return Path(str(p)).expanduser()
-
-
-def normalise_path(run_dir: Path, p: Path | None) -> Path | None:
-    if p is None:
-        return None
-    return (run_dir / p).resolve() if not p.is_absolute() else p.resolve()
 
 
 def ensure_script_exists(path: Path, label: str) -> None:
@@ -231,5 +276,92 @@ def run_sbatch(
     return m.group(1), cmd_str
 
 
-def _jobs_path(run_dir: Path) -> Path:
-    return run_dir / "jobs.json"
+def submit_tool_run(
+    run_dir: Path,
+    *,
+    # stage: Stage,
+    stage: _STAGE = "all",
+    submit_plan: type[SubmitPlan],
+    hypothesis: _HYP = "both",
+    depend_afterok: str | None = None,
+    sbatch_exe: str = "sbatch",
+    dry_run: bool = False,
+    force: bool = False,
+    record: _RECORD = "jobs.json",
+) -> dict[str, Any]:
+    """
+    Submit external tool prepared scripts for a run_dir.
+
+    Parameters
+    ----------
+    run_dir
+        Prepared run directory.
+    stage
+        Which stage(s) to submit: "cpu", "gpu", or "all".
+    hypothesis
+        Which GPU hypothesis to run: "signal_fit", "no_signal", or "both".
+    depend_afterok
+        Optional sbatch job id to depend on for GPU submissions.
+    sbatch_exe
+        sbatch executable to invoke.
+    dry_run
+        If True, do not submit jobs; return the commands that would run.
+    force
+        If True, allow resubmission even if jobs.json indicates prior submissions.
+    record
+        Where to record submission metadata. Currently only "jobs.json" is supported.
+
+    Returns
+    -------
+    dict
+        A jobs.json-style record of the submission (merged if not dry_run).
+
+    Notes on jobs.json recording
+    ----------------------------
+    jobs.json is treated as a durable record that may be updated across invocations:
+      - stage=cpu creates/updates jobs.cpu_precompute
+      - stage=gpu appends/updates jobs.gpu
+      - stage=all updates both
+
+    We also keep a submission 'history' list so previous job ids are not lost.
+    """
+
+    plan = submit_plan(run_dir.expanduser().resolve(), stage)
+
+    ensure_script_exists(plan.manifest_path, "manifest.json")
+
+    if record == "manifest":
+        raise InvalidArgumentError(
+            "record='manifest' is not enabled in the MVP to avoid mutating provenance. "
+            "Use record='jobs.json' (default)."
+        )
+
+    plan.check_jobs_not_running(force)
+
+    result: dict[str, Any] = {
+        "run_dir": str(plan.run_dir),
+        "manifest": str(plan.manifest_path),
+        "submitted_utc": utc_now_iso(),
+        "sbatch": sbatch_exe,
+        "dry_run": bool(dry_run),
+        "stage": stage,
+        "commands": [],
+        "jobs": {},
+    }
+
+    # add tool specific extra fields to result
+    for extra_field, default in plan.jobs_file.extra_fields:
+        result[extra_field] = default
+
+    # do stage specific stuff here
+    for requested_stage in plan.requested_stages:
+        result, jobid, cmd = requested_stage.value["method"](
+            plan, result, sbatch_exe, dry_run, hypothesis, depend_afterok
+        )
+
+    if not dry_run:
+        merged = plan.merge_jobs_record(result)
+        plan.write_jobs(merged)
+        return merged
+
+    return result

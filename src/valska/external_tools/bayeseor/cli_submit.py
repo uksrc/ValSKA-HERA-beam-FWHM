@@ -13,12 +13,13 @@ from valska.external_tools.common.submit import (
     MissingDependencyError,
     SbatchError,
     SubmissionError,
+    submit_tool_run,
 )
 from valska.external_tools.common.utils import utc_now_compact
 
 from .submit import (
+    BayesEoRSubmitPlan,
     _find_completed_cpu_precompute_matrix_dir,
-    submit_bayeseor_run,
 )
 
 
@@ -406,9 +407,10 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     try:
-        result = submit_bayeseor_run(
+        result = submit_tool_run(
             run_dir,
             stage=args.stage,
+            submit_plan=BayesEoRSubmitPlan,
             hypothesis=args.hypothesis,
             depend_afterok=args.depend_afterok,
             sbatch_exe=sbatch_exe,

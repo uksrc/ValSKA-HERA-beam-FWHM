@@ -9,12 +9,15 @@ from pathlib import Path
 from typing import Any, Literal
 
 from valska.external_tools.bayeseor.runner import BayesEoRInstall
-from valska.external_tools.common.submit import SubmissionError
+from valska.external_tools.common.submit import (
+    SubmissionError,
+    submit_tool_run,
+)
 from valska.external_tools.common.utils import utc_now_compact, utc_now_iso
 
 from ..common.runner import CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
-from .submit import submit_bayeseor_run
+from .submit import BayesEoRSubmitPlan
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
@@ -486,9 +489,10 @@ def run_fwhm_sweep(
             try:
                 submit_force = bool(force or resubmit)
 
-                res = submit_bayeseor_run(
+                res = submit_tool_run(
                     p.run_dir,
                     stage="all" if submit == "all" else submit,  # type: ignore[arg-type]
+                    submit_plan=BayesEoRSubmitPlan,
                     hypothesis=hypothesis,
                     depend_afterok=depend_afterok,
                     sbatch_exe=sbatch_exe,

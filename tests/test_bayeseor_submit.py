@@ -4,9 +4,10 @@ from pathlib import Path
 import pytest
 
 from valska.external_tools.bayeseor import cli_submit
-from valska.external_tools.bayeseor.submit import (
+from valska.external_tools.bayeseor.submit import BayesEoRSubmitPlan
+from valska.external_tools.common.submit import (
     MissingDependencyError,
-    submit_bayeseor_run,
+    submit_tool_run,
 )
 
 
@@ -55,7 +56,9 @@ def test_submit_gpu_uses_recorded_dependency_when_outputs_missing(tmp_path):
         {"jobs": {"cpu_precompute": {"job_id": "12345"}}},
     )
 
-    result = submit_bayeseor_run(run_dir, stage="gpu", dry_run=True)
+    result = submit_tool_run(
+        run_dir, stage="gpu", submit_plan=BayesEoRSubmitPlan, dry_run=True
+    )
 
     assert result["jobs"]["gpu"]["dependency"] == "afterok:12345"
     assert result["jobs"]["gpu"]["dependency_source"] == "jobs_json"
@@ -73,7 +76,9 @@ def test_submit_gpu_skips_dependency_when_cpu_outputs_verified(tmp_path):
         {"jobs": {"cpu_precompute": {"job_id": "12345"}}},
     )
 
-    result = submit_bayeseor_run(run_dir, stage="gpu", dry_run=True)
+    result = submit_tool_run(
+        run_dir, stage="gpu", submit_plan=BayesEoRSubmitPlan, dry_run=True
+    )
 
     assert result["jobs"]["gpu"]["dependency"] is None
     assert (
@@ -93,7 +98,9 @@ def test_submit_gpu_requires_dependency_or_completed_outputs(tmp_path):
     _write_submit_fixture(run_dir)
 
     with pytest.raises(MissingDependencyError):
-        submit_bayeseor_run(run_dir, stage="gpu", dry_run=True)
+        submit_tool_run(
+            run_dir, stage="gpu", submit_plan=BayesEoRSubmitPlan, dry_run=True
+        )
 
 
 def test_cli_submit_allows_gpu_when_completed_cpu_outputs_exist(tmp_path):

@@ -1,10 +1,12 @@
 import filecmp
+import json
 from importlib.resources import path
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from valska.external_tools.pyuvsim import setup as pyuvsim_setup
 from valska.external_tools.pyuvsim.constants import TOOL_NAME
 from valska.external_tools.pyuvsim.runner import CondaRunner
 from valska.external_tools.pyuvsim.setup import prepare_pyuvsim_run
@@ -88,13 +90,22 @@ def test_prepare_pyuvsim_run_correct_manifest(_pyuvsim_config, _run_dir):
 
     run_dir = _run_dir
 
-    manifest = (run_dir / "manifest.json").read_text()
+    manifest = json.loads((run_dir / "manifest.json").read_text())
 
-    assert str(_pyuvsim_config["results_root"]) in manifest
-    assert str(run_dir) in manifest
-    assert str(_pyuvsim_config["template_yaml"]) in manifest
-    assert _pyuvsim_config["sky_model"] in manifest
-    assert _pyuvsim_config["runner"].conda_activate in manifest
+    assert (
+        Path(manifest["results_root"])
+        == _pyuvsim_config["results_root"].resolve()
+    )
+    assert Path(manifest["run_dir"]) == run_dir.resolve()
+    assert (
+        Path(manifest["template_yaml"])
+        == _pyuvsim_config["template_yaml"].resolve()
+    )
+    assert manifest["sky_model"] == _pyuvsim_config["sky_model"]
+    assert (
+        manifest["pyuvsim"]["runner"]["conda_activate"]
+        == _pyuvsim_config["runner"].conda_activate
+    )
 
 
 @pytest.mark.parametrize(
@@ -149,3 +160,34 @@ def test_prepare_pyuvsim_run_copies_reference_files_with_default_template(
         and len(comparison.common_files) > 0
         for comparison in comparisons
     )
+
+
+def test_prepare_pyuvsim_run_recognises_symlinked_default_template(
+    _pyuvsim_config, tmp_path, monkeypatch
+):
+    """Recognise the packaged default through a symlinked logical path."""
+
+    template_name = "fov-19.4-oscar-sm.yml"
+    physical_templates = _pyuvsim_config["template_yaml"].resolve().parent
+    logical_templates = tmp_path / "logical-templates"
+    logical_templates.symlink_to(physical_templates, target_is_directory=True)
+    logical_template = logical_templates / template_name
+
+    monkeypatch.setattr(
+        pyuvsim_setup,
+        "get_template_path",
+        lambda name: logical_templates / name,
+    )
+
+    config = dict(_pyuvsim_config)
+    config["template_yaml"] = logical_template
+    config["results_root"] = tmp_path / "results"
+
+    outputs = prepare_pyuvsim_run(**config)
+    run_dir = outputs["run_dir"]
+
+    assert (run_dir / "telescope_config").is_dir()
+    assert (run_dir / "catalog_files").is_dir()
+
+    manifest = json.loads(outputs["manifest_json"].read_text())
+    assert Path(manifest["template_yaml"]) == logical_template.resolve()

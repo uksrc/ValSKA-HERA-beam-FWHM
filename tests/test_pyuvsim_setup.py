@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from valska.external_tools.pyuvsim import setup as pyuvsim_setup
+from valska.external_tools.pyuvsim import templates as pyuvsim_templates
 from valska.external_tools.pyuvsim.constants import TOOL_NAME
 from valska.external_tools.pyuvsim.runner import CondaRunner
 from valska.external_tools.pyuvsim.setup import prepare_pyuvsim_run
@@ -174,9 +174,9 @@ def test_prepare_pyuvsim_run_recognises_symlinked_default_template(
     logical_template = logical_templates / template_name
 
     monkeypatch.setattr(
-        pyuvsim_setup,
-        "get_template_path",
-        lambda name: logical_templates / name,
+        pyuvsim_templates.resources,
+        "files",
+        lambda package: logical_templates,
     )
 
     config = dict(_pyuvsim_config)
@@ -188,6 +188,10 @@ def test_prepare_pyuvsim_run_recognises_symlinked_default_template(
 
     assert (run_dir / "telescope_config").is_dir()
     assert (run_dir / "catalog_files").is_dir()
+    assert (
+        pyuvsim_templates.get_template_path(template_name)
+        == logical_template.resolve()
+    )
 
     manifest = json.loads(outputs["manifest_json"].read_text())
     assert Path(manifest["template_yaml"]) == logical_template.resolve()

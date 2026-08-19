@@ -335,8 +335,7 @@ def prepare_pyuvsim_run(
 
     # Include reference simulation config and catalogue files for the default template
     # TODO: Allow these to be referenced from outside the repository (e.g. a shared data folder) and include them in the manifest
-    default_template = get_template_path("fov-19.4-oscar-sm.yml").resolve()
-    if template_yaml == default_template:
+    if template_yaml == get_template_path("fov-19.4-oscar-sm.yml"):
         templates_dir = template_yaml.parent
 
         for folder in ["telescope_config", "catalog_files"]:

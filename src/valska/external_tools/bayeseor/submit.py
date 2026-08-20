@@ -5,9 +5,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from valska.external_tools.common.submit import (
+    _HYP,
     InvalidArgumentError,
     JobsFile,
     MissingDependencyError,
@@ -18,10 +19,6 @@ from valska.external_tools.common.submit import (
     get_path_from_artefacts,
     run_sbatch,
 )
-
-_STAGE = Literal["cpu", "gpu", "all"]
-_HYP = Literal["signal_fit", "no_signal", "both"]
-_RECORD = Literal["jobs.json", "manifest"]
 
 _AFTEROK_RE = re.compile(r"afterok:(\d+)")
 _CPU_MATRIX_MARKERS: dict[str, tuple[str, ...]] = {
@@ -37,7 +34,12 @@ class BayesEoRStage(Stage):
 class BayesEoRStageType(StageType):
     @staticmethod
     def cpu_precompute_setup(
-        plan, result, sbatch_exe, dry_run, hypothesis, depend_afterok
+        plan: BayesEoRSubmitPlan,
+        result: dict[str, Any],
+        sbatch_exe: str,
+        dry_run: bool,
+        hypothesis: _HYP,
+        depend_afterok: str,
     ):
         ensure_script_exists(plan.cpu_script, "CPU precompute")
 
@@ -62,26 +64,36 @@ class BayesEoRStageType(StageType):
 
     @staticmethod
     def gpu_setup(
-        plan, result, sbatch_exe, dry_run, hypothesis, depend_afterok
+        plan: BayesEoRSubmitPlan,
+        result: dict[str, Any],
+        sbatch_exe: str,
+        dry_run: bool,
+        hypothesis: _HYP,
+        depend_afterok: str,
     ):
         # --------------------
         # GPU submission
         # --------------------
 
-        cpu_jobid = ""
+        jobs = result.get("jobs") or {"jobs": {}}
 
-        try:
-            cpu_jobid = result["jobs"]["cpu_precompute"]["job_id"]
-        except KeyError:
-            cpu_jobid = ""
+        cpu_jobs = jobs.get("jobs") or {}
+        cpu_job = cpu_jobs.get("cpu_precompute")
+
+        cpu_jobid = (
+            cpu_job.get("job_id", "") if isinstance(cpu_job, dict) else ""
+        )
 
         dep: str | None = None
         dependency_source: str | None = None
         verified_matrix_dir: Path | None = None
 
-        if cpu_jobid:
+        # First check whether stage=all - this means CPU and GPU were submitted
+        # together and GPU should depend on CPU with ID as recorded in jobs.json
+        if plan.stage == "all" and cpu_jobid:
             dep = cpu_jobid
             dependency_source = "same_invocation_cpu"
+        # Otherwise check for explicit dependency with manually entered CPU ID
         elif depend_afterok is not None:
             dep = _safe_int_jobid(depend_afterok)
             if dep is None:
@@ -89,19 +101,24 @@ class BayesEoRStageType(StageType):
                     "--depend-afterok must be a numeric SLURM job id."
                 )
             dependency_source = "explicit_depend_afterok"
+        # Placeholder for dry run when CPU/GPU stages are submitted separately
         elif dry_run and plan.requested_stages == [
             [BayesEoRStageType.CPU, BayesEoRStageType.GPU]
         ]:
             dep = "<CPU_JOBID>"
             dependency_source = "dry_run_placeholder"
+        # Otherwise CPU job must have been submitted separately before GPU
         else:
             verified_matrix_dir = _find_completed_cpu_precompute_matrix_dir(
                 plan.run_dir
             )
+            # Either it could have finished already, in which case outputs will be
+            # available
             if verified_matrix_dir is not None:
                 dependency_source = "cpu_precompute_outputs_verified"
+            # OR it could still be running - in that case, depend on its job ID
             else:
-                dep = _extract_cpu_jobid_from_existing(plan.load_jobs)
+                dep = _extract_cpu_jobid_from_existing(plan.load_jobs())
                 if dep is not None:
                     dependency_source = "jobs_json"
 
@@ -165,7 +182,8 @@ class BayesEoRStageType(StageType):
                 "job_id": jobid,
             }
 
-        result["jobs"]["gpu"] = gpu_jobs
+        jobs["jobs"]["gpu"] = gpu_jobs
+        result["jobs"] = jobs
 
         return result, jobid, cmd
 

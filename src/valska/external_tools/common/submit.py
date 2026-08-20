@@ -83,7 +83,7 @@ class SubmitPlan:
     run_dir: Path
     # TODO should be a Stage object
     stage: str
-    requested_stages: list[Stage] = field(init=False)
+    requested_stages: list[StageType] = field(init=False)
     manifest_path: Path = field(init=False)
     jobs_path: Path = field(init=False)
     jobs_file: JobsFile = field(init=False)
@@ -169,9 +169,9 @@ class SubmitPlan:
         new_jobs = new_result.get("jobs")
         if isinstance(new_jobs, dict):
             for requested_stage in self.requested_stages:
-                stage = new_jobs.get(requested_stage["name"])
+                stage = new_jobs.get(requested_stage.value["name"])
                 if isinstance(stage, dict):
-                    merged_jobs[requested_stage["name"]] = stage
+                    merged_jobs[requested_stage.value["name"]] = stage
 
         merged["jobs"] = merged_jobs
 
@@ -346,7 +346,7 @@ def submit_tool_run(
         "dry_run": bool(dry_run),
         "stage": stage,
         "commands": [],
-        "jobs": {},
+        "jobs": plan.load_jobs(),
     }
 
     # add tool specific extra fields to result

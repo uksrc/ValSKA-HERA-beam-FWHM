@@ -43,6 +43,8 @@ class BayesEoRStageType(StageType):
     ):
         ensure_script_exists(plan.cpu_script, "CPU precompute")
 
+        jobs = result.get("jobs") or {"jobs": {}}
+
         # --------------------
         # CPU submission
         # --------------------
@@ -54,11 +56,13 @@ class BayesEoRStageType(StageType):
             dry_run=dry_run,
         )
         result["commands"].append(cmd)
-        result["jobs"]["cpu_precompute"] = {
+
+        jobs["jobs"]["cpu_precompute"] = {
             "script": str(plan.cpu_script),
             "job_id": jobid,
             "cpu_precompute_driver_hypothesis": plan.cpu_precompute_driver_hypothesis,
         }
+        result["jobs"] = jobs
 
         return result, jobid, cmd
 

@@ -335,7 +335,7 @@ echo "Hostname:             $(hostname)"
 echo "Working dir:          $(pwd)"
 echo "Run dir:              {run_dir}"
 echo "Config:               {config_yaml}"
-echo "{tool_name} command:  {command}
+echo '{tool_name} command:  {command}'
 echo "Mode:                 {mode}"
 echo "----------------------------------------"
 

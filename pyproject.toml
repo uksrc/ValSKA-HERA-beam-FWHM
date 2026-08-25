@@ -131,6 +131,7 @@ valska-bayeseor-cleanup = "valska.external_tools.bayeseor.cli_cleanup:main"
 valska-bayeseor-help = "valska.external_tools.bayeseor.cli_help:main"
 valska-pyuvsim-prepare = "valska.external_tools.pyuvsim.cli_prepare:main"
 valska-pyuvsim-submit  = "valska.external_tools.pyuvsim.cli_submit:main"
+valska-data-preflight = "valska.data_preflight.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

@@ -23,6 +23,7 @@ from rich.progress import (
     TextColumn,
     TimeElapsedColumn,
 )
+
 from valska.evidence import ChainPair, run_complete_bayeseor_analysis
 from valska.plotting import BeamAnalysisPlotter
 
@@ -39,7 +40,6 @@ _TICK_LABEL_FONTSIZE = 11
 _TITLE_FONTSIZE = 14
 _LEGEND_FONTSIZE = 10
 _PLOT_DPI = 300
-
 
 _LEGACY_PERTURBATION_FIELDS = {
     "fwhm_perturb_frac": "fwhm_deg",

@@ -7,17 +7,16 @@ import argparse
 import json
 import shutil
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-from valska.utils import get_default_path_manager
 
 from valska.cli_format import (
     CliColors,
     add_color_argument,
     resolve_color_mode,
 )
+from valska.utils import get_default_path_manager
 
 from .cli_list_sweeps import discover_sweeps
 from .sweep_health import SweepPointHealth, inspect_sweep_health
@@ -73,7 +72,7 @@ def _apply_filters(
 
 
 def _utc_stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _is_older_than_days(
@@ -361,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
         max_results=args.max_results,
     )
 
-    now_ts = datetime.now(timezone.utc).timestamp()
+    now_ts = datetime.now(UTC).timestamp()
     actions: list[dict[str, Any]] = []
 
     planned = 0

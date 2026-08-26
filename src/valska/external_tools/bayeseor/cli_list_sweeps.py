@@ -9,13 +9,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from valska.utils import get_default_path_manager
-
 from valska.cli_format import (
     CliColors,
     add_color_argument,
     resolve_color_mode,
 )
+from valska.utils import get_default_path_manager
 
 
 def _safe_load_manifest(manifest_path: Path) -> dict[str, Any]:

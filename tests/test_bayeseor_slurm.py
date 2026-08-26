@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor.runner import (
+from valska.external_tools.bayeseor.runner import (
     BayesEoRInstall,
     CondaRunner,
 )
-from valska_hera_beam.external_tools.bayeseor.slurm import render_submit_script
+from valska.external_tools.bayeseor.slurm import render_submit_script
 
 
 def _render_script(mode: str) -> str:

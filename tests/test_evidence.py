@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from valska_hera_beam import evidence
+from valska import evidence
 
 from .constants import mock_read_chains
 

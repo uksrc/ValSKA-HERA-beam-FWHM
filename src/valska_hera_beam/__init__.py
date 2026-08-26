@@ -1,25 +1,9 @@
-"""
-ValSKA
-
-Validation tooling for SKA and precursor science workflows, including
-21-cm power-spectrum studies of primary beam FWHM uncertainties.
-"""
+"""Compatibility wrapper for deprecated module `valska_hera_beam.__init__`."""
 
 from __future__ import annotations
 
-# -----------------------------------------------------------------------------
-# Version handling
-#
-# The version is generated at build time by setuptools-scm and written to
-# _version.py. When running from a source tree without installation (e.g. on
-# HPC systems), this file may not exist, so we fall back gracefully.
-# -----------------------------------------------------------------------------
+from valska_hera_beam._compat import warn_import as _warn_import
 
-try:
-    from ._version import version as __version__
-except ImportError:  # pragma: no cover
-    __version__ = "unknown"
+_warn_import(__name__, "valska")
 
-__all__ = [
-    "__version__",
-]
+from valska import *  # noqa: F401,F403

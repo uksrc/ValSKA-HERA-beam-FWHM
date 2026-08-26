@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from valska_hera_beam.external_tools.bayeseor import cli_submit
-from valska_hera_beam.external_tools.bayeseor.submit import (
+from valska.external_tools.bayeseor import cli_submit
+from valska.external_tools.bayeseor.submit import (
     MissingDependencyError,
     submit_bayeseor_run,
 )

@@ -108,11 +108,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _format_perturbation_label(raw_label: object) -> str:
+def _perturbation_fraction(raw_label: object) -> float | None:
     label = str(raw_label)
     try:
-        frac = float(label.split("_", 1)[1])
+        return float(label.split("_", 1)[1])
     except Exception:
+        return None
+
+
+def _format_perturbation_label(raw_label: object) -> str:
+    label = str(raw_label)
+    frac = _perturbation_fraction(label)
+    if frac is None:
         return label
 
     if label.startswith("antdiam_"):
@@ -120,14 +127,6 @@ def _format_perturbation_label(raw_label: object) -> str:
     if label.startswith("fwhm_"):
         return f"ΔFWHM/FWHM = {frac * 100:+.2f}%"
     return f"Δ = {frac * 100:+.2f}%"
-
-
-def _perturbation_fraction(raw_label: object) -> float | None:
-    label = str(raw_label)
-    try:
-        return float(label.split("_", 1)[1])
-    except Exception:
-        return None
 
 
 def _coerce_float(raw: object) -> float:

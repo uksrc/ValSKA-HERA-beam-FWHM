@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from valska_hera_beam.external_tools.bayeseor import cli_report_all
+from valska.external_tools.bayeseor import cli_report_all
 
 
 def _mk_point(run_dir: Path, *, signal_ns: float, no_signal_ns: float) -> None:

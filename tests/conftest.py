@@ -2,8 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from valska_hera_beam.plotting import BeamAnalysisPlotter
-from valska_hera_beam.utils import PathManager
+from tests.test_pyuvsim_slurm import _render_script
+from valska.plotting import BeamAnalysisPlotter
+from valska.utils import PathManager
 
 from .constants import EOR_PS, NOISE_RATIO
 
@@ -80,3 +81,9 @@ def beam_analysis_fixture(chains_dir):
     )
 
     yield beam_analysis_plotter
+
+
+# relevant for pyuvsim tests
+@pytest.fixture(scope="session")
+def simulate_script():
+    return _render_script("simulate")

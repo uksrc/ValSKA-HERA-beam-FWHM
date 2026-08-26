@@ -8,8 +8,6 @@ import sys
 from pathlib import Path
 from typing import Any, Literal
 
-from valska.utils import get_default_path_manager, resolve_data_path
-
 from valska.cli_format import (
     CliColors,
     add_color_argument,
@@ -20,6 +18,7 @@ from valska.external_tools.bayeseor import (
     CondaRunner,
     get_template_path,
 )
+from valska.utils import get_default_path_manager, resolve_data_path
 
 from . import sweep as sweep_mod  # for DRY helpers (run_label + point dirs)
 from .cli_prepare import _get_nested, _slurm_defaults

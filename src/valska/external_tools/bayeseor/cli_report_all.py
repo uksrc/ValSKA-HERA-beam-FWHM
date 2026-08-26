@@ -9,8 +9,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from valska.utils import get_default_path_manager
-
 from valska.cli_format import (
     CliColors,
     add_color_argument,
@@ -19,6 +17,7 @@ from valska.cli_format import (
     resolve_progress_mode,
     show_progress,
 )
+from valska.utils import get_default_path_manager
 
 from .cli_list_sweeps import discover_sweeps
 from .report import SweepReportResult, generate_sweep_report

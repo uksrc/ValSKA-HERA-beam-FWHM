@@ -19,14 +19,14 @@ fi
 
 if command -v conda >/dev/null 2>&1; then
     if conda run -n "$VALSKA_CONDA_ENV" python -m \
-        valska_hera_beam.external_tools.bayeseor.cli_compare_sweeps "$@"; then
+        valska.external_tools.bayeseor.cli_compare_sweeps "$@"; then
         exit 0
     fi
 fi
 
 if command -v python >/dev/null 2>&1 && [[ -d "src" ]]; then
     exec env PYTHONPATH=src python -m \
-        valska_hera_beam.external_tools.bayeseor.cli_compare_sweeps "$@"
+        valska.external_tools.bayeseor.cli_compare_sweeps "$@"
 fi
 
 echo "Error: could not find valska-bayeseor-compare-sweeps, conda fallback, or local module fallback." >&2

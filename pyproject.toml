@@ -174,3 +174,7 @@ ignore = ["E501"]
 
 [tool.coverage.run]
 omit = ["src/valska_hera_beam/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["temp"]

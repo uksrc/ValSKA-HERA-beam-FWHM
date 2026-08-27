@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ...cli_format import CliColors, add_color_argument, resolve_color_mode
 from .submit import (
     InvalidArgumentError,
     SbatchError,
@@ -153,6 +154,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the full result object as JSON to stdout (useful for scripting).",
     )
+    add_color_argument(p)
 
     return p
 
@@ -189,34 +191,42 @@ def _has_simulate_job(existing: dict[str, Any] | None) -> bool:
     return isinstance(sim, dict) and bool(sim.get("job_id"))
 
 
-def _print_human(result: dict[str, Any]) -> None:
-    """Print a human-readable submission summary."""
+def _print_summary(result: dict[str, Any], *, colors: CliColors) -> None:
+    """Print a terminal-readable submission summary."""
     run_dir = result.get("run_dir", "")
     dry_run = bool(result.get("dry_run", False))
 
-    print(f"Run dir: {run_dir}")
-    print(f"Dry run: {dry_run}")
+    print(f"Run dir: {colors.path(run_dir)}")
+    dry_run_text = (
+        colors.warning(dry_run) if dry_run else colors.success(dry_run)
+    )
+    print(f"Dry run: {dry_run_text}")
 
-    print("\nCommands:")
+    print("\n" + colors.heading("Commands:"))
     for cmd in result.get("commands", []):
         print(f"  {cmd}")
 
     jobs = result.get("jobs", {}) or {}
     if not jobs:
-        print("\nNo jobs recorded.")
+        print("\n" + colors.warning("No jobs recorded."))
         return
 
-    print("\nJob IDs:")
+    print("\n" + colors.heading("Job IDs:"))
     sim = jobs.get("simulate")
     if isinstance(sim, dict):
         jid = sim.get("job_id")
-        print(f"  simulate: {jid if jid is not None else '(dry-run)'}")
+        value = (
+            colors.success(jid)
+            if jid is not None
+            else colors.warning("(dry-run)")
+        )
+        print(f"  simulate: {value}")
 
     if not dry_run:
-        print("\nRecorded:")
-        print(f"  {Path(run_dir) / 'jobs.json'}")
+        print("\n" + colors.heading("Recorded:"))
+        print(f"  {colors.path(Path(run_dir) / 'jobs.json')}")
 
-    print("\nNext steps:")
+    print("\n" + colors.heading("Next steps:"))
     print("  - Check `squeue -u $USER` to see submitted jobs.")
     print(
         "  - Inspect logs referenced by the submit script in the run directory."
@@ -227,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for valska-pyuvsim-submit."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
 
     run_dir = Path(args.run_dir).expanduser().resolve()
     jobs_path = run_dir / "jobs.json"
@@ -259,7 +272,10 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 archived = _archive_jobs_json(run_dir)
                 if archived is not None and not args.dry_run:
-                    print(f"Archived existing jobs.json -> {archived}")
+                    print(
+                        "Archived existing jobs.json -> "
+                        f"{colors.path(archived)}"
+                    )
                 existing = None
                 sim_exists = False
             except Exception as e:
@@ -312,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         print(json.dumps(result, indent=2))
     else:
-        _print_human(result)
+        _print_summary(result, colors=colors)
 
     return 0
 

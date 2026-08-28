@@ -5,25 +5,23 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
+from valska.external_tools.bayeseor.runner import BayesEoRInstall
+from valska.external_tools.common.submit import (
+    SubmissionError,
+    submit_tool_run,
+)
+from valska.external_tools.common.utils import utc_now_compact, utc_now_iso
+
+from ..common.runner import CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
-from .submit import SubmissionError, submit_bayeseor_run
+from .submit import BayesEoRSubmitPlan
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
 _PERT = Literal["fwhm_deg", "antenna_diameter"]
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _utc_now_compact() -> str:
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _format_run_label_from_fwhm_frac(frac: float) -> str:
@@ -105,7 +103,7 @@ def archive_jobs_json(run_dir: Path) -> Path | None:
     jp = _jobs_path(run_dir)
     if not jp.exists():
         return None
-    archived = run_dir / f"jobs_{_utc_now_compact()}.json"
+    archived = run_dir / f"jobs_{utc_now_compact()}.json"
     jp.rename(archived)
     return archived
 
@@ -196,7 +194,7 @@ def write_sweep_manifest(
         "perturb_parameter": perturb_parameter,
         "data_path": str(data_path),
         "template_yaml": str(template_yaml),
-        "created_utc": _utc_now_iso(),
+        "created_utc": utc_now_iso(),
         "sweep_dir": str(sweep_dir),
         "points": [
             {
@@ -380,7 +378,7 @@ def run_fwhm_sweep(
                 variant=variant,
                 run_label=run_label,
             )
-            run_dir = base / _utc_now_compact() if unique else base
+            run_dir = base / utc_now_compact() if unique else base
             manifest_json = run_dir / "manifest.json"
             points.append(
                 SweepPoint(
@@ -400,7 +398,7 @@ def run_fwhm_sweep(
             run_id=run_id,
             perturb_parameter=perturb_parameter,
             data_path=data_path,
-            created_utc=_utc_now_iso(),
+            created_utc=utc_now_iso(),
             sweep_dir=sweep_dir,
             sweep_manifest_json=sweep_manifest_path,
             template_yaml=template_yaml,
@@ -425,7 +423,7 @@ def run_fwhm_sweep(
             variant=variant,
             run_label=run_label,
         )
-        run_dir = base_run_dir / _utc_now_compact() if unique else base_run_dir
+        run_dir = base_run_dir / utc_now_compact() if unique else base_run_dir
 
         out = prepare_bayeseor_run(
             template_yaml=template_yaml,
@@ -491,9 +489,10 @@ def run_fwhm_sweep(
             try:
                 submit_force = bool(force or resubmit)
 
-                res = submit_bayeseor_run(
+                res = submit_tool_run(
                     p.run_dir,
                     stage="all" if submit == "all" else submit,  # type: ignore[arg-type]
+                    submit_plan=BayesEoRSubmitPlan,
                     hypothesis=hypothesis,
                     depend_afterok=depend_afterok,
                     sbatch_exe=sbatch_exe,
@@ -547,7 +546,7 @@ def run_fwhm_sweep(
         run_id=run_id,
         perturb_parameter=perturb_parameter,
         data_path=data_path,
-        created_utc=_utc_now_iso(),
+        created_utc=utc_now_iso(),
         sweep_dir=sweep_dir,
         sweep_manifest_json=sweep_manifest_path,
         template_yaml=template_yaml,

@@ -81,6 +81,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TypedDict
 
+from valska.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
 from valska.external_tools.pyuvsim import (
     CondaRunner,
     ContainerRunner,
@@ -382,6 +387,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help=("Time step in seconds for beam check simulation."),
     )
+    add_color_argument(parser)
 
     return parser
 
@@ -481,6 +487,7 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for valska-pyuvsim-prepare."""
     parser = build_parser()
     args = parser.parse_args(argv)
+    colors = CliColors(resolve_color_mode(args.color))
 
     if args.list_templates:
         for name in list_templates():
@@ -697,21 +704,41 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     if args.dry_run:
-        print("\n[DRY RUN] Prepare would be executed with:")
-        print(f"  results_root:       {results_root} [{results_root_src}]")
-        print(f"  beam_model:         {beam_model} [{beam_sky_src}]")
-        print(f"  sky_model:          {sky_model} [{beam_sky_src}]")
+        print(
+            "\n" + colors.heading("[DRY RUN] Prepare would be executed with:")
+        )
+        print(
+            f"  results_root:       {colors.path(results_root)} "
+            f"{colors.source(results_root_src)}"
+        )
+        print(
+            f"  beam_model:         {beam_model} {colors.source(beam_sky_src)}"
+        )
+        print(
+            f"  sky_model:          {sky_model} {colors.source(beam_sky_src)}"
+        )
         print(f"  run_id:             {args.run_id}")
-        print(f"  run_label:          {run_label} [{run_label_src}]")
+        print(
+            f"  run_label:          {run_label} {colors.source(run_label_src)}"
+        )
         print(f"  unique:             {unique}")
-        print(f"  template:           {template_yaml} [{template_src}]")
-        print(f"  variant:            {variant} [{variant_src}]")
+        print(
+            f"  template:           {colors.path(template_yaml)} "
+            f"{colors.source(template_src)}"
+        )
+        print(f"  variant:            {variant} {colors.source(variant_src)}")
         if valska_root is not None:
-            print(f"  valska_root:        {valska_root} [{valska_root_src}]")
+            print(
+                f"  valska_root:        {colors.path(valska_root)} "
+                f"{colors.source(valska_root_src)}"
+            )
         else:
             print("  valska_root:        (none)")
         if beamdata_path is not None:
-            print(f"  beamdata:           {beamdata_path} [{beamdata_src}]")
+            print(
+                f"  beamdata:           {colors.path(beamdata_path)} "
+                f"{colors.source(beamdata_src)}"
+            )
         else:
             print("  beamdata:           (none)")
         if args.fwhm_perturb_frac is not None:
@@ -719,21 +746,32 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("  fwhm_perturb_frac:  (none)")
         if repo_path is not None:
-            print(f"  pyuvsim_repo:       {repo_path} [{repo_src}]")
+            print(
+                f"  pyuvsim_repo:       {colors.path(repo_path)} "
+                f"{colors.source(repo_src)}"
+            )
         else:
             print("  pyuvsim_repo:       (none)")
-        print(f"  conda:              env={conda_env} [{conda_src}]")
-        print(f"  run_dir (preview):  {preview_run_dir}")
+        print(
+            f"  conda:              env={conda_env} {colors.source(conda_src)}"
+        )
+        print(f"  run_dir (preview):  {colors.path(preview_run_dir)}")
         if beamcheck_args.get("make_beam_check") is not None:
-            print("\n[DRY RUN] Additional beam checks enabled:")
+            print(
+                "\n"
+                + colors.heading("[DRY RUN] Additional beam checks enabled:")
+            )
             print(f"  beamcheck conda environment: {beamcheck_env}")
             print(f"  hours each side of transit: {check_hours}")
             print(f"  time step in seconds: {step_seconds}")
         else:
-            print("\n[DRY RUN] Additional beam checks disabled")
-        print("\n[DRY RUN] SLURM defaults to be written:")
+            print(
+                "\n"
+                + colors.heading("[DRY RUN] Additional beam checks disabled")
+            )
+        print("\n" + colors.heading("[DRY RUN] SLURM defaults to be written:"))
         print(f"  cpu: {slurm_cpu}")
-        print("\n[DRY RUN] No files will be created.")
+        print("\n" + colors.success("[DRY RUN] No files will be created."))
         return 0
 
     install = pyuvsimInstall(install_path=Path(repo_path))
@@ -762,9 +800,9 @@ def main(argv: list[str] | None = None) -> int:
     run_dir = Path(out["run_dir"])
     manifest = Path(out["manifest_json"])
 
-    print("\nRun prepared:")
-    print(f"  run_dir:      {run_dir}")
-    print(f"  manifest:     {manifest}")
+    print("\n" + colors.heading("Run prepared:"))
+    print(f"  run_dir:      {colors.path(run_dir)}")
+    print(f"  manifest:     {colors.path(manifest)}")
     print(f"  beam_model:   {beam_model}")
     print(f"  sky_model:    {sky_model}")
     print(f"  variant:      {variant}")

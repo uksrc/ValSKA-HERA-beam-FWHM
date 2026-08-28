@@ -27,6 +27,8 @@ Notes on testing techniques used:
 import json
 from pathlib import Path
 
+import pytest
+
 from valska.external_tools.bayeseor import (
     cli_prepare,
     cli_submit,
@@ -106,6 +108,46 @@ def test_cli_prepare_rejects_dual_perturbation_modes():
     assert code == 2
 
 
+@pytest.mark.parametrize(
+    ("color_mode", "expect_ansi"),
+    [("always", True), ("never", False)],
+)
+def test_cli_prepare_dry_run_color_modes(
+    tmp_path, capsys, monkeypatch, color_mode, expect_ansi
+):
+    """Prepare dry-runs honour the shared colour-mode contract."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+
+    code = cli_prepare.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--results-root",
+            str(tmp_path / "results"),
+            "--bayeseor-repo",
+            str(tmp_path / "BayesEoR"),
+            "--conda-sh",
+            "source /path/to/conda.sh",
+            "--conda-env",
+            "bayeseor",
+            "--dry-run",
+            "--color",
+            color_mode,
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert ("\x1b[" in out) is expect_ansi
+    assert "[DRY RUN] Prepare would be executed with:" in out
+
+
 def test_cli_sweep_antenna_mode_dry_run_returns_0():
     """
     sweep dry-run should support antenna_diameter perturbation mode.
@@ -128,6 +170,93 @@ def test_cli_sweep_antenna_mode_dry_run_returns_0():
         ]
     )
     assert code == 0
+
+
+def test_cli_sweep_dry_run_color_always(capsys, monkeypatch):
+    """Dry-run output can be colorized explicitly for demos."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+            "--color",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "[DRY RUN] Sweep would be executed with:" in out
+
+
+def test_cli_sweep_dry_run_color_never(capsys):
+    """Dry-run output remains plain when color is disabled."""
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+            "--color",
+            "never",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" not in out
+    assert "[runtime_paths.yaml:data.root]" in out
+
+
+def test_cli_sweep_dry_run_no_color_env_suppresses_color(capsys, monkeypatch):
+    """NO_COLOR suppresses ANSI output even when color is requested."""
+    monkeypatch.setenv("NO_COLOR", "1")
+
+    code = cli_sweep.main(
+        [
+            "--beam",
+            "airy",
+            "--sky",
+            "GLEAM_plus_GSM",
+            "--data",
+            "input.uvh5",
+            "--run-id",
+            "r001",
+            "--perturb-parameter",
+            "antenna_diameter",
+            "--antenna-diameter-fracs",
+            "0.0",
+            "--dry-run",
+            "--color",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" not in out
 
 
 def test_cli_sweep_rejects_mismatched_perturbation_flags():
@@ -178,6 +307,62 @@ def test_cli_submit_record_manifest_returns_2(tmp_path):
     _write_minimal_manifest(run_dir)
     code = cli_submit.main([str(run_dir), "--record", "manifest", "--dry-run"])
     assert code == 2
+
+
+@pytest.mark.parametrize(
+    ("color_mode", "expect_ansi"),
+    [("always", True), ("never", False)],
+)
+def test_cli_submit_dry_run_color_modes(
+    tmp_path, capsys, monkeypatch, color_mode, expect_ansi
+):
+    """Submission dry-runs honour the shared colour-mode contract."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    _write_minimal_manifest(run_dir)
+
+    code = cli_submit.main(
+        [
+            str(run_dir),
+            "--stage",
+            "cpu",
+            "--dry-run",
+            "--color",
+            color_mode,
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert ("\x1b[" in out) is expect_ansi
+    assert "Commands:" in out
+    assert "sbatch" in out
+
+
+def test_cli_submit_json_is_not_colorized(tmp_path, capsys, monkeypatch):
+    """Forced colour never introduces ANSI escapes into JSON output."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    _write_minimal_manifest(run_dir)
+
+    code = cli_submit.main(
+        [
+            str(run_dir),
+            "--stage",
+            "cpu",
+            "--dry-run",
+            "--json",
+            "--color",
+            "always",
+        ]
+    )
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "\x1b[" not in out
+    assert json.loads(out)["dry_run"] is True
 
 
 def test_cli_submit_sbatch_failure_returns_4(tmp_path, monkeypatch):

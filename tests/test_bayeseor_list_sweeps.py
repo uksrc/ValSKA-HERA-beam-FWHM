@@ -102,6 +102,27 @@ def test_list_sweeps_latest(tmp_path: Path, capsys) -> None:
     assert payload["sweeps"][0]["run_id"] == "sweep_new"
 
 
+def test_list_sweeps_color_always(tmp_path: Path, capsys, monkeypatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    results_root = tmp_path / "results"
+    _mk_sweep(
+        results_root,
+        beam="airy_diam14m",
+        sky="GSM_plus_GLEAM",
+        run_id="sweep_color",
+        created_utc="2026-02-20T20:00:00Z",
+    )
+
+    code = cli_list_sweeps.main(
+        ["--results-root", str(results_root), "--color", "always"]
+    )
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "sweep_color" in out
+
+
 def test_list_sweeps_missing_search_root_returns_2(
     tmp_path: Path, capsys
 ) -> None:

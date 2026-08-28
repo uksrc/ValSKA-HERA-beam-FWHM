@@ -64,6 +64,45 @@ class TestCLIPrepare:
 
         assert "usage:" in capsys.readouterr().err
 
+    @pytest.mark.parametrize(
+        ("color_mode", "expect_ansi"),
+        [("always", True), ("never", False)],
+    )
+    def test_cli_prepare_dry_run_color_modes(
+        self,
+        tmp_path,
+        capsys,
+        monkeypatch,
+        color_mode,
+        expect_ansi,
+    ):
+        """Prepare dry-runs honour the shared colour-mode contract."""
+        monkeypatch.delenv("NO_COLOR", raising=False)
+
+        code = cli_prepare.main(
+            [
+                "--beam",
+                "airy",
+                "--sky",
+                "GLEAM_plus_GSM",
+                "--run-id",
+                "r001",
+                "--results-root",
+                str(tmp_path / "results"),
+                "--pyuvsim-repo",
+                str(tmp_path / "pyuvsim"),
+                "--no-conda-activate",
+                "--dry-run",
+                "--color",
+                color_mode,
+            ]
+        )
+
+        assert code == 0
+        out = capsys.readouterr().out
+        assert ("\x1b[" in out) is expect_ansi
+        assert "[DRY RUN] Prepare would be executed with:" in out
+
 
 class TestCLISubmit:
     def test_cli_submit_missing_manifest_returns_1(self, tmp_path):
@@ -130,3 +169,60 @@ class TestCLISubmit:
         code = cli_submit.main([str(run_dir), "--dry-run"])
 
         assert code != 0
+
+    @pytest.mark.parametrize(
+        ("color_mode", "expect_ansi"),
+        [("always", True), ("never", False)],
+    )
+    def test_cli_submit_dry_run_color_modes(
+        self,
+        tmp_path,
+        capsys,
+        monkeypatch,
+        color_mode,
+        expect_ansi,
+    ):
+        """Submission dry-runs honour the shared colour-mode contract."""
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        _write_minimal_manifest(run_dir)
+
+        code = cli_submit.main(
+            [
+                str(run_dir),
+                "--dry-run",
+                "--color",
+                color_mode,
+            ]
+        )
+
+        assert code == 0
+        out = capsys.readouterr().out
+        assert ("\x1b[" in out) is expect_ansi
+        assert "Commands:" in out
+        assert "sbatch" in out
+
+    def test_cli_submit_json_is_not_colorized(
+        self, tmp_path, capsys, monkeypatch
+    ):
+        """Forced colour never introduces ANSI escapes into JSON output."""
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        _write_minimal_manifest(run_dir)
+
+        code = cli_submit.main(
+            [
+                str(run_dir),
+                "--dry-run",
+                "--json",
+                "--color",
+                "always",
+            ]
+        )
+
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "\x1b[" not in out
+        assert json.loads(out)["dry_run"] is True

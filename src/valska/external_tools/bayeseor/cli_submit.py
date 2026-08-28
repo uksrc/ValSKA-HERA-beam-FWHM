@@ -17,6 +17,7 @@ from valska.external_tools.common.submit import (
 )
 from valska.external_tools.common.utils import utc_now_compact
 
+from ...cli_format import CliColors, add_color_argument, resolve_color_mode
 from .submit import (
     BayesEoRSubmitPlan,
     _find_completed_cpu_precompute_matrix_dir,
@@ -178,6 +179,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the full result object as JSON to stdout (useful for scripting).",
     )
+    add_color_argument(p)
 
     return p
 
@@ -233,28 +235,36 @@ def _has_gpu_jobs(existing: dict[str, Any] | None) -> bool:
     return sf_ok or ns_ok
 
 
-def _print_summary(result: dict[str, Any]) -> None:
+def _print_summary(result: dict[str, Any], *, colors: CliColors) -> None:
     """Print a readable submission summary."""
     run_dir = result.get("run_dir", "")
     dry_run = bool(result.get("dry_run", False))
 
-    print(f"Run dir: {run_dir}")
-    print(f"Dry run: {dry_run}")
+    print(f"Run dir: {colors.path(run_dir)}")
+    dry_run_text = (
+        colors.warning(dry_run) if dry_run else colors.success(dry_run)
+    )
+    print(f"Dry run: {dry_run_text}")
 
-    print("\nCommands:")
+    print("\n" + colors.heading("Commands:"))
     for cmd in result.get("commands", []):
         print(f"  {cmd}")
 
     jobs = result.get("jobs", {}) or {}
     if not jobs:
-        print("\nNo jobs recorded.")
+        print("\n" + colors.warning("No jobs recorded."))
         return
 
-    print("\nJob IDs:")
+    print("\n" + colors.heading("Job IDs:"))
     cpu = jobs.get("cpu_precompute")
     if isinstance(cpu, dict):
         jid = cpu.get("job_id")
-        print(f"  CPU precompute: {jid if jid is not None else '(dry-run)'}")
+        value = (
+            colors.success(jid)
+            if jid is not None
+            else colors.warning("(dry-run)")
+        )
+        print(f"  CPU precompute: {value}")
 
     gpu = jobs.get("gpu")
     if isinstance(gpu, dict):
@@ -264,21 +274,29 @@ def _print_summary(result: dict[str, Any]) -> None:
 
         sf = gpu.get("signal_fit")
         if isinstance(sf, dict):
-            print(
-                f"  signal_fit: {sf.get('job_id') if sf.get('job_id') is not None else '(dry-run)'}"
+            sf_id = sf.get("job_id")
+            value = (
+                colors.success(sf_id)
+                if sf_id is not None
+                else colors.warning("(dry-run)")
             )
+            print(f"  signal_fit: {value}")
 
         ns = gpu.get("no_signal")
         if isinstance(ns, dict):
-            print(
-                f"  no_signal: {ns.get('job_id') if ns.get('job_id') is not None else '(dry-run)'}"
+            ns_id = ns.get("job_id")
+            value = (
+                colors.success(ns_id)
+                if ns_id is not None
+                else colors.warning("(dry-run)")
             )
+            print(f"  no_signal: {value}")
 
     if not dry_run:
-        print("\nRecorded:")
-        print(f"  {Path(run_dir) / 'jobs.json'}")
+        print("\n" + colors.heading("Recorded:"))
+        print(f"  {colors.path(Path(run_dir) / 'jobs.json')}")
 
-    print("\nNext steps:")
+    print("\n" + colors.heading("Next steps:"))
     print("  - Check `squeue -u $USER` to see submitted jobs.")
     print(
         "  - Inspect logs referenced by the submit scripts in the run directory."
@@ -292,6 +310,9 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for valska-bayeseor-submit."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    colors = CliColors(
+        resolve_color_mode(args.color), enabled=not bool(args.json_out)
+    )
 
     run_dir = Path(args.run_dir).expanduser().resolve()
     jobs_path = run_dir / "jobs.json"
@@ -326,7 +347,10 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 archived = _archive_jobs_json(run_dir)
                 if archived is not None and not args.dry_run:
-                    print(f"Archived existing jobs.json -> {archived}")
+                    print(
+                        "Archived existing jobs.json -> "
+                        f"{colors.path(archived)}"
+                    )
                 # After archiving, treat as no existing jobs record.
                 existing = None
                 cpu_exists = False
@@ -437,7 +461,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_out:
         print(json.dumps(result, indent=2))
     else:
-        _print_summary(result)
+        _print_summary(result, colors=colors)
 
     return 0
 

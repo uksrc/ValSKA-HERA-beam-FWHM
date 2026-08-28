@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import math
+import os
 import re
 from collections.abc import Mapping
 from contextlib import redirect_stdout
@@ -15,6 +16,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 import matplotlib.pyplot as plt
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
 from valska.evidence import ChainPair, run_complete_bayeseor_analysis
 from valska.plotting import BeamAnalysisPlotter
@@ -375,6 +383,7 @@ def generate_sweep_report(
     make_plots: bool = True,
     include_plot_analysis_results: bool = False,
     include_complete_analysis_table: bool = False,
+    show_progress: bool = False,
 ) -> SweepReportResult:
     """Generate summary table(s) and plots for an existing sweep directory."""
     sweep_dir = Path(sweep_dir).expanduser().resolve()
@@ -520,13 +529,37 @@ def generate_sweep_report(
     complete_analysis_rows: list[dict[str, Any]] = []
     if include_complete_analysis_table and chain_pairs:
         buffer = io.StringIO()
-        with redirect_stdout(buffer):
-            complete_res = run_complete_bayeseor_analysis(
-                chain_pairs=chain_pairs,
-                create_plots=False,
-                verbose=False,
-                show_progress=False,
+        if show_progress:
+            progress_console = Console(
+                stderr=True,
+                force_terminal=True,
+                no_color=os.environ.get("NO_COLOR") is not None,
             )
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                TimeElapsedColumn(),
+                console=progress_console,
+                transient=True,
+            ) as progress:
+                progress.add_task(
+                    "Running complete BayesEoR analysis", total=None
+                )
+                with redirect_stdout(buffer):
+                    complete_res = run_complete_bayeseor_analysis(
+                        chain_pairs=chain_pairs,
+                        create_plots=False,
+                        verbose=False,
+                        show_progress=False,
+                    )
+        else:
+            with redirect_stdout(buffer):
+                complete_res = run_complete_bayeseor_analysis(
+                    chain_pairs=chain_pairs,
+                    create_plots=False,
+                    verbose=False,
+                    show_progress=False,
+                )
 
         complete_analysis_json = report_dir / "complete_analysis_results.json"
         complete_analysis_json.write_text(

@@ -113,6 +113,28 @@ def test_cleanup_dry_run_plans_actions(tmp_path: Path, capsys) -> None:
     assert point_missing.exists()
 
 
+def test_cleanup_color_always(tmp_path: Path, capsys, monkeypatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    results_root = tmp_path / "results"
+    _mk_sweep(results_root, "sweep_cleanup")
+
+    code = cli_cleanup.main(
+        [
+            "--results-root",
+            str(results_root),
+            "--prune-logs",
+            "--color",
+            "always",
+        ]
+    )
+    assert code == 0
+
+    out = capsys.readouterr().out
+    assert "\x1b[" in out
+    assert "Sweep cleanup summary:" in out
+    assert "Actions:" in out
+
+
 def test_cleanup_execute_prune_runs_requires_confirm(
     tmp_path: Path, capsys
 ) -> None:

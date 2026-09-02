@@ -605,6 +605,49 @@ def test_cli_report_prints_plain_complete_analysis_table(
     assert "✅ PASS" not in out
 
 
+def test_cli_report_json_disables_progress(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    calls = {}
+
+    def fake_generate_sweep_report(**kwargs):
+        calls.update(kwargs)
+        return cli_report.SweepReportResult(
+            sweep_dir=tmp_path,
+            out_dir=tmp_path / "report",
+            evidence_source="ins",
+            rows_total=1,
+            rows_complete=1,
+            summary_csv=tmp_path / "report" / "summary.csv",
+            summary_json=tmp_path / "report" / "summary.json",
+            delta_plot_png=None,
+            evidence_plot_png=None,
+            plot_analysis_results_png=None,
+            valska_plot_analysis_results_pngs=[],
+            complete_analysis_json=None,
+            complete_analysis_csv=None,
+            complete_analysis_rows=[],
+        )
+
+    monkeypatch.setattr(
+        cli_report, "generate_sweep_report", fake_generate_sweep_report
+    )
+
+    code = cli_report.main(
+        [
+            str(tmp_path),
+            "--include-complete-analysis-table",
+            "--progress",
+            "always",
+            "--json",
+        ]
+    )
+
+    assert code == 0
+    assert calls["show_progress"] is False
+    json.loads(capsys.readouterr().out)
+
+
 def test_cli_report_rejects_print_table_with_json(
     tmp_path: Path,
     capsys,

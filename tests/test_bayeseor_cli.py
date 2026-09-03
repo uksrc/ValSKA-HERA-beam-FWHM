@@ -509,7 +509,7 @@ def test_cli_sweep_dry_run_color_never(capsys):
     assert code == 0
     out = capsys.readouterr().out
     assert "\x1b[" not in out
-    assert "[runtime_paths.yaml:data.root]" in out
+    assert "[DRY RUN] Sweep would be executed with:" in out
 
 
 def test_cli_sweep_dry_run_no_color_env_suppresses_color(capsys, monkeypatch):

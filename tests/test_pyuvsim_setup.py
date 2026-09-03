@@ -8,6 +8,9 @@ from typing import Any
 
 import numpy
 import pytest
+from astropy import units
+from astropy.coordinates import AltAz, EarthLocation, SkyCoord
+from astropy.time import Time
 from pyradiosky import SkyModel
 from ruamel.yaml.comments import CommentedSeq
 
@@ -17,6 +20,7 @@ from valska.external_tools.pyuvsim.runner import CondaRunner
 from valska.external_tools.pyuvsim.setup import prepare_pyuvsim_run
 from valska.external_tools.pyuvsim.setup_beamcheck import (
     prepare_beam_check_cfg,
+    zenith_radec,
 )
 from valska.utils_yaml import dump_yaml, load_yaml
 
@@ -258,8 +262,8 @@ def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
     _pyuvsim_config, _run_dir
 ):
 
-    expected_dec = -30.803418402688553
-    expected_ra = 30.51832412194913
+    expected_ra = 31.277234663933523
+    expected_dec = -30.80274893729959
 
     prepare_pyuvsim_run(
         **_pyuvsim_config,
@@ -279,6 +283,7 @@ def test_prepare_pyuvsim_run_beamcheck_creates_zenith_catalog(
     assert len(sky.ra) == 1
     assert len(sky.dec) == 1
 
+    assert numpy.isclose(sky.ra[0].deg, expected_ra)
     assert numpy.isclose(sky.dec[0].deg, expected_dec)
 
 
@@ -400,3 +405,91 @@ def test_prepare_pyuvsim_run_recognises_symlinked_default_template(
 
     manifest = json.loads(outputs["manifest_json"].read_text())
     assert Path(manifest["template_yaml"]) == logical_template.resolve()
+
+
+@pytest.mark.parametrize(
+    "time_strings",
+    [
+        # Odd number of points, equal spacing.
+        [
+            "2026-01-15T10:00:00",
+            "2026-01-15T12:00:00",
+            "2026-01-15T14:00:00",
+        ],
+        # Even number of points, equal spacing.
+        [
+            "2026-01-15T10:00:00",
+            "2026-01-15T11:00:00",
+            "2026-01-15T12:00:00",
+            "2026-01-15T13:00:00",
+        ],
+        # Odd number of points, unequal spacing.
+        [
+            "2026-01-15T10:00:00",
+            "2026-01-15T10:17:00",
+            "2026-01-15T14:00:00",
+        ],
+        # Even number of points, unequal spacing.
+        [
+            "2026-01-15T10:00:00",
+            "2026-01-15T10:17:00",
+            "2026-01-15T12:43:00",
+            "2026-01-15T14:00:00",
+        ],
+        # Minimum valid number of points.
+        [
+            "2026-01-15T10:00:00",
+            "2026-01-15T14:00:00",
+        ],
+    ],
+)
+def test_zenith_radec_is_at_zenith_at_observation_midpoint(time_strings):
+    """The RA/Dec returned by zenith_radec should be at zenith at mid-time."""
+
+    time_array = Time(time_strings, scale="utc").jd
+
+    longitude = -26.7033 * units.deg
+    latitude = -26.7033 * units.deg
+    height = 377.0 * units.m
+
+    ra, dec = zenith_radec(
+        time_array,
+        longitude,
+        latitude,
+        height,
+    )
+
+    # zenith_radec should put the source at zenith at the midpoint.
+    t_mid = Time(
+        0.5 * (time_array[0] + time_array[-1]),
+        format="jd",
+        scale="utc",
+    )
+
+    location = EarthLocation(
+        lat=latitude,
+        lon=longitude,
+        height=height,
+    )
+
+    source = SkyCoord(
+        ra=ra,
+        dec=dec,
+        unit="deg",
+        frame="icrs",
+    )
+
+    altaz = source.transform_to(
+        AltAz(
+            obstime=t_mid,
+            location=location,
+            pressure=0 * units.hPa,
+        )
+    )
+
+    # The source should be exactly at zenith, within the numerical
+    # precision of the coordinate transformations.
+    assert altaz.alt.to_value(units.deg) == pytest.approx(
+        90.0,
+        abs=1e-8,
+    )

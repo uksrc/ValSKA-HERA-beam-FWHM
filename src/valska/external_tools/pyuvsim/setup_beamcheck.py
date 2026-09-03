@@ -121,25 +121,6 @@ def get_config_times(cfg: dict) -> numpy.typing.NDArray:
     return time_array
 
 
-def get_ra_dec_at_mid_time(
-    time_array: numpy.typing.NDArray, longitude: Angle, latitude: Angle
-) -> tuple[float, float]:
-    """
-    Construct RA/Dec such that source will be overhead at
-    the mid point of the time array at the telescope
-    lon/lat
-    This is the simple HA zenith method
-    uses geodetic latitude from config file
-    (GPS style on Earth ellipsoid)
-    """
-    t_mid = 0.5 * (time_array[0] + time_array[-1])
-
-    ra = _lst_at_time(t_mid, longitude)
-    dec = latitude
-
-    return ra, dec
-
-
 def zenith_radec(
     time_array: numpy.typing.NDArray,
     longitude: Angle,
@@ -148,7 +129,7 @@ def zenith_radec(
 ) -> tuple[float, float]:
     """
     Full calculation of RA and Dec to place source at
-    celestial zenith
+    celestial zenith at the mid-time of the observation
     Different to the simple HA method due to
     - geocentric latitude
     - Earth ellipsoid flattening
@@ -160,7 +141,9 @@ def zenith_radec(
         height=height,
     )
 
-    obstime = Time(time_array, format="jd", scale="utc")
+    # Calculate middle of observation
+    t_mid = 0.5 * (time_array[0] + time_array[-1])
+    obstime = Time(t_mid, format="jd", scale="utc")
 
     altaz = SkyCoord(
         alt=90,
@@ -173,7 +156,7 @@ def zenith_radec(
 
     icrs = altaz.icrs
 
-    return icrs.ra.deg[0], icrs.dec.deg[0]
+    return float(icrs.ra.deg), float(icrs.dec.deg)
 
 
 def prepare_beam_check_cfg(
@@ -202,6 +185,8 @@ def prepare_beam_check_cfg(
     _update_baselines(new_cfg, simulation_config.ref_antenna)
 
     # Optional: specify new time array
+    # This has an odd number of steps, with midpoint exactly
+    # at the middle index
     if hours_each_side is not None:
         time_array, new_cfg = _adjust_time_array(
             new_cfg,
@@ -211,7 +196,8 @@ def prepare_beam_check_cfg(
         )
 
     # Build minimal sky catalogue
-    # Set RA/Dec so that source transits zenith at t_mid
+    # Set RA/Dec so that source transits zenith at the
+    # middle index of the time array
     ra, dec = zenith_radec(
         time_array,
         simulation_config.longitude,

@@ -7,6 +7,11 @@ Primary entry points:
 - get_template_path: access shipped validation templates.
 """
 
+from .analysis_plot import (
+    BayesEoRPlotConfig,
+    load_bayeseor_analysis_outputs,
+    plot_bayeseor_power_spectra_and_posteriors,
+)
 from .constants import TOOL_NAME
 from .report import generate_sweep_report
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
@@ -27,4 +32,7 @@ __all__ = [
     "CondaRunner",
     "ContainerRunner",
     "TOOL_NAME",
+    "BayesEoRPlotConfig",
+    "load_bayeseor_analysis_outputs",
+    "plot_bayeseor_power_spectra_and_posteriors",
 ]

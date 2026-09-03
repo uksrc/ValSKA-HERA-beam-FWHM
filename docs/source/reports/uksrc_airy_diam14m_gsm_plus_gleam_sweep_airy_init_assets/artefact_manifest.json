@@ -1,0 +1,59 @@
+{
+  "created_utc": "2026-07-16T11:50:22.882199+00:00",
+  "sweep_dir": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3",
+  "report_dir": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report",
+  "assets_dir": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets",
+  "evidence_source": "ins",
+  "rows_total": 11,
+  "rows_complete": 11,
+  "artefacts": [
+    {
+      "role": "sweep_summary_csv",
+      "name": "sweep_report_summary.csv",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/sweep_report_summary.csv",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.csv"
+    },
+    {
+      "role": "sweep_summary_json",
+      "name": "sweep_report_summary.json",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/sweep_report_summary.json",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/sweep_report_summary.json"
+    },
+    {
+      "role": "delta_log_evidence_plot",
+      "name": "delta_log_evidence_vs_perturb_frac.png",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/delta_log_evidence_vs_perturb_frac.png",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/delta_log_evidence_vs_perturb_frac.png"
+    },
+    {
+      "role": "log_evidence_by_model_plot",
+      "name": "log_evidence_by_model_vs_perturb_frac.png",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/log_evidence_by_model_vs_perturb_frac.png",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/log_evidence_by_model_vs_perturb_frac.png"
+    },
+    {
+      "role": "legacy_analysis_plot",
+      "name": "plot_analysis_results_signal_fit.png",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/plot_analysis_results_signal_fit.png",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/plot_analysis_results_signal_fit.png"
+    },
+    {
+      "role": "valska_analysis_plot",
+      "name": "plot_analysis_results_signal_fit_valska.png",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/plot_analysis_results_signal_fit_valska.png",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/plot_analysis_results_signal_fit_valska.png"
+    },
+    {
+      "role": "complete_analysis_json",
+      "name": "complete_analysis_results.json",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/complete_analysis_results.json",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_results.json"
+    },
+    {
+      "role": "complete_analysis_csv",
+      "name": "complete_analysis_successful.csv",
+      "source_path": "/shared/UKSRC-ST/ps550/validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3/report/complete_analysis_successful.csv",
+      "copied_path": "/home/ps550/ValSKA-HERA-beam-FWHM/docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/complete_analysis_successful.csv"
+    }
+  ]
+}

@@ -190,7 +190,7 @@ class BeamMetrics:
                 100 * self.results["chromaticity"]["freq_std"],
             )
             log.info(
-                "   Fractional linear trend with frequency = %.3f %%",
+                "   Fractional linear trend within frequency band = %.3f %%",
                 100 * self.results["chromaticity"]["freq_grad"],
             )
             log.info(
@@ -539,14 +539,15 @@ def chromaticity_test(
 
     inv_freq = 1 / freq_array
     valid = ~numpy.isnan(test_param)
+    bandwidth = freq_array.max() - freq_array.min()
 
-    # Measure variation across frequency
+    # Measure variation across frequency band
     if numpy.sum(valid) > 1:
         freq_std = numpy.std(test_param[valid]) / numpy.mean(test_param[valid])
         p = numpy.polyfit(
             freq_array[valid], numpy.abs(test_param[valid]), deg=1
         )
-        freq_grad = p[0] / numpy.mean(test_param[valid])
+        freq_grad = p[0] * bandwidth / numpy.mean(test_param[valid])
         trend = numpy.polyval(p, freq_array[valid])
         residual = test_param[valid] - trend
         frac_resid = numpy.std(residual) / numpy.mean(test_param[valid])

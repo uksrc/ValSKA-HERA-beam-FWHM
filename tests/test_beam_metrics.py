@@ -1,13 +1,15 @@
 """Unit tests for beam metrics"""
 
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy
 import pytest
+from astropy.coordinates import Angle
 
 from valska import beam_metrics
 
-from .constants import make_airy_data, make_gaussian_data, write_pyuvsim_config
+from .constants import make_airy_data, make_gaussian_data
 
 CONFIG_TEXT = (
     "beam_paths:\n"
@@ -34,11 +36,13 @@ def test_beam_width_gaussian_fit_recovers_fwhm():
     v_auto = y[:, numpy.newaxis]
     freq = numpy.array([1.0])
 
-    fwhm, gauss_result, airy_result = beam_metrics.fit_beam_width_vs_frequency(
-        freq=freq,
-        theta_deg=theta,
-        v_auto=v_auto,
-        shape="GaussianBeam",
+    fwhm, chi2, gauss_result, airy_result = (
+        beam_metrics.fit_beam_width_vs_frequency(
+            freq=freq,
+            theta_deg=theta,
+            v_auto=v_auto,
+            shape="GaussianBeam",
+        )
     )
 
     expected_fwhm = 2 * numpy.sqrt(2 * numpy.log(2)) * sigma
@@ -64,7 +68,7 @@ def test_beam_width_gaussian_fit_multiple_frequencies():
     )
     freq = numpy.array([1.0, 2.0, 3.0])
 
-    fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+    fwhm, _, _, _ = beam_metrics.fit_beam_width_vs_frequency(
         freq=freq,
         theta_deg=theta,
         v_auto=data,
@@ -86,11 +90,13 @@ def test_beam_width_airy_fit_returns_parameters():
 
     v_auto = y[:, numpy.newaxis]
 
-    fwhm, gauss_result, airy_result = beam_metrics.fit_beam_width_vs_frequency(
-        freq=freqs,
-        theta_deg=theta,
-        v_auto=v_auto,
-        shape="AiryBeam",
+    fwhm, chi2, gauss_result, airy_result = (
+        beam_metrics.fit_beam_width_vs_frequency(
+            freq=freqs,
+            theta_deg=theta,
+            v_auto=v_auto,
+            shape="AiryBeam",
+        )
     )
 
     # Airy branch should not populate Gaussian params
@@ -132,7 +138,7 @@ def test_beam_width_empty_mask_returns_nan():
     v_auto = numpy.zeros((100, 1))
     freq = numpy.array([1.0])
 
-    fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+    fwhm, _, _, _ = beam_metrics.fit_beam_width_vs_frequency(
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
@@ -158,7 +164,7 @@ def test_beam_width_gaussian_fit_with_noise():
     v_auto = noisy[:, numpy.newaxis]
     freq = numpy.array([1.0])
 
-    fwhm, _, _ = beam_metrics.fit_beam_width_vs_frequency(
+    fwhm, _, _, _ = beam_metrics.fit_beam_width_vs_frequency(
         freq=freq,
         theta_deg=theta,
         v_auto=v_auto,
@@ -182,15 +188,11 @@ def test_chromaticity_returns_expected_correlation(capsys):
     freq = numpy.array([1, 1.2, 1.5, 2, 3, 6], dtype=float)
     param = numpy.array([6, 5, 4, 3, 2, 1], dtype=float)
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
     expected = 1.0
 
-    assert numpy.isclose(corr, expected)
-
-    captured = capsys.readouterr()
-    assert "Variation with frequency" in captured.out
-    assert "Correlation with 1/frequency" in captured.out
+    assert numpy.isclose(result["correlation"], expected)
 
 
 def test_chromaticity_ignores_nan_values():
@@ -218,11 +220,11 @@ def test_chromaticity_ignores_nan_values():
         dtype=float,
     )
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
     expected = 1.0
 
-    assert numpy.isclose(corr, expected, equal_nan=True)
+    assert numpy.isclose(result["correlation"], expected, equal_nan=True)
 
 
 def test_chromaticity_returns_nan_when_not_enough_samples():
@@ -233,9 +235,12 @@ def test_chromaticity_returns_nan_when_not_enough_samples():
     freq = numpy.array([1, 2], dtype=float)
     param = numpy.array([1, 2], dtype=float)
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
-    assert numpy.isnan(corr)
+    assert numpy.isclose(result["correlation"], numpy.nan, equal_nan=True)
+    assert numpy.isclose(result["freq_std"], 0.5 / 1.5)
+    assert numpy.isclose(result["freq_grad"], 1.0 / 1.5)
+    assert numpy.isclose(result["frac_resid"], 0.0)
 
 
 def test_chromaticity_all_nan_input():
@@ -245,21 +250,27 @@ def test_chromaticity_all_nan_input():
     freq = numpy.array([1, 2, 3], dtype=float)
     param = numpy.array([numpy.nan, numpy.nan, numpy.nan])
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
-    assert numpy.isnan(corr)
+    assert numpy.isclose(result["correlation"], numpy.nan, equal_nan=True)
+    assert numpy.isclose(result["freq_std"], 0.0)
+    assert numpy.isclose(result["freq_grad"], 0.0)
+    assert numpy.isclose(result["frac_resid"], 0.0)
 
 
 def test_chromaticity_constant_parameter():
     """
-    Constant parameter arrays produce undefined correlation.
+    Constant parameter arrays produce zero slope and undefined correlation.
     """
     freq = numpy.array([1, 2, 3, 4, 5, 6], dtype=float)
     param = numpy.ones(6)
 
-    corr = beam_metrics.chromaticity_test(freq, param)
+    result = beam_metrics.chromaticity_test(freq, param)
 
-    assert numpy.isnan(corr)
+    assert numpy.isclose(result["correlation"], numpy.nan, equal_nan=True)
+    assert numpy.isclose(result["freq_std"], 0.0)
+    assert numpy.isclose(result["freq_grad"], 0.0)
+    assert numpy.isclose(result["frac_resid"], 0.0)
 
 
 def test_plot_beam_shape_basic():
@@ -277,6 +288,7 @@ def test_plot_beam_shape_basic():
     ax.set_ylabel.assert_called_with("Stokes I (XX+YY) Amplitude (Jy)")
     ax.set_title.assert_called_with("Autocorrelation beam profile (1.0 MHz)")
     ax.legend.assert_called_once()
+    ax.set_yscale.assert_not_called()
 
 
 def test_plot_beam_shape_with_fits():
@@ -300,6 +312,18 @@ def test_plot_beam_shape_with_fits():
 
     # Check that fits were plotted
     assert ax.plot.call_count >= 3  # data + two fits
+
+
+def test_plot_beam_shape_ylog():
+    ax = MagicMock()
+
+    theta = numpy.array([0, 1, 2])
+    y = numpy.array([1, 2, 3])
+    freq = 1e6
+
+    beam_metrics.plot_beam_shape(ax, theta, y, freq, ylog=True)
+
+    ax.set_yscale.assert_called_once_with("log")
 
 
 def test_plot_spectrum_basic():
@@ -341,31 +365,25 @@ def test_plot_spectrum_midpoint_is_correct():
     assert ax.axvline.call_args[0][0] == freq[mid_idx]
 
 
-def test_sim_config_init_defaults():
-    config = beam_metrics.SimulationConfig()
-
-    assert config.latitude is None
-    assert config.sigma is None
-    assert config.beam_shape is None
-
-
-def test_sim_config_init_values():
-    config = beam_metrics.SimulationConfig(
-        latitude=-30.7,
-        sigma=0.5,
-        beam_shape="GaussianBeam",
-    )
-
-    assert config.latitude == -30.7
-    assert config.sigma == 0.5
-    assert config.beam_shape == "GaussianBeam"
-
-
 def test_beam_metrics_init():
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+            Path("templates"),
+        )
+
+        mock_config.assert_called_once_with(
+            Path("config.yaml"),
+            Path("templates"),
+        )
+
+        assert bm.simulation_config is mock_config.return_value
 
     assert bm.uv_filename == "test.uvh5"
-    assert isinstance(bm.simulation_config, beam_metrics.SimulationConfig)
 
     numpy.testing.assert_array_equal(bm.baseline_counts, numpy.array([]))
     numpy.testing.assert_array_equal(bm.lsts_hours, numpy.array([]))
@@ -375,93 +393,19 @@ def test_beam_metrics_init():
     numpy.testing.assert_array_equal(bm.v_time_bl, numpy.array([]))
 
 
-@pytest.mark.parametrize(
-    ("beam_spec", "expected_shape", "expected_size"),
-    [
-        (
-            "    class: GaussianBeam\n    sigma: 0.2",
-            "GaussianBeam",
-            0.2,
-        ),
-        (
-            "    type: gaussian\n    sigma: 0.2",
-            "GaussianBeam",
-            0.2,
-        ),
-        (
-            "    class: AiryBeam\n    diameter: 14.0",
-            "AiryBeam",
-            14.0,
-        ),
-        (
-            "    type: airy\n    diameter: 14.0",
-            "AiryBeam",
-            14.0,
-        ),
-    ],
-)
-def test_read_simulation_config_beam_mapping(
-    tmp_path,
-    beam_spec,
-    expected_shape,
-    expected_size,
-):
-
-    config_text = CONFIG_TEXT.format(beam_spec=beam_spec)
-
-    config_path = write_pyuvsim_config(tmp_path, config_text)
-
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(config_path)
-
-    assert bm.simulation_config.beam_shape == expected_shape
-    if expected_shape == "GaussianBeam":
-        assert bm.simulation_config.sigma == expected_size
-        assert bm.simulation_config.diameter is None
-    if expected_shape == "AiryBeam":
-        assert bm.simulation_config.sigma is None
-        assert bm.simulation_config.diameter == expected_size
-    assert bm.simulation_config.latitude == -26.7
-
-
-def test_read_simulation_config_unknown_beam_type(tmp_path):
-
-    config_text = CONFIG_TEXT.format(beam_spec="    type: not_a_beam\n")
-
-    config_path = write_pyuvsim_config(tmp_path, config_text)
-
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-
-    with pytest.raises(KeyError):
-        bm.read_simulation_config(config_path)
-
-
-def test_prepare_uv_data_raises_without_latitude():
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-
-    mock_uv = MagicMock()
-
-    mock_uv.time_array = numpy.array([1.0, 1.0])
-    mock_uv.lst_array = numpy.array([0.1, 0.1])
-    mock_uv.freq_array = numpy.array([[100e6, 110e6]])
-
-    # shape:
-    # (Nblts=2, Nspws=1, Nfreqs=2, Npols=2)
-    mock_uv.data_array = numpy.ones((2, 1, 2, 2), dtype=complex)
-
-    mock_uv.select.return_value = mock_uv
-
-    with pytest.raises(ValueError, match="Please add the simulation config"):
-        bm.prepare_uv_data(mock_uv)
-
-
 def test_prepare_uv_data_success(tmp_path):
 
-    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
-    config_path = write_pyuvsim_config(tmp_path, config_text)
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_sim_config = Mock()
+        mock_sim_config.latitude = Angle(-26.7, unit="deg")
+        mock_sim_config.source_ra = Angle([0.15], unit="rad")
+        mock_config.return_value = mock_sim_config
 
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(config_path)
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+            Path("templates"),
+        )
 
     mock_uv = MagicMock()
 
@@ -492,14 +436,20 @@ def test_prepare_uv_data_success(tmp_path):
 
     assert len(bm.theta_deg) == 2
 
+    numpy.testing.assert_allclose(
+        bm.theta_deg, numpy.array([-2.55926667, 2.55926667])
+    )
+
 
 def test_prepare_uv_data_raises_for_inconsistent_baselines(tmp_path):
 
-    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
-    config_path = write_pyuvsim_config(tmp_path, config_text)
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
 
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-    bm.read_simulation_config(config_path)
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     mock_uv = MagicMock()
 
@@ -526,12 +476,13 @@ def test_compute_beam_metrics(
     mock_chromaticity,
     tmp_path,
 ):
-    config_text = CONFIG_TEXT.format(beam_spec=BEAM_SPEC)
-    config_path = write_pyuvsim_config(tmp_path, config_text)
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
 
-    bm = beam_metrics.BeamMetrics("test.uvh5")
-
-    bm.read_simulation_config(config_path)
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     bm.theta_deg = numpy.array([-5, 0, 5])
     bm.v_auto = numpy.ones((3, 4))
@@ -539,17 +490,18 @@ def test_compute_beam_metrics(
 
     mock_fit.return_value = (
         numpy.array([10.0, 11.0, 12.0, 13.0]),
+        numpy.array([1.0, 1.0, 1.0, 1.0]),
         "gauss_result",
         "airy_result",
     )
 
-    gauss_result, airy_result, widths = bm.compute_beam_metrics()
+    bm.compute_beam_metrics()
 
-    assert gauss_result == "gauss_result"
-    assert airy_result == "airy_result"
+    assert bm.gauss_result == "gauss_result"
+    assert bm.airy_result == "airy_result"
 
     numpy.testing.assert_array_equal(
-        widths,
+        bm.fit_vs_freq,
         numpy.array([10.0, 11.0, 12.0, 13.0]),
     )
 
@@ -569,7 +521,13 @@ def test_make_plots(
     mock_waterfall,
     mock_show,
 ):
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     bm.v_auto = numpy.ones((2, 4))
     bm.v_time_bl = numpy.ones((2, 2))
@@ -577,12 +535,11 @@ def test_make_plots(
     bm.lsts_hours = numpy.array([1.0, 2.0])
     bm.theta_deg = numpy.array([-1.0, 1.0])
     bm.freq_array = numpy.array([100e6, 110e6, 120e6, 130e6])
+    bm.gauss_result = "gauss"
+    bm.airy_result = "airy"
+    bm.fit_vs_freq = numpy.array([1, 2, 3, 4])
 
-    bm.make_plots(
-        gauss_result="gauss",
-        airy_result="airy",
-        fit_vs_freq=numpy.array([1, 2, 3, 4]),
-    )
+    bm.make_plots()
 
     mock_heatmap.assert_called_once()
     mock_beam_shape.assert_called_once()
@@ -604,7 +561,13 @@ def test_make_plots_can_save_without_showing(
     mock_show,
     tmp_path,
 ):
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     bm.v_auto = numpy.ones((2, 4))
     bm.v_time_bl = numpy.ones((2, 2))
@@ -612,13 +575,13 @@ def test_make_plots_can_save_without_showing(
     bm.lsts_hours = numpy.array([1.0, 2.0])
     bm.theta_deg = numpy.array([-1.0, 1.0])
     bm.freq_array = numpy.array([100e6, 110e6, 120e6, 130e6])
+    bm.gauss_result = "gauss"
+    bm.airy_result = None
+    bm.fit_vs_freq = numpy.array([1, 2, 3, 4])
 
     save_path = tmp_path / "beam_metrics.png"
 
     bm.make_plots(
-        gauss_result="gauss",
-        airy_result=None,
-        fit_vs_freq=numpy.array([1, 2, 3, 4]),
         save_path=save_path,
         show=False,
     )
@@ -633,16 +596,24 @@ def test_make_plots_can_save_without_showing(
 
 @patch("valska.beam_metrics.UVData")
 def test_check_beam(mock_uvdata):
-    bm = beam_metrics.BeamMetrics("test.uvh5")
+
+    with patch("valska.beam_metrics.SimulationConfig") as mock_config:
+        mock_config.return_value = Mock()
+
+        bm = beam_metrics.BeamMetrics(
+            "test.uvh5",
+            "config.yaml",
+        )
 
     with (
         patch.object(bm, "prepare_uv_data") as mock_prepare,
         patch.object(
             bm,
             "compute_beam_metrics",
-            return_value=("g", "a", numpy.array([1])),
+            return_value=(numpy.array([1]), numpy.array([1]), "g", "a"),
         ) as mock_compute,
         patch.object(bm, "make_plots") as mock_plots,
+        patch.object(bm, "write_report", return_value={}) as mock_write,
     ):
         mock_uv_instance = MagicMock()
         mock_uvdata.from_file.return_value = mock_uv_instance
@@ -653,3 +624,4 @@ def test_check_beam(mock_uvdata):
         mock_prepare.assert_called_once_with(mock_uv_instance)
         mock_compute.assert_called_once()
         mock_plots.assert_called_once()
+        mock_write.assert_called_once()

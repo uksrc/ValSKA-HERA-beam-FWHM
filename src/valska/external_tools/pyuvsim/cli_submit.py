@@ -221,6 +221,15 @@ def _print_summary(result: dict[str, Any], *, colors: CliColors) -> None:
             else colors.warning("(dry-run)")
         )
         print(f"  simulate: {value}")
+    beamcheck = jobs.get("beamcheck")
+    if isinstance(beamcheck, dict):
+        jid = beamcheck.get("job_id")
+        value = (
+            colors.success(jid)
+            if jid is not None
+            else colors.warning("(dry-run)")
+        )
+        print(f"  beamcheck: {value}")
 
     if not dry_run:
         print("\n" + colors.heading("Recorded:"))

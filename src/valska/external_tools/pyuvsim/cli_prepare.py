@@ -79,7 +79,7 @@ import argparse
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from valska.cli_format import (
     CliColors,
@@ -88,12 +88,20 @@ from valska.cli_format import (
 )
 from valska.external_tools.pyuvsim import (
     CondaRunner,
+    ContainerRunner,
     get_template_path,
     list_templates,
     prepare_pyuvsim_run,
     pyuvsimInstall,
 )
 from valska.utils import get_default_path_manager, resolve_data_path
+
+
+class BeamCheckArgs(TypedDict, total=False):
+    make_beam_check: bool
+    hours_each_side: float | None
+    step_seconds: float | None
+    beamcheck_runner: CondaRunner | ContainerRunner
 
 
 def _utc_stamp() -> str:
@@ -354,6 +362,30 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Print resolved paths and intended run directory, but do not write files.",
+    )
+
+    parser.add_argument(
+        "--no-beamcheck",
+        dest="disable_beam_check",
+        action="store_true",
+        default=False,
+        help="Disable the beam check simulation (enabled by default).",
+    )
+
+    parser.add_argument(
+        "--beamcheck-hours",
+        dest="check_hours",
+        type=float,
+        help=(
+            "Duration in hours either side of transit for beam check simulation."
+        ),
+    )
+
+    parser.add_argument(
+        "--beamcheck-step-seconds",
+        dest="step_seconds",
+        type=float,
+        help=("Time step in seconds for beam check simulation."),
     )
     add_color_argument(parser)
 
@@ -642,6 +674,35 @@ def main(argv: list[str] | None = None) -> int:
         unique=unique,
     )
 
+    # Beamcheck arguments
+    beamcheck_args: BeamCheckArgs = {}
+    if not args.disable_beam_check:
+        cfg_beamcheck = _get_nested(runtime, "pyuvsim", "beamcheck") or {}
+        check_hours = (
+            args.check_hours
+            if args.check_hours is not None
+            else cfg_beamcheck.get("hours_each_side")
+        )
+        step_seconds = (
+            args.step_seconds
+            if args.step_seconds is not None
+            else cfg_beamcheck.get("step_seconds")
+        )
+        beamcheck_env = cfg_beamcheck.get("conda_env")
+        if beamcheck_env is not None:
+            beamcheck_args = {
+                "make_beam_check": True,
+                "hours_each_side": check_hours,
+                "step_seconds": step_seconds,
+                "beamcheck_runner": CondaRunner(
+                    conda_activate=conda_sh, env_name=beamcheck_env
+                ),
+            }
+        else:
+            print(
+                "Beam check requested but no conda_env configured in runtime_paths.yaml."
+            )
+
     if args.dry_run:
         print(
             "\n" + colors.heading("[DRY RUN] Prepare would be executed with:")
@@ -695,6 +756,19 @@ def main(argv: list[str] | None = None) -> int:
             f"  conda:              env={conda_env} {colors.source(conda_src)}"
         )
         print(f"  run_dir (preview):  {colors.path(preview_run_dir)}")
+        if beamcheck_args.get("make_beam_check") is not None:
+            print(
+                "\n"
+                + colors.heading("[DRY RUN] Additional beam checks enabled:")
+            )
+            print(f"  beamcheck conda environment: {beamcheck_env}")
+            print(f"  hours each side of transit: {check_hours}")
+            print(f"  time step in seconds: {step_seconds}")
+        else:
+            print(
+                "\n"
+                + colors.heading("[DRY RUN] Additional beam checks disabled")
+            )
         print("\n" + colors.heading("[DRY RUN] SLURM defaults to be written:"))
         print(f"  cpu: {slurm_cpu}")
         print("\n" + colors.success("[DRY RUN] No files will be created."))
@@ -720,6 +794,7 @@ def main(argv: list[str] | None = None) -> int:
         overrides=overrides,
         slurm_cpu=slurm_cpu,
         fwhm_perturb_frac=args.fwhm_perturb_frac,
+        **beamcheck_args,
     )
 
     run_dir = Path(out["run_dir"])
@@ -734,6 +809,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  run_label:    {run_label}")
     print(f"  run_id:       {args.run_id}")
 
+    if "submit_sh_beamcheck" in out:
+        print("\nAlso prepared 'beam check' run with single source at zenith")
+
     print("\nNext steps:")
     print("  Option A) Submit via ValSKA (recommended):")
     print(f"     valska-pyuvsim-submit {run_dir}")
@@ -741,6 +819,8 @@ def main(argv: list[str] | None = None) -> int:
     if "submit_sh_simulate" in out:
         print("\n  Option B) Manual submission:")
         print(f"     sbatch {out['submit_sh_simulate']}")
+        if "submit_sh_beamcheck" in out:
+            print(f"     sbatch {out['submit_sh_beamcheck']}")
 
     return 0
 

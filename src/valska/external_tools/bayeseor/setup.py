@@ -8,8 +8,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
+
+from valska.utils_yaml import dump_yaml, load_yaml
 
 from ... import __version__
 from . import TOOL_NAME
@@ -25,31 +26,6 @@ def _utc_stamp() -> str:
 # -----------------------------------------------------------------------------
 # YAML IO (ruamel.yaml)
 # -----------------------------------------------------------------------------
-
-_YAML = YAML(typ="rt")  # round-trip
-_YAML.preserve_quotes = True
-_YAML.indent(mapping=2, sequence=4, offset=2)
-_YAML.width = 4096  # avoid wrapping compact priors blocks
-
-
-def _load_yaml(path: Path) -> CommentedMap:
-    """Load a YAML file preserving comments and formatting."""
-    with path.open("r", encoding="utf-8") as f:
-        data = _YAML.load(f)
-    if not isinstance(data, CommentedMap):
-        raise ValueError(f"Expected a mapping at top-level of YAML: {path}")
-    return data
-
-
-def _dump_yaml(data: Mapping[str, Any], path: Path) -> None:
-    """Write YAML using ruamel round-trip formatting."""
-    if isinstance(data, CommentedMap):
-        out = data
-    else:
-        out = CommentedMap(dict(data))
-
-    with path.open("w", encoding="utf-8") as f:
-        _YAML.dump(out, f)
 
 
 def _as_flow_seq(seq: Any) -> CommentedSeq:
@@ -360,7 +336,7 @@ def prepare_bayeseor_run(
     # yield a fresh timestamp directory anyway.
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    base_cfg = _load_yaml(template_yaml)
+    base_cfg = load_yaml(template_yaml)
 
     # Required linkage between ValSKA and BayesEoR:
     # Always overwrite any placeholder (e.g. "__SET_BY_VALSKA__").
@@ -399,7 +375,7 @@ def prepare_bayeseor_run(
         )
 
         config_yaml = run_dir / f"config_{hyp}.yaml"
-        _dump_yaml(hyp_cfg, config_yaml)
+        dump_yaml(hyp_cfg, config_yaml)
 
         submit_gpu = run_dir / f"submit_{hyp}_gpu_run.sh"
         submit_gpu.write_text(

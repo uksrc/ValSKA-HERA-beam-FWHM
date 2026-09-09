@@ -71,6 +71,24 @@ Enable extended outputs:
       --include-plot-analysis-results \
       --include-complete-analysis-table
 
+Print the complete-analysis results as a terminal table as well as writing
+the JSON and CSV artefacts:
+
+    valska-bayeseor-report /path/to/_sweeps/<run_id> \
+      --print-complete-analysis-table
+
+`--print-complete-analysis-table` implies
+`--include-complete-analysis-table`. For ASCII-only validation labels, use:
+
+    valska-bayeseor-report /path/to/_sweeps/<run_id> \
+      --print-complete-analysis-table \
+      --complete-analysis-table-style plain
+
+The standard `--color auto|always|never` option controls terminal styling.
+The printing option cannot be combined with `--json`; use
+`--include-complete-analysis-table --json` when a machine-readable report
+payload is required.
+
 Custom output directory:
 
     valska-bayeseor-report /path/to/_sweeps/<run_id> \

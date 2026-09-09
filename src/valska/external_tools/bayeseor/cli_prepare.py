@@ -86,6 +86,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from valska.cli_format import (
+    CliColors,
+    add_color_argument,
+    resolve_color_mode,
+)
 from valska.external_tools.bayeseor import (
     BayesEoRInstall,
     CondaRunner,
@@ -401,6 +406,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print resolved paths and intended run directory, but do not write files.",
     )
+    add_color_argument(parser)
 
     return parser
 
@@ -514,6 +520,7 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint for valska-bayeseor-prepare."""
     parser = build_parser()
     args = parser.parse_args(argv)
+    colors = CliColors(resolve_color_mode(args.color))
     if (
         args.fwhm_perturb_frac is not None
         and args.antenna_diameter_perturb_frac is not None
@@ -696,16 +703,33 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.dry_run:
-        print("\n[DRY RUN] Prepare would be executed with:")
-        print(f"  results_root:       {results_root} [{results_root_src}]")
-        print(f"  beam_model:         {beam_model} [{beam_sky_src}]")
-        print(f"  sky_model:          {sky_model} [{beam_sky_src}]")
+        print(
+            "\n" + colors.heading("[DRY RUN] Prepare would be executed with:")
+        )
+        print(
+            f"  results_root:       {colors.path(results_root)} "
+            f"{colors.source(results_root_src)}"
+        )
+        print(
+            f"  beam_model:         {beam_model} {colors.source(beam_sky_src)}"
+        )
+        print(
+            f"  sky_model:          {sky_model} {colors.source(beam_sky_src)}"
+        )
         print(f"  run_id:             {args.run_id}")
-        print(f"  run_label:          {run_label} [{run_label_src}]")
+        print(
+            f"  run_label:          {run_label} {colors.source(run_label_src)}"
+        )
         print(f"  unique:             {unique}")
-        print(f"  template:           {template_yaml} [{template_src}]")
-        print(f"  variant:            {variant} [{variant_src}]")
-        print(f"  data:               {data_path} [{data_src}]")
+        print(
+            f"  template:           {colors.path(template_yaml)} "
+            f"{colors.source(template_src)}"
+        )
+        print(f"  variant:            {variant} {colors.source(variant_src)}")
+        print(
+            f"  data:               {colors.path(data_path)} "
+            f"{colors.source(data_src)}"
+        )
         if args.fwhm_perturb_frac is not None:
             print(f"  fwhm_perturb_frac:  {args.fwhm_perturb_frac:+.6g}")
         else:
@@ -717,13 +741,18 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             print("  antenna_diameter_perturb_frac:  (none)")
-        print(f"  bayeseor_repo:      {repo_path} [{repo_src}]")
-        print(f"  conda:              env={conda_env} [{conda_src}]")
-        print(f"  run_dir (preview):  {preview_run_dir}")
-        print("\n[DRY RUN] SLURM defaults to be written:")
+        print(
+            f"  bayeseor_repo:      {colors.path(repo_path)} "
+            f"{colors.source(repo_src)}"
+        )
+        print(
+            f"  conda:              env={conda_env} {colors.source(conda_src)}"
+        )
+        print(f"  run_dir (preview):  {colors.path(preview_run_dir)}")
+        print("\n" + colors.heading("[DRY RUN] SLURM defaults to be written:"))
         print(f"  cpu: {slurm_cpu}")
         print(f"  gpu: {slurm_gpu}")
-        print("\n[DRY RUN] No files will be created.")
+        print("\n" + colors.success("[DRY RUN] No files will be created."))
         return 0
 
     install = BayesEoRInstall(repo_path=Path(repo_path))
@@ -753,9 +782,9 @@ def main(argv: list[str] | None = None) -> int:
     run_dir = Path(out["run_dir"])
     manifest = Path(out["manifest_json"])
 
-    print("\nRun prepared:")
-    print(f"  run_dir:      {run_dir}")
-    print(f"  manifest:     {manifest}")
+    print("\n" + colors.heading("Run prepared:"))
+    print(f"  run_dir:      {colors.path(run_dir)}")
+    print(f"  manifest:     {colors.path(manifest)}")
     print(f"  beam_model:   {beam_model}")
     print(f"  sky_model:    {sky_model}")
     print(f"  variant:      {variant}")
@@ -765,7 +794,10 @@ def main(argv: list[str] | None = None) -> int:
     # ---------------------------------------------------------------------
     # Next steps (recommended submit CLI + manual fallback)
     # ---------------------------------------------------------------------
-    print("\nNext steps (typical BayesEoR two-stage workflow):")
+    print(
+        "\n"
+        + colors.heading("Next steps (typical BayesEoR two-stage workflow):")
+    )
 
     print("  Option A) Submit via ValSKA (recommended):")
     print(f"     valska-bayeseor-submit {run_dir}")
@@ -780,7 +812,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"     valska-bayeseor-submit {run_dir} --stage gpu --resubmit")
 
-    print("\n  Option B) Manual submission (inspect scripts, then sbatch):")
+    print(
+        "\n"
+        + colors.heading(
+            "  Option B) Manual submission (inspect scripts, then sbatch):"
+        )
+    )
 
     cpu_key = "submit_sh_cpu_precompute"
     if cpu_key in out:

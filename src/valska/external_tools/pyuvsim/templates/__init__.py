@@ -20,7 +20,7 @@ def list_templates() -> list[str]:
 
 def get_template_path(name: str) -> Path:
     """
-    Return a filesystem Path to a shipped template.
+    Return the resolved filesystem path to a shipped template.
 
     Uses importlib.resources so this works both from a source checkout and from
     an installed wheel.
@@ -28,4 +28,4 @@ def get_template_path(name: str) -> Path:
     pkg = __package__
     candidate = resources.files(pkg) / name
     with resources.as_file(candidate) as p:
-        return Path(p)
+        return Path(p).resolve()

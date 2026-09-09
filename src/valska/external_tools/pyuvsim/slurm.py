@@ -8,6 +8,21 @@ from pathlib import Path
 from .runner import CondaRunner, ContainerRunner, pyuvsimInstall
 
 
+def _read_runner(runner: CondaRunner | ContainerRunner):
+
+    if isinstance(runner, CondaRunner):
+        prefix = runner.bash_prefix()
+        python_exe = "python"
+    else:
+        bind_args = " ".join(f'-B "{p}"' for p in runner.bind_paths)
+        prefix = ""
+        python_exe = (
+            f'{runner.apptainer_exe} exec {bind_args} "{runner.image_path}" python'
+        ).strip()
+
+    return prefix, python_exe
+
+
 def render_submit_script(
     *,
     runner: CondaRunner | ContainerRunner,
@@ -16,6 +31,10 @@ def render_submit_script(
     run_dir: Path,
     slurm: Mapping[str, object] | None = None,
     mode: str = "simulate",
+    postprocess_runner: CondaRunner | ContainerRunner = CondaRunner(
+        None, None
+    ),
+    postprocess_cmd: str | None = None,
 ) -> str:
     """
     Render a SLURM submit script for a pyuvsim run.
@@ -89,15 +108,7 @@ def render_submit_script(
             "slurm['extra_sbatch'] must be a list of strings if provided"
         )
 
-    if isinstance(runner, CondaRunner):
-        prefix = runner.bash_prefix()
-        python_exe = "python"
-    else:
-        bind_args = " ".join(f'-B "{p}"' for p in runner.bind_paths)
-        prefix = ""
-        python_exe = (
-            f'{runner.apptainer_exe} exec {bind_args} "{runner.image_path}" python'
-        ).strip()
+    prefix, python_exe = _read_runner(runner)
 
     ntasks_for_mpi = ntasks if ntasks is not None else 1
     mpi_prefix = f'mpirun -n "${{SLURM_NTASKS:-{ntasks_for_mpi}}}"'
@@ -171,6 +182,16 @@ def render_submit_script(
         else "(not recorded)"
     )
     execution_interface = "pyuvsim.uvsim.run_uvsim"
+
+    postprocess_block = ""
+    if postprocess_cmd is not None:
+        post_prefix, post_python_exe = _read_runner(postprocess_runner)
+
+        postprocess_block = (
+            'echo "Running post-processing..."'
+            f"\n\n{post_prefix}"
+            f"\n\n{post_python_exe} -m {postprocess_cmd}"
+        )
 
     return f"""{sbatch_block}
 
@@ -271,6 +292,8 @@ if [[ $RC -ne 0 ]]; then
   echo "ERROR: pyuvsim command failed with exit code $RC"
   exit $RC
 fi
+
+{postprocess_block}
 
 echo "----------------------------------------"
 echo "ValSKA / pyuvsim SLURM job complete"

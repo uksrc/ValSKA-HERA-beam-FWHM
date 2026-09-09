@@ -42,6 +42,7 @@ dependencies = [
   "astropy>=7.0",
   "astropy-healpix>=1.1.3",
   "pyuvdata>=3.2.5",
+  "pyradiosky>=1.1.1",
 
   # Inference / pipeline
   "anesthetic>=2.13",
@@ -173,3 +174,7 @@ ignore = ["E501"]
 
 [tool.coverage.run]
 omit = ["src/valska_hera_beam/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["temp"]

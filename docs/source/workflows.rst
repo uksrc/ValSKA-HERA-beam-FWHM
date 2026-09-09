@@ -10,3 +10,4 @@ Workflows
    workflows/bayeseor_validation
    workflows/verifying_prepared_outputs
    workflows/pyuvsim_cli_examples
+   workflows/data_preflight

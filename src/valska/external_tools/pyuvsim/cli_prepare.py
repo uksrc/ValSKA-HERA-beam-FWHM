@@ -23,7 +23,7 @@ Specifically, it:
 Design principles
 -----------------
 - setup.prepare_pyuvsim_run() is the single source of truth for canonical
-  run_dir construction. 
+  run_dir construction.
 
 Variant concept
 ---------------
@@ -128,7 +128,6 @@ def _derive_variant_from_template_path(template_yaml: Path) -> str:
     stem = template_yaml.stem
     stem = stem.replace("_template", "", 1)
     return stem.strip("_") or template_yaml.stem
-
 
 
 def build_parser() -> argparse.ArgumentParser:

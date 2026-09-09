@@ -88,7 +88,6 @@ def _apply_valska_root_paths(
     return changed
 
 
-
 # -----------------------------------------------------------------------------
 # FWHM perturbation
 # -----------------------------------------------------------------------------
@@ -221,6 +220,7 @@ def _write_simulation(
 # Public API
 # -----------------------------------------------------------------------------
 
+
 def compute_run_dir(
     *,
     results_root: Path,
@@ -302,7 +302,6 @@ def prepare_pyuvsim_run(
         raise ValueError("beam_model must be a non-empty string")
     if not sky_model:
         raise ValueError("sky_model must be a non-empty string")
-
 
     # Backwards-compatible SLURM handling:
     # if slurm_cpu is not supplied, fall back to slurm.

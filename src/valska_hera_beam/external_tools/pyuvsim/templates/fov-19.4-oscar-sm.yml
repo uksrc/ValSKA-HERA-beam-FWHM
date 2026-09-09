@@ -1,0 +1,46 @@
+filing:
+  outdir: 'outputs/'
+  #outfile_name: 'gleam-158.30-167.10-MHz-nf-38-pld-mean-2.82-std-0.19-fov-19.4deg-circ-field-1_uniform'
+  #outfile_name: 'gleam-field-1-pld-mean-2.82-std-0.19-nf-38-nt-34-dt-11s-fov-19.4deg-airy_quentin'
+  outfile_name: 'gleam-field-1-pld-mean-2.82-std-0.19-nf-38-nt-34-dt-11s-fov-19.4deg-gauss'
+  #outfile_name: 'gleam-158.30-167.10-MHz-nf-38-pld-mean-2.82-std-0.19-fov-12.9deg-circ-field-1-airy_quentin'
+  #outfile_name: 'gsm-nside256-158.3-167.1MHz-nf-38-fov-19.4deg-circ-field-1-airy_quentin'
+  #outfile_name: 'gsm-nside256-158.3-167.1MHz-nf-38-fov-19.4-field-1-airy_quentin'
+  #outfile_name: 'wn-nside256-field-1-hex37-14.6m-nt-34-dt-11s-fov-19.4deg-airy_quentin'
+  #outfile_name: 'wn-nside256-field-1-hex37-14.6m-nt-34-dt-11s-fov-12.9deg-circ-airy_quentin'
+  output_format: 'uvh5'
+  clobber: True
+freq:
+  Nfreqs: 38
+  start_freq: 158304048.743
+  channel_width: 237618.986858
+sources:
+   catalog: "/home/qdg20/projects/ValSKA-HERA-beam-FWHM/config/pyuvsim/catalog_files/\
+             gleam-field-1-158.30-167.10-MHz-nf-38-fov-19.4-pld-mean-2.82-std-0.19.skyh5"
+
+telescope:
+  array_layout: "/home/qdg20/projects/ValSKA-HERA-beam-FWHM/config/pyuvsim/reference_simulations/first_generation/telescope_config/\
+                 hex-37-14.6m.csv"
+  telescope_config_name: "/home/qdg20/projects/ValSKA-HERA-beam-FWHM/config/pyuvsim/reference_simulations/first_generation/telescope_config/\
+                          hex-37-14.6m-gauss-fwhm9.3.yml"
+
+time:
+  #time_array: [2458098.200000000,2458098.206666667,2458098.213333333,2458098.220000000,2458098.226666667,2458098.233333333,2458098.240000000,2458098.246666667,2458098.253333334,2458098.260000000,2458098.266666667,2458098.273333333,2458098.280000000,2458098.286666667,2458098.293333333,2458098.300000000,2458098.306666667,2458098.313333334,2458098.320000000,2458098.326666667,2458098.333333333,2458098.340000000,2458098.346666667,2458098.353333333,2458098.360000000,2458098.366666666,2458098.373333334,2458098.380000000,2458098.386666667,2458098.393333333,2458098.400000000,2458098.406666667,2458098.413333333,2458098.420000000]
+  # HERA Field 1
+  # 34, 11 sec integrations
+  time_array: [2458098.304401821, 2458098.3045291356, 2458098.3046564506,
+               2458098.304783765, 2458098.3049110803, 2458098.305038395,
+               2458098.30516571, 2458098.3052930245, 2458098.3054203396,
+               2458098.305547654, 2458098.305674969, 2458098.305802284,
+               2458098.305929599, 2458098.3060569135, 2458098.3061842285,
+               2458098.306311543, 2458098.306438858, 2458098.3065661727,
+               2458098.3066934873, 2458098.3068208024, 2458098.306948117,
+               2458098.307075432, 2458098.3072027466, 2458098.3073300617,
+               2458098.3074573763, 2458098.3075846913, 2458098.307712006,
+               2458098.307839321, 2458098.3079666356, 2458098.3080939506,
+               2458098.308221265, 2458098.3083485803, 2458098.308475895,
+               2458098.30860321]
+select:
+  # All bls < 40 m
+  bls: "[(0, 0), (0, 1), (0, 2), (4, 0), (0, 5), (0, 6), (0, 7), (9, 0), (0, 10),
+         (0, 11), (0, 12), (16, 0), (0, 17), (4, 1), (9, 1), (4, 2)]"

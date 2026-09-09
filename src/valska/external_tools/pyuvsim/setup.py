@@ -88,25 +88,6 @@ def _apply_valska_root_paths(
     return changed
 
 
-# -----------------------------------------------------------------------------
-# Template / variant helpers
-# -----------------------------------------------------------------------------
-
-
-def _default_variant_from_template(template_yaml: Path) -> str:
-    """
-    Derive a stable variant key from a template filename.
-
-    Rules:
-      - take filename stem
-      - remove first occurrence of "_template" if present
-      - strip leading/trailing underscores
-    """
-    stem = Path(template_yaml).stem
-    stem = stem.replace("_template", "", 1)
-    stem = stem.strip("_")
-    return stem or Path(template_yaml).stem
-
 
 # -----------------------------------------------------------------------------
 # FWHM perturbation
@@ -240,6 +221,30 @@ def _write_simulation(
 # Public API
 # -----------------------------------------------------------------------------
 
+def compute_run_dir(
+    *,
+    results_root: Path,
+    beam_model: str,
+    sky_model: str,
+    variant: str,
+    run_label: str,
+    run_id: str,
+    unique: bool,
+) -> Path:
+    """
+    Compute the canonical run directory.
+    """
+    base_dir = (
+        results_root
+        / "pyuvsim"
+        / beam_model
+        / sky_model
+        / variant
+        / run_label
+        / run_id
+    )
+    return base_dir / _utc_stamp() if unique else base_dir
+
 
 def prepare_pyuvsim_run(
     *,
@@ -257,7 +262,7 @@ def prepare_pyuvsim_run(
     slurm_cpu: Mapping[str, object] | None = None,
     run_dir: Path | None = None,
     run_id: str = "default",
-    variant: str | None = None,
+    variant: str,
     unique: bool = False,
     fwhm_perturb_frac: float | None = None,
     make_beam_check: bool = False,
@@ -270,9 +275,6 @@ def prepare_pyuvsim_run(
 
     Canonical non-sweep layout (when run_dir is None):
       <results_root>/pyuvsim/<beam_model>/<sky_model>/<variant>/<run_label>/<run_id>[/<UTCSTAMP>]
-
-    Variant defaults to a name derived from the template filename stem
-    (first occurrence of '_template' removed).
 
     Returns
     -------
@@ -301,9 +303,6 @@ def prepare_pyuvsim_run(
     if not sky_model:
         raise ValueError("sky_model must be a non-empty string")
 
-    variant_clean = (variant or "").strip()
-    if not variant_clean:
-        variant_clean = _default_variant_from_template(template_yaml)
 
     # Backwards-compatible SLURM handling:
     # if slurm_cpu is not supplied, fall back to slurm.
@@ -311,16 +310,15 @@ def prepare_pyuvsim_run(
 
     # Canonical run_dir (only if not explicitly supplied)
     if run_dir is None:
-        base_dir = (
-            results_root
-            / "pyuvsim"
-            / beam_model
-            / sky_model
-            / variant_clean
-            / run_label
-            / run_id
+        run_dir = compute_run_dir(
+            results_root=results_root,
+            beam_model=beam_model,
+            sky_model=sky_model,
+            variant=variant,
+            run_label=run_label,
+            run_id=run_id,
+            unique=unique,
         )
-        run_dir = base_dir / _utc_stamp() if unique else base_dir
     else:
         run_dir = Path(run_dir).expanduser().resolve()
 
@@ -428,7 +426,7 @@ def prepare_pyuvsim_run(
         "valska_version": __version__,
         "beam_model": beam_model,
         "sky_model": sky_model,
-        "variant": variant_clean,
+        "variant": variant,
         "run_label": run_label,
         "run_id": run_id,
         "results_root": str(results_root),

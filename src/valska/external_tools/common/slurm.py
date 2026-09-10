@@ -27,11 +27,11 @@ def render_submit_script(
     Parameters
     ----------
     runner
-        How BayesEoR is executed (currently conda; container support later).
+        How the tool is executed (currently conda; container support later).
     install
-        Where BayesEoR lives and how to locate its run script.
+        Where the tool lives and how to locate its run script.
     config_yaml
-        Path to the rendered BayesEoR config YAML to run.
+        Path to the rendered toll config YAML to run.
     run_dir
         Run directory containing configs/logs/manifests.
     slurm
@@ -79,7 +79,7 @@ def render_submit_script(
                 (without the ``"#SBATCH "`` prefix)
 
     mode
-        Execution mode:
+        Execution mode (just for BayesEoR module for now):
 
         - ``"cpu"``: precompute instrument transfer matrices (BayesEoR ``--cpu``)
         - ``"gpu_run"``: run sampling assuming precompute exists

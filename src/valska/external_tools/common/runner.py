@@ -9,7 +9,8 @@ from pathlib import Path
 @dataclass(frozen=True)
 class ToolInstall:
     """
-    Stores where the external tool lives. Object that inherit may expand this to other installation properties.
+    Stores where the external tool lives. Object that inherit
+    may expand this to other installation properties.
     """
 
     install_path: Path
@@ -18,10 +19,10 @@ class ToolInstall:
 @dataclass(frozen=True)
 class CondaRunner:
     """
-    Run BayesEoR via a named conda environment.
+    Run the tool via a named conda environment.
 
-    conda_activate should point to conda.sh (or equivalent) so that `conda activate` works
-    inside non-interactive batch shells (SLURM).
+    conda_activate should point to conda.sh (or equivalent) so that
+    `conda activate` works inside non-interactive batch shells (slurm).
     """
 
     conda_activate: (
@@ -37,7 +38,7 @@ class CondaRunner:
 @dataclass(frozen=True)
 class ContainerRunner:
     """
-    Future: Run BayesEoR inside a container (Apptainer/Singularity).
+    Future: Run the tool inside a container (Apptainer/Singularity).
 
     This is included now so we don’t need to redesign the API later.
     The only thing that should change is how we construct the command line;

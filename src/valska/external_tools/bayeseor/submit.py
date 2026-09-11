@@ -201,12 +201,11 @@ class BayesEoRJobsFile(JobsFile):
     extra_fields = [("hypothesis", "")]
 
 
+# These are the possible stages for this module
 _STAGES = {
     "cpu": [BayesEoRStageType.CPU],
     "gpu": [BayesEoRStageType.GPU],
     "all": [BayesEoRStageType.CPU, BayesEoRStageType.GPU],
-    # TODO - once pyuvsim is also refactored
-    # "simulate": pyuvsimStageType.simulate,
 }
 
 
@@ -222,8 +221,8 @@ class BayesEoRSubmitPlan(SubmitPlan):
     def __post_init__(self):
         super().__post_init__()
 
-        self.requested_stages = []
-        self.requested_stages.extend(_STAGES[self.stage])
+        self.requested_stages = self.resolve_stages(self.stage)
+        # self.requested_stages.extend(_STAGES[self.stage])
 
         self.jobs_file = BayesEoRJobsFile()
 
@@ -254,6 +253,15 @@ class BayesEoRSubmitPlan(SubmitPlan):
         self.cpu_script = self.normalise_path(cpu_script)  # type: ignore[assignment]
         self.gpu_signal_fit_script = self.normalise_path(gpu_signal)
         self.gpu_no_signal_script = self.normalise_path(gpu_nosig)
+
+    def resolve_stages(self, stage: str) -> list[Stage]:
+        """Resolve BayesEoR stages"""
+        try:
+            return [stage_type.value for stage_type in _STAGES[stage]]
+        except KeyError:
+            raise InvalidArgumentError(
+                f"Unknown BayesEoR submission stage: {stage}"
+            )
 
     def check_jobs_not_running(self, force):
         existing_jobs = self.load_jobs()

@@ -15,7 +15,7 @@ from valska.external_tools.common.utils import utc_now_iso
 
 _RECORD = Literal["jobs.json", "manifest"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
-_STAGE = Literal["cpu", "gpu", "all"]
+
 
 _JOBID_RE = re.compile(r"Submitted\s+batch\s+job\s+(\d+)\s*$", re.IGNORECASE)
 
@@ -36,6 +36,7 @@ class SbatchError(SubmissionError):
     """Raised when sbatch fails or returns unparseable output."""
 
 
+# @dataclass()
 class Stage(TypedDict):
     """Holds details about a stage and points to the method which does any setup before submission"""
 
@@ -82,8 +83,9 @@ class SubmitPlan:
 
     run_dir: Path
     # TODO should be a Stage object
-    stage: str
-    requested_stages: list[StageType] = field(init=False)
+    stage: str  # (this can include "all" which is actually two stages)
+    # These are the resolved stage objects in a list:
+    requested_stages: list[Stage] = field(init=False)
     manifest_path: Path = field(init=False)
     jobs_path: Path = field(init=False)
     jobs_file: JobsFile = field(init=False)
@@ -91,6 +93,9 @@ class SubmitPlan:
     def __post_init__(self):
         self.manifest_path = self.run_dir / "manifest.json"
         self.jobs_path = self.run_dir / "jobs.json"
+
+    def resolve_stages(self, stage: str) -> list[Stage]:
+        raise NotImplementedError
 
     def load_manifest(self) -> dict[str, Any]:
         """
@@ -169,9 +174,9 @@ class SubmitPlan:
         new_jobs = new_result.get("jobs")
         if isinstance(new_jobs, dict):
             for requested_stage in self.requested_stages:
-                stage = new_jobs.get(requested_stage.value["name"])
+                stage = new_jobs.get(requested_stage["name"])
                 if isinstance(stage, dict):
-                    merged_jobs[requested_stage.value["name"]] = stage
+                    merged_jobs[requested_stage["name"]] = stage
 
         merged["jobs"] = merged_jobs
 
@@ -280,7 +285,7 @@ def submit_tool_run(
     run_dir: Path,
     *,
     # stage: Stage,
-    stage: _STAGE = "all",
+    stage: str,
     submit_plan: type[SubmitPlan],
     hypothesis: _HYP = "both",
     depend_afterok: str | None = None,
@@ -297,7 +302,7 @@ def submit_tool_run(
     run_dir
         Prepared run directory.
     stage
-        Which stage(s) to submit: "cpu", "gpu", or "all".
+        Which stage(s) to submit: e.g. "cpu", "gpu", or "all".
     hypothesis
         Which GPU hypothesis to run: "signal_fit", "no_signal", or "both".
     depend_afterok
@@ -355,7 +360,7 @@ def submit_tool_run(
 
     # do stage specific stuff here
     for requested_stage in plan.requested_stages:
-        result, jobid, cmd = requested_stage.value["method"](
+        result, jobid, cmd = requested_stage["method"](
             plan, result, sbatch_exe, dry_run, hypothesis, depend_afterok
         )
 

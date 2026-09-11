@@ -5,23 +5,23 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ...cli_format import CliColors, add_color_argument, resolve_color_mode
-from .submit import (
+from valska.external_tools.common.submit import (
     InvalidArgumentError,
     MissingDependencyError,
     SbatchError,
     SubmissionError,
-    _find_completed_cpu_precompute_matrix_dir,
-    submit_bayeseor_run,
+    submit_tool_run,
 )
+from valska.external_tools.common.utils import utc_now_compact
 
-
-def _utc_now_compact() -> str:
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+from ...cli_format import CliColors, add_color_argument, resolve_color_mode
+from .submit import (
+    BayesEoRSubmitPlan,
+    _find_completed_cpu_precompute_matrix_dir,
+)
 
 
 def _load_runtime_paths_yaml() -> dict[str, Any]:
@@ -189,7 +189,7 @@ def _archive_jobs_json(run_dir: Path) -> Path | None:
     jobs_path = run_dir / "jobs.json"
     if not jobs_path.exists():
         return None
-    archived = run_dir / f"jobs_{_utc_now_compact()}.json"
+    archived = run_dir / f"jobs_{utc_now_compact()}.json"
     jobs_path.rename(archived)
     return archived
 
@@ -431,9 +431,10 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     try:
-        result = submit_bayeseor_run(
+        result = submit_tool_run(
             run_dir,
             stage=args.stage,
+            submit_plan=BayesEoRSubmitPlan,
             hypothesis=args.hypothesis,
             depend_afterok=args.depend_afterok,
             sbatch_exe=sbatch_exe,

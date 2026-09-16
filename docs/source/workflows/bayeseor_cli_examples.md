@@ -658,7 +658,7 @@ scratch or test output root:
 RUN_ID="sweep_v3_array_smoke_$(date -u +%Y%m%dT%H%M%SZ)"
 RESULTS_ROOT="/path/to/scratch/valska-array-smoke-${RUN_ID}"
 
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
   --run-id "$RUN_ID" \
   --results-root "$RESULTS_ROOT" \
   --submit all \
@@ -711,7 +711,7 @@ If the dry-run output looks correct, submit the same sweep for real by
 removing `--submit-dry-run`:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
   --run-id "$RUN_ID" \
   --results-root "$RESULTS_ROOT" \
   --submit all \
@@ -730,7 +730,7 @@ Slurm job ID in sweep-level `jobs.json`, then submits the GPU array job(s) with:
 To split submission into two steps, submit CPU first:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
   --run-id "$RUN_ID" \
   --results-root "$RESULTS_ROOT" \
   --submit cpu \
@@ -742,7 +742,7 @@ bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
 Then submit GPU arrays after the CPU array job has been recorded:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh \
   --run-id "$RUN_ID" \
   --results-root "$RESULTS_ROOT" \
   --submit gpu \
@@ -847,13 +847,13 @@ bash_scripts/valska-bayeseor-report-sweep.sh --sweep-dir /path/to/_sweeps/<run_i
 Airy helper convenience (prepare/submit sweep and auto-run reporting at the end):
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report
 ```
 
 Skip plot generation when auto-reporting:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report-no-plots
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report-no-plots
 ```
 
 For full reporting options and failure-handling behaviour, see:
@@ -960,4 +960,4 @@ Ambiguous older patterns like `GLEAM_beam` are rejected to prevent silent misrou
 - `src/valska/external_tools/bayeseor/sweep.py`
 - `src/valska/external_tools/bayeseor/submit.py`
 - `config/runtime_paths.yaml`
-- `bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh`
+- `case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh`

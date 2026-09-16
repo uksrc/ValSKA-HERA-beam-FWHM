@@ -54,7 +54,7 @@ valska-bayeseor-report /path/to/_sweeps/<run_id>
 Airy sweep helper can trigger this automatically after sweep preparation/submission:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all --report
 ```
 
 Use `--report-no-plots` on the helper for table-only reporting.
@@ -72,26 +72,26 @@ installed `valska-bayeseor-sweep` and `valska-bayeseor-report` entry points:
 
 ```bash
 conda activate valska
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --dry-run
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --dry-run
 ```
 
 The wrappers default to prepare-only; pass `--submit all` when ready to submit
 both CPU and GPU stages:
 
 ```bash
-bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-airy_diam14m-GSM_plus_GLEAM_v3.sh --submit all
 ```
 
 Gaussian v3 wrappers are available for achromatic and chromatic beams with GSM,
 GLEAM, and GSM_plus_GLEAM skies:
 
 ```text
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GLEAM_v3.sh
-bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_plus_GLEAM_v3.sh
-bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM_v3.sh
-bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GLEAM_v3.sh
-bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM_plus_GLEAM_v3.sh
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_v3.sh
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GLEAM_v3.sh
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-achromatic_Gaussian-GSM_plus_GLEAM_v3.sh
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM_v3.sh
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GLEAM_v3.sh
+case_studies/hera_beam/bash_scripts/valska-bayeseor-sweep-chromatic_Gaussian-GSM_plus_GLEAM_v3.sh
 ```
 
 JSON summary:
@@ -144,7 +144,7 @@ valska-bayeseor-report \
   --include-plot-analysis-results \
   --include-complete-analysis-table \
   --export-report-assets \
-  docs/source/reports/assets/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init
+  docs/source/reports/hera_beam/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets
 ```
 
 This copies the generated report artefacts into the chosen asset directory and

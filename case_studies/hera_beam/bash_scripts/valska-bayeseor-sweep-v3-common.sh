@@ -16,12 +16,12 @@ set -euo pipefail
 : "${PERTURB_PARAMETER:?PERTURB_PARAMETER must be set by the wrapper}"
 
 COMMON_SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "$COMMON_SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd -- "$COMMON_SCRIPT_DIR/../../.." && pwd)"
 
 RESULTS_ROOT="${RESULTS_ROOT:-$REPO_ROOT/validation_results/UKSRC/v2}"
 VALSKA_BAYESEOR_SWEEP_CMD="${VALSKA_BAYESEOR_SWEEP_CMD:-valska-bayeseor-sweep}"
 VALSKA_BAYESEOR_REPORT_CMD="${VALSKA_BAYESEOR_REPORT_CMD:-valska-bayeseor-report}"
-export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}"
+export MPLCONFIGDIR="${MPLCONFIGDIR:-$REPO_ROOT/temp/tmp/matplotlib}"
 mkdir -p "$MPLCONFIGDIR"
 SUBMIT_MODE="none"
 SUBMIT_MODE_KIND="per-point"

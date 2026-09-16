@@ -3,6 +3,10 @@
 Campaign-specific validation reports can live in this directory once they are
 ready to be versioned with the documentation.
 
+Use a case-study subdirectory for each distinct validation programme. For
+example, HERA beam reports and their report-local assets live under
+`docs/source/reports/hera_beam/`.
+
 Start from the template at:
 
 ```text

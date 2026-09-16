@@ -230,7 +230,7 @@ valska-bayeseor-report \
   --include-plot-analysis-results \
   --include-complete-analysis-table \
   --export-report-assets \
-  docs/source/reports/assets/<report-id>
+  docs/source/reports/<case-study>/<report-id>_assets
 ```
 
 This writes `artefact_manifest.json` in the asset directory, recording the

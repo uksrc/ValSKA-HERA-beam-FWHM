@@ -5,5 +5,5 @@ Reports
    :maxdepth: 1
 
    reports/README
-   reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init
+   reports/hera_beam/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init
    workflows/validation_report_template

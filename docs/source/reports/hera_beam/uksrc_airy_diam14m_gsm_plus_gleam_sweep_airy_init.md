@@ -143,7 +143,7 @@ python -m valska.external_tools.bayeseor.cli_report \
   validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3 \
   --include-plot-analysis-results \
   --include-complete-analysis-table \
-  --export-report-assets docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets \
+  --export-report-assets docs/source/reports/hera_beam/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets \
   --print-complete-analysis-table
 ```
 
@@ -154,7 +154,7 @@ valska-bayeseor-report \
   validation_results/UKSRC/v2/bayeseor/airy_diam14m/GSM_plus_GLEAM/_sweeps/sweep_airy_v3 \
   --include-plot-analysis-results \
   --include-complete-analysis-table \
-  --export-report-assets docs/source/reports/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets \
+  --export-report-assets docs/source/reports/hera_beam/uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets \
   --print-complete-analysis-table
 ```
 
@@ -230,7 +230,7 @@ Report-local copies of the completeness summaries are available at [sweep_report
 
 This report was originally drafted on 2026-04-25 against the historical campaign `sweep_airy_init` (created `2026-02-27T23:36:40Z`, under `validation_results/UKSRC/bayeseor/...`). On 2026-07-15, as part of a merge and refresh of the `validation-report-drafts` branch, the report's title, executive summary, data, figures, and tables were updated to the v2 campaign `sweep_airy_v3` (created `2026-04-28T19:09:57Z`, under `validation_results/UKSRC/v2/bayeseor/...`), which uses the same beam model, sky model, input visibility dataset, and `antenna_diameter` sweep points as the original.
 
-The report's filename (`uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init.md`) and asset-directory slug (`uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/`) intentionally still say `sweep_airy_init`. These are referenced from `docs/source/reports.rst` (the toctree entry) and `docs/source/workflows/bayeseor_reporting.md` (an example asset path), plus the report's own embedded image/asset links; renaming them now would break those references for no content benefit, since the filename is only a slug and the report's title, H1, and body text are the parts that state which campaign the content actually describes. A future rename to a `sweep_airy_v3`-based slug, with the corresponding link updates, is a reasonable follow-up but was treated as out of scope for this focused content refresh.
+The report's filename (`uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init.md`) and asset-directory slug (`uksrc_airy_diam14m_gsm_plus_gleam_sweep_airy_init_assets/`) intentionally still say `sweep_airy_init`. These are referenced from `docs/source/reports.rst` (the toctree entry) and `docs/source/workflows/bayeseor_reporting.md` (an example asset path), plus the report's own embedded image and asset links. Renaming them would require a coordinated link update but would not alter the report content; the report's title, H1, and body state which campaign the report describes.
 
 Before updating this report, the following checks were performed to confirm the v2 campaign reproduces rather than changes the original result:
 

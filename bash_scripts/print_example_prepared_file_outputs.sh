@@ -31,9 +31,9 @@
 #
 # Example output (paths & timestamps will vary):
 #
-# Running: valska-bayeseor-prepare --beam chromatic_Gaussian --sky GLEAM --data-root-key gaussian --data ... --template validation_chromatic_Gaussian.yaml --run-id sweep --results-root /home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/valska-bayeseor-manifests-XXXX
+# Running: valska-bayeseor-prepare --beam chromatic_Gaussian --sky GLEAM --data-root-key gaussian --data ... --template validation_chromatic_Gaussian.yaml --run-id sweep --results-root <temporary-results-root>
 #
-# ==== Manifest: /home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/valska-bayeseor-manifests-XXXX/bayeseor/chromatic_Gaussian/GLEAM/validation_chromatic_Gaussian/default/sweep/manifest.json ====
+# ==== Manifest: <temporary-results-root>/bayeseor/chromatic_Gaussian/GLEAM/validation_chromatic_Gaussian/default/sweep/manifest.json ====
 # {
 #   "tool": "bayeseor",
 #   "created_utc": "20260125T123456Z",
@@ -43,13 +43,13 @@
 #   "variant": "validation_chromatic_Gaussian",
 #   "run_label": "default",
 #   "run_id": "sweep",
-#   "results_root": "/home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/valska-bayeseor-manifests-XXXX",
-#   "run_dir": "/home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/valska-bayeseor-manifests-XXXX/.../sweep",
+#   "results_root": "<temporary-results-root>",
+#   "run_dir": "<temporary-results-root>/.../sweep",
 #   "template_name": "validation_chromatic_Gaussian.yaml",
-#   "data_path": "/shared/.../gsm_plus_gleam-158...uvh5",
+#   "data_path": "<data-root>/gsm_plus_gleam-158...uvh5",
 #   "hypothesis": "both",
-#   "bayeseor": {"install": {"repo_path": "/home/ps550/BayesEoR", "run_script": "run.sh"}},
-#   "artefacts": {"run_script": "/tmp/.../run.sh"}
+#   "bayeseor": {"install": {"repo_path": "<bayeseor-repo>", "run_script": "run.sh"}},
+#   "artefacts": {"run_script": "<temporary-results-root>/.../run.sh"}
 # }
 # OK: manifest tool is 'bayeseor'
 #

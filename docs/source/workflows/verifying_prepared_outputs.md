@@ -57,9 +57,9 @@ CLI options (summary)
 
 Example minimal output (illustrative)
 ```text
-Running: valska-bayeseor-prepare --beam chromatic_Gaussian --sky GLEAM --data-root-key gaussian --data ... --template validation_chromatic_Gaussian.yaml --run-id sweep --results-root /home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/valska-bayeseor-manifests-XXXX
+Running: valska-bayeseor-prepare --beam chromatic_Gaussian --sky GLEAM --data-root-key gaussian --data ... --template validation_chromatic_Gaussian.yaml --run-id sweep --results-root <temporary-results-root>
 
-==== Manifest: /home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/.../sweep/manifest.json ====
+==== Manifest: <temporary-results-root>/.../sweep/manifest.json ====
 {
   "tool": "bayeseor",
   "created_utc": "20260125T123456Z",
@@ -67,7 +67,7 @@ Running: valska-bayeseor-prepare --beam chromatic_Gaussian --sky GLEAM --data-ro
   "beam_model": "chromatic_Gaussian",
   "sky_model": "GLEAM",
   "run_id": "sweep",
-  "run_dir": "/home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/.../sweep",
+  "run_dir": "<temporary-results-root>/.../sweep",
   "template_name": "validation_chromatic_Gaussian.yaml",
   ...
 }
@@ -87,12 +87,12 @@ priors:
   - name: fwhm
 
 ---- artefacts (from manifest) ----
-run_script: /home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/.../run.sh
+run_script: <temporary-results-root>/.../run.sh
   #!/bin/sh
   echo "ok"
 
 Checked 1 manifest(s) — all OK
-Temporary results-root kept at: /home/ps550/ValSKA-HERA-beam-FWHM/temp/tmp/valska-bayeseor-manifests-XXXX
+Temporary results-root kept at: <temporary-results-root>
 ```
 
 Exit codes

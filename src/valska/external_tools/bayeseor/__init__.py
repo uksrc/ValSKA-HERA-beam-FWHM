@@ -7,6 +7,12 @@ Primary entry points:
 - get_template_path: access shipped validation templates.
 """
 
+from .chain_utils import (
+    build_group_labels,
+    build_pp_groups_from_paths,
+    filter_chain_pairs,
+    filter_chain_pairs_absolute_range,
+)
 from .constants import TOOL_NAME
 from .native_plotting import (
     BayesEoRPlotConfig,
@@ -35,4 +41,8 @@ __all__ = [
     "BayesEoRPlotConfig",
     "load_bayeseor_analysis_outputs",
     "plot_bayeseor_power_spectra_and_posteriors",
+    "build_group_labels",
+    "build_pp_groups_from_paths",
+    "filter_chain_pairs",
+    "filter_chain_pairs_absolute_range",
 ]

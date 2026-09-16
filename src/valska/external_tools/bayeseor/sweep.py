@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
+
+from valska.external_tools.common.utils import (
+    archive_timestamped,
+    array_spec,
+    extract_numeric_job_id,
+    is_numeric_job_id,
+    load_json_object,
+    utc_now_compact,
+    utc_now_iso,
+    write_json_object,
+)
 
 from .runner import BayesEoRInstall, CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
@@ -28,14 +37,6 @@ _SUBMIT_MODE = Literal["per-point", "array"]
 _DRY_RUN_CPU_ARRAY_JOB_ID = "DRY_RUN_CPU_ARRAY_JOB_ID"
 _DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID = "DRY_RUN_SIGNAL_FIT_GPU_ARRAY_JOB_ID"
 _DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID = "DRY_RUN_NO_SIGNAL_GPU_ARRAY_JOB_ID"
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _utc_now_compact() -> str:
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _format_run_label_from_fwhm_frac(frac: float) -> str:
@@ -121,64 +122,13 @@ def archive_jobs_json(run_dir: Path) -> Path | None:
     jp = _jobs_path(run_dir)
     if not jp.exists():
         return None
-    archived = run_dir / f"jobs_{_utc_now_compact()}.json"
-    jp.rename(archived)
-    return archived
+    return archive_timestamped(jp)
 
 
 def archive_sweep_jobs_json(sweep_dir: Path) -> Path | None:
     """Archive sweep_dir/jobs.json -> sweep_dir/jobs_<UTCSTAMP>.json."""
     jp = _sweep_jobs_path(sweep_dir)
-    if not jp.exists():
-        return None
-    archived = sweep_dir / f"jobs_{_utc_now_compact()}.json"
-    jp.rename(archived)
-    return archived
-
-
-def _load_json_dict(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return data if isinstance(data, dict) else None
-
-
-def _write_json_dict(path: Path, payload: dict[str, Any]) -> Path:
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return path
-
-
-def _array_spec(task_count: int, max_parallel: int | None) -> str:
-    if task_count <= 0:
-        raise ValueError("task_count must be positive for array submission")
-    if max_parallel is not None and max_parallel <= 0:
-        raise ValueError("array throttle must be a positive integer")
-    spec = f"0-{task_count - 1}"
-    if max_parallel is not None:
-        spec += f"%{max_parallel}"
-    return spec
-
-
-def _extract_cpu_array_jobid(existing: dict[str, Any] | None) -> str | None:
-    if not isinstance(existing, dict):
-        return None
-    jobs = existing.get("jobs")
-    if not isinstance(jobs, dict):
-        return None
-    cpu = jobs.get("cpu_precompute_array")
-    if not isinstance(cpu, dict):
-        return None
-    job_id = cpu.get("job_id")
-    if job_id is None:
-        return None
-    job_id_str = str(job_id).strip()
-    return job_id_str if job_id_str.isdigit() else None
-
-
-def _is_real_job_id(job_id: Any) -> bool:
-    if job_id is None:
-        return False
-    return str(job_id).strip().isdigit()
+    return archive_timestamped(jp)
 
 
 def _merge_sweep_jobs_record(
@@ -256,7 +206,7 @@ def _array_tasks_payload(points: list[SweepPoint]) -> list[dict[str, Any]]:
 def _write_array_tasks_json(sweep_dir: Path, points: list[SweepPoint]) -> Path:
     out_path = sweep_dir / "array_tasks.json"
     payload = _array_tasks_payload(points)
-    _write_json_dict(out_path, {"tasks": payload})
+    write_json_object(out_path, {"tasks": payload})
     return out_path
 
 
@@ -277,13 +227,13 @@ def _render_and_write_array_scripts(
     no_signal_script = sweep_dir / "submit_no_signal_gpu_array.sh"
 
     slurm_cpu_array = dict(slurm_cpu)
-    slurm_cpu_array.setdefault("array", _array_spec(task_count, array_max_cpu))
+    slurm_cpu_array.setdefault("array", array_spec(task_count, array_max_cpu))
     slurm_cpu_array.setdefault(
         "output", sweep_dir / "slurm-cpu-array-%A_%a.out"
     )
 
     slurm_gpu_array = dict(slurm_gpu)
-    slurm_gpu_array.setdefault("array", _array_spec(task_count, array_max_gpu))
+    slurm_gpu_array.setdefault("array", array_spec(task_count, array_max_gpu))
     slurm_gpu_array.setdefault(
         "output", sweep_dir / "slurm-gpu-array-%A_%a.out"
     )
@@ -351,8 +301,10 @@ def _submit_sweep_array(
     array_max_cpu: int | None,
     array_max_gpu: int | None,
 ) -> dict[str, Any]:
-    existing = _load_json_dict(_sweep_jobs_path(sweep_dir))
-    cpu_dependency_from_existing = _extract_cpu_array_jobid(existing)
+    existing = load_json_object(_sweep_jobs_path(sweep_dir))
+    cpu_dependency_from_existing = extract_numeric_job_id(
+        existing, "jobs", "cpu_precompute_array", "job_id"
+    )
     archived: Path | None = None
 
     if existing is not None and not (force or resubmit):
@@ -361,7 +313,9 @@ def _submit_sweep_array(
             if (
                 submit in ("cpu", "all")
                 and isinstance(jobs.get("cpu_precompute_array"), dict)
-                and _is_real_job_id(jobs["cpu_precompute_array"].get("job_id"))
+                and is_numeric_job_id(
+                    jobs["cpu_precompute_array"].get("job_id")
+                )
             ):
                 raise InvalidArgumentError(
                     f"CPU array job already recorded in jobs.json for {sweep_dir}. "
@@ -374,9 +328,11 @@ def _submit_sweep_array(
                 sf = gpu.get("signal_fit")
                 ns = gpu.get("no_signal")
                 if (
-                    isinstance(sf, dict) and _is_real_job_id(sf.get("job_id"))
+                    isinstance(sf, dict)
+                    and is_numeric_job_id(sf.get("job_id"))
                 ) or (
-                    isinstance(ns, dict) and _is_real_job_id(ns.get("job_id"))
+                    isinstance(ns, dict)
+                    and is_numeric_job_id(ns.get("job_id"))
                 ):
                     raise InvalidArgumentError(
                         f"GPU array jobs already recorded in jobs.json for {sweep_dir}. "
@@ -391,7 +347,7 @@ def _submit_sweep_array(
         "manifest": str(sweep_manifest_path),
         "jobs_json": str(_sweep_jobs_path(sweep_dir)),
         "submit_mode": "array",
-        "submitted_utc": _utc_now_iso(),
+        "submitted_utc": utc_now_iso(),
         "dry_run": bool(submit_dry_run),
         "stage": submit,
         "hypothesis": hypothesis,
@@ -424,7 +380,7 @@ def _submit_sweep_array(
             "command": cmd,
             "job_id": cpu_jobid,
             "job_id_is_placeholder": bool(submit_dry_run),
-            "array": _array_spec(task_count, array_max_cpu),
+            "array": array_spec(task_count, array_max_cpu),
             "task_count": task_count,
             "task_file": str(tasks_json),
             "dependency": None,
@@ -457,7 +413,7 @@ def _submit_sweep_array(
         gpu_jobs: dict[str, Any] = {
             "dependency": f"afterok:{dep}",
             "dependency_source": dependency_source,
-            "array": _array_spec(task_count, array_max_gpu),
+            "array": array_spec(task_count, array_max_gpu),
             "task_count": task_count,
             "task_file": str(tasks_json),
         }
@@ -506,7 +462,7 @@ def _submit_sweep_array(
         result["archived_jobs_json"] = str(archived)
 
     merged = _merge_sweep_jobs_record(existing, result)
-    _write_json_dict(_sweep_jobs_path(sweep_dir), merged)
+    write_json_object(_sweep_jobs_path(sweep_dir), merged)
 
     return result
 
@@ -611,7 +567,7 @@ def write_sweep_manifest(
         "data_root_key": data_root_key,
         "template_yaml": str(template_yaml),
         "submit_mode": submit_mode,
-        "created_utc": _utc_now_iso(),
+        "created_utc": utc_now_iso(),
         "sweep_dir": str(sweep_dir),
         "points": [
             {
@@ -643,8 +599,7 @@ def write_sweep_manifest(
     if submission is not None:
         payload["submission"] = submission
 
-    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return out_path
+    return write_json_object(out_path, payload)
 
 
 def run_fwhm_sweep(
@@ -806,7 +761,7 @@ def run_fwhm_sweep(
                 variant=variant,
                 run_label=run_label,
             )
-            run_dir = base / _utc_now_compact() if unique else base
+            run_dir = base / utc_now_compact() if unique else base
             manifest_json = run_dir / "manifest.json"
             points.append(
                 SweepPoint(
@@ -828,7 +783,7 @@ def run_fwhm_sweep(
             data_path=data_path,
             data_path_source=data_path_source,
             data_root_key=data_root_key,
-            created_utc=_utc_now_iso(),
+            created_utc=utc_now_iso(),
             sweep_dir=sweep_dir,
             sweep_manifest_json=sweep_manifest_path,
             template_yaml=template_yaml,
@@ -854,7 +809,7 @@ def run_fwhm_sweep(
             variant=variant,
             run_label=run_label,
         )
-        run_dir = base_run_dir / _utc_now_compact() if unique else base_run_dir
+        run_dir = base_run_dir / utc_now_compact() if unique else base_run_dir
 
         out = prepare_bayeseor_run(
             template_yaml=template_yaml,
@@ -1048,7 +1003,7 @@ def run_fwhm_sweep(
         data_path=data_path,
         data_path_source=data_path_source,
         data_root_key=data_root_key,
-        created_utc=_utc_now_iso(),
+        created_utc=utc_now_iso(),
         sweep_dir=sweep_dir,
         sweep_manifest_json=sweep_manifest_path,
         template_yaml=template_yaml,

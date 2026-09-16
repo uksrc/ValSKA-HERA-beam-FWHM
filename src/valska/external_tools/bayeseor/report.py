@@ -371,6 +371,14 @@ def _rows_to_dicts(rows: list[SweepPointReportRow]) -> list[dict[str, Any]]:
     return [asdict(r) for r in rows]
 
 
+def _portable_path(path: Path, root: Path, *, fallback: str) -> str:
+    """Return a POSIX path relative to ``root`` without leaking host paths."""
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return fallback
+
+
 def _write_summary_csv(
     rows: list[SweepPointReportRow], out_path: Path
 ) -> None:
@@ -446,6 +454,11 @@ def generate_sweep_report(
         perturb_parameter = _coerce_perturb_parameter(point, run_label)
         perturb_frac = _coerce_perturb_frac(point, run_label)
         run_dir = Path(str(point.get("run_dir", ""))).expanduser().resolve()
+        portable_run_dir = _portable_path(
+            run_dir,
+            sweep_dir,
+            fallback=run_label,
+        )
 
         try:
             signal = _read_point_evidence(run_dir, "signal_fit")
@@ -470,7 +483,7 @@ def generate_sweep_report(
                 perturb_parameter=perturb_parameter,
                 perturb_frac=perturb_frac,
                 run_label=run_label,
-                run_dir=str(run_dir),
+                run_dir=portable_run_dir,
                 status="ok",
                 signal_fit_ns_log_evidence=signal.ns_log_evidence,
                 signal_fit_ns_log_evidence_err=signal.ns_log_evidence_err,
@@ -491,7 +504,7 @@ def generate_sweep_report(
                 perturb_parameter=perturb_parameter,
                 perturb_frac=perturb_frac,
                 run_label=run_label,
-                run_dir=str(run_dir),
+                run_dir=portable_run_dir,
                 status="incomplete",
                 signal_fit_ns_log_evidence=None,
                 signal_fit_ns_log_evidence_err=None,
@@ -505,7 +518,7 @@ def generate_sweep_report(
                 delta_log_evidence=None,
                 bayes_factor_signal_over_no_signal=None,
                 log10_bayes_factor_signal_over_no_signal=None,
-                note=str(exc),
+                note=str(exc).replace(str(run_dir), portable_run_dir),
             )
 
         rows.append(row)
@@ -781,16 +794,28 @@ def export_report_artefacts(
             {
                 "role": role,
                 "name": source.name,
-                "source_path": str(source),
-                "copied_path": str(target),
+                "source_path": _portable_path(
+                    source,
+                    result.sweep_dir,
+                    fallback=f"{result.out_dir.name}/{source.name}",
+                ),
+                "copied_path": _portable_path(
+                    target,
+                    assets_dir,
+                    fallback=target.name,
+                ),
             }
         )
 
     manifest: dict[str, Any] = {
         "created_utc": datetime.now(UTC).isoformat(),
-        "sweep_dir": str(result.sweep_dir),
-        "report_dir": str(result.out_dir),
-        "assets_dir": str(assets_dir),
+        "sweep_dir": result.sweep_dir.name,
+        "report_dir": _portable_path(
+            result.out_dir,
+            result.sweep_dir,
+            fallback=result.out_dir.name,
+        ),
+        "assets_dir": ".",
         "evidence_source": result.evidence_source,
         "rows_total": result.rows_total,
         "rows_complete": result.rows_complete,

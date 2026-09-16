@@ -153,6 +153,9 @@ def test_generate_sweep_report_writes_outputs(tmp_path: Path) -> None:
     first = payload["points"][0]
     assert first["status"] == "ok"
     assert first["delta_log_evidence"] is not None
+    assert first["run_dir"] == "validation/antdiam_-1.0e-01"
+    assert str(tmp_path) not in result.summary_csv.read_text(encoding="utf-8")
+    assert str(tmp_path) not in result.summary_json.read_text(encoding="utf-8")
 
 
 def test_complete_analysis_csv_uses_lf_line_endings_when_empty(
@@ -274,10 +277,18 @@ def test_export_report_artefacts_copies_outputs_and_writes_manifest(
     assert len(export.artefact_paths) == 2
 
     payload = json.loads(export.manifest_json.read_text(encoding="utf-8"))
-    assert payload["sweep_dir"] == str(result.sweep_dir)
+    assert payload["sweep_dir"] == "sweep_test"
+    assert payload["report_dir"] == "report"
+    assert payload["assets_dir"] == "."
     assert payload["rows_complete"] == 1
     roles = {artefact["role"] for artefact in payload["artefacts"]}
     assert roles == {"sweep_summary_csv", "sweep_summary_json"}
+    for artefact in payload["artefacts"]:
+        assert artefact["source_path"] == f"report/{artefact['name']}"
+        assert artefact["copied_path"] == artefact["name"]
+    assert str(tmp_path) not in export.manifest_json.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_generate_sweep_report_infers_missing_perturb_frac_from_label(
@@ -837,3 +848,4 @@ def test_generate_sweep_report_marks_incomplete_when_chain_file_missing(
     payload = json.loads(result.summary_json.read_text(encoding="utf-8"))
     assert payload["points"][0]["status"] == "incomplete"
     assert "Missing chain file" in payload["points"][0]["note"]
+    assert str(tmp_path) not in payload["points"][0]["note"]

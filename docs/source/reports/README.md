@@ -15,4 +15,6 @@ JSON summaries, and commands that support their conclusions.
 Use `valska-bayeseor-report --export-report-assets <asset-dir>` to copy the
 current generated report artefacts into a documentation asset directory and
 write an `artefact_manifest.json` describing where each copied file came from.
-The canonical generated outputs remain under the sweep's `report/` directory.
+Manifest source paths are relative to the sweep directory, and copied paths
+are relative to the asset directory. The canonical generated outputs remain
+under the sweep's `report/` directory.

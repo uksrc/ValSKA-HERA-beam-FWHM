@@ -150,7 +150,8 @@ valska-bayeseor-report \
 This copies the generated report artefacts into the chosen asset directory and
 writes `artefact_manifest.json` there. The canonical generated outputs still
 live under `<sweep_dir>/report/`; the copied assets are a documentation snapshot
-for figures, CSV tables, and reviewable report evidence.
+for figures, CSV tables, and reviewable report evidence. Paths in the manifest
+are relative to the sweep or asset directory so the snapshot is portable.
 
 Print the colourised complete-analysis summary table in the terminal:
 

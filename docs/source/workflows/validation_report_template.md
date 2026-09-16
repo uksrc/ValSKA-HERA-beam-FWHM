@@ -234,7 +234,8 @@ valska-bayeseor-report \
 ```
 
 This writes `artefact_manifest.json` in the asset directory, recording the
-source report directory and every copied artefact.
+source report directory and every copied artefact with portable paths relative
+to the sweep or asset directory.
 
 ## Appendix C: Campaign Completeness
 

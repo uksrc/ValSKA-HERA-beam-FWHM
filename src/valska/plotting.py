@@ -10,6 +10,11 @@ import numpy as np
 from bayeseor.analyze.analyze import DataContainer
 from matplotlib.figure import Figure
 
+from valska.constants import (
+    DEFAULT_EOR_POWER_MK2_MPC3,
+    DEFAULT_NOISE_TO_EOR_POWER_RATIO,
+)
+
 from .utils import get_default_path_manager, load_paths
 
 
@@ -23,8 +28,8 @@ class BeamAnalysisPlotter:
         base_chains_dir: str | Path | None = None,
         paths_file: str | Path | None = None,
         paths: dict[str, str] | None = None,
-        eor_ps: float = 214777.66068216303,  # mK^2 Mpc^3
-        noise_ratio: float = 0.5,
+        eor_ps: float = DEFAULT_EOR_POWER_MK2_MPC3,
+        noise_ratio: float = DEFAULT_NOISE_TO_EOR_POWER_RATIO,
         default_expected_ps: float | None = None,
     ):
         """Initialize the plotter with a base directory for chains.
@@ -41,10 +46,10 @@ class BeamAnalysisPlotter:
             uses default paths.
         eor_ps : float, optional
             EoR power spectrum value in mK^2 Mpc^3.
-            Default is 214777.66068216303.
+            Defaults to ``DEFAULT_EOR_POWER_MK2_MPC3``.
         noise_ratio : float, optional
-            Ratio of noise PS to EoR PS. Default is 0.5
-            (noise_ps = eor_ps / 2).
+            Ratio of noise PS to EoR PS. Defaults to
+            ``DEFAULT_NOISE_TO_EOR_POWER_RATIO``.
         default_expected_ps : float, optional
             Default expected power spectrum to use in plots.
             If None, uses noise_ps.

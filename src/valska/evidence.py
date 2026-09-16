@@ -48,6 +48,8 @@ import tqdm  # noqa: F401
 from anesthetic import read_chains
 from bayeseor.analyze.analyze import DataContainer
 
+from valska.constants import DEFAULT_EOR_POWER_MK2_MPC3
+
 PathLike = str | Path
 BayesFactorResult = dict[str, Any]
 PerturbationResult = dict[str, Any]
@@ -373,7 +375,7 @@ def find_chain_pairs(  # noqa: PLR0912
 def analyze_chain_pair(  # noqa: PLR0912
     pair: ChainPair,
     dir_prefix: Path | None = None,
-    expected_ps: float = 214777.66068216303,
+    expected_ps: float = DEFAULT_EOR_POWER_MK2_MPC3,
     create_plots: bool = True,
     verbose: bool = True,
 ) -> PerturbationResult:
@@ -496,7 +498,7 @@ def run_complete_bayeseor_analysis(  # noqa: PLR0912,PLR0913,PLR0915
     chain_pairs: ChainPairMap,
     perturbation_levels: Iterable[str] | None = None,
     dir_prefix: Path | None = None,
-    expected_ps: float = 214777.66068216303,
+    expected_ps: float = DEFAULT_EOR_POWER_MK2_MPC3,
     create_plots: bool = False,
     show_detailed_results: bool = False,
     verbose: bool = True,

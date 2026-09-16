@@ -23,14 +23,14 @@ from matplotlib.colors import TwoSlopeNorm
 from matplotlib.figure import Figure
 from scipy import stats
 
+from valska.constants import DEFAULT_NOISE_POWER_MK2_MPC3
+
 Hypothesis = Literal["signal_fit", "no_signal"]
 PriorMode = Literal["shared", "grouped", "per_chain", "off"]
 ColorMode = Literal["perturbation", "cycle"]
 UpperLimitMode = Literal["noise_proxy", "posterior_edge", "manual", "off"]
 UpperLimitPlotMode = Literal["omit", "arrow"]
 
-DEFAULT_EOR_PS = 214777.66068216303
-DEFAULT_NOISE_RATIO = 0.5
 _TRAILING_FLOAT_RE = re.compile(
     r"(?P<prefix>.*?)[_-](?P<value>[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)$",
     re.IGNORECASE,
@@ -67,9 +67,7 @@ class BayesEoRPlotDataConfig:
     ps_kind: Literal["ps", "dmps"] = "dmps"
     temp_unit: str = "mK"
     little_h_units: bool = False
-    expected_ps: float | list[float] | None = (
-        DEFAULT_EOR_PS * DEFAULT_NOISE_RATIO
-    )
+    expected_ps: float | list[float] | None = DEFAULT_NOISE_POWER_MK2_MPC3
     expected_dmps: float | list[float] | None = None
 
 

@@ -19,7 +19,7 @@ from valska.cli_format import (
     resolve_progress_mode,
     show_progress,
 )
-from valska.external_tools.bayeseor.analysis_plot import (
+from valska.external_tools.bayeseor.native_plotting import (
     BayesEoRPlotConfig,
 )
 from valska.external_tools.bayeseor.plot_configs import (

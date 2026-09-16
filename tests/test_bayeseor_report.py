@@ -8,9 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from valska import evidence
-from valska.external_tools.bayeseor import cli_report
-from valska.external_tools.bayeseor.analysis_plot import (
+from valska.external_tools.bayeseor import cli_report, evidence
+from valska.external_tools.bayeseor.native_plotting import (
     BayesEoRPlotConfig,
 )
 from valska.external_tools.bayeseor.report import (

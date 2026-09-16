@@ -16,6 +16,7 @@ def test_archive_timestamped_renames_existing_file(
 
     archived = utils.archive_timestamped(source)
 
+    assert archived is not None
     assert archived == tmp_path / "jobs_20260916T120000Z.json"
     assert archived.read_text(encoding="utf-8") == "{}"
     assert not source.exists()

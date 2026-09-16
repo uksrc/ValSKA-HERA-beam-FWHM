@@ -10,9 +10,11 @@ deprecated compatibility shim for downstream users migrating existing code.
    :recursive:
 
    valska.beam_metrics
-   valska.evidence
+   valska.external_tools.bayeseor.chain_utils
+   valska.external_tools.bayeseor.evidence
    valska.notebook_helpers
-   valska.plotting
+   valska.external_tools.bayeseor.plotting
+   valska.external_tools.bayeseor.native_plotting
    valska.utils
 
    valska.external_tools
@@ -20,4 +22,3 @@ deprecated compatibility shim for downstream users migrating existing code.
    valska.external_tools.bayeseor
 
    valska.external_tools.pyuvsim
-

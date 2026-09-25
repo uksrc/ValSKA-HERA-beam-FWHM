@@ -314,16 +314,11 @@ def submit_tool_run[OptionsType: RunOptions](
         Which stage(s) to submit: e.g. "cpu", "gpu", or "all".
     options
         run options containing common + module specific options:
-        depend_afterok
-            Optional sbatch job id to depend on for GPU submissions.
-        sbatch_exe
-            sbatch executable to invoke.
-        dry_run
-            If True, do not submit jobs; return the commands that would run.
-        force
-            If True, allow resubmission even if jobs.json indicates prior submissions.
-        record
-            Where to record submission metadata. Currently only "jobs.json" is supported.
+        depend_afterok: Optional sbatch job id to depend on for GPU submissions.
+        sbatch_exe: sbatch executable to invoke.
+        dry_run: If True, do not submit jobs; return the commands that would run.
+        force: If True, allow resubmission even if jobs.json indicates prior submissions.
+        record: Where to record submission metadata. Currently only "jobs.json" is supported.
 
     Returns
     -------

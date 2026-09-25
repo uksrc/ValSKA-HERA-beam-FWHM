@@ -19,6 +19,7 @@ from valska.external_tools.common.utils import utc_now_compact
 
 from ...cli_format import CliColors, add_color_argument, resolve_color_mode
 from .submit import (
+    BayesEoRRunOptions,
     BayesEoRSubmitPlan,
     _find_completed_cpu_precompute_matrix_dir,
 )
@@ -433,14 +434,16 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = submit_tool_run(
             run_dir,
-            stage=args.stage,
+            stage_id=args.stage,
             submit_plan=BayesEoRSubmitPlan,
-            hypothesis=args.hypothesis,
-            depend_afterok=args.depend_afterok,
-            sbatch_exe=sbatch_exe,
-            dry_run=args.dry_run,
-            force=force,
-            record=record,
+            options=BayesEoRRunOptions(
+                hypothesis=args.hypothesis,
+                depend_afterok=args.depend_afterok,
+                sbatch_exe=sbatch_exe,
+                dry_run=args.dry_run,
+                force=force,
+                record=record,
+            ),
         )
     except MissingDependencyError as e:
         print(f"ERROR: {e}", file=sys.stderr)

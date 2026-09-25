@@ -5,13 +5,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from valska.external_tools.common.submit import (
-    _HYP,
     InvalidArgumentError,
     JobsFile,
     MissingDependencyError,
+    RunOptions,
     Stage,
     StageType,
     SubmitPlan,
@@ -26,6 +26,8 @@ _CPU_MATRIX_MARKERS: dict[str, tuple[str, ...]] = {
     "T_Ninv_T": ("T_Ninv_T.h5", "T_Ninv_T.npz"),
 }
 
+_HYP = Literal["signal_fit", "no_signal", "both"]
+
 
 class BayesEoRStage(Stage):
     """Inherits the Stage class which contains info about a stage and points to the setup method"""
@@ -36,10 +38,6 @@ class BayesEoRStageType(StageType):
     def cpu_precompute_setup(
         plan: BayesEoRSubmitPlan,
         result: dict[str, Any],
-        sbatch_exe: str,
-        dry_run: bool,
-        hypothesis: _HYP,
-        depend_afterok: str,
     ):
         ensure_script_exists(plan.cpu_script, "CPU precompute")
 
@@ -51,9 +49,9 @@ class BayesEoRStageType(StageType):
         jobid, cmd = run_sbatch(
             plan.cpu_script,
             dependency_afterok=None,
-            sbatch_exe=sbatch_exe,
+            sbatch_exe=plan.options.sbatch_exe,
             cwd=plan.run_dir,
-            dry_run=dry_run,
+            dry_run=plan.options.dry_run,
         )
         result["commands"].append(cmd)
 
@@ -70,10 +68,6 @@ class BayesEoRStageType(StageType):
     def gpu_setup(
         plan: BayesEoRSubmitPlan,
         result: dict[str, Any],
-        sbatch_exe: str,
-        dry_run: bool,
-        hypothesis: _HYP,
-        depend_afterok: str,
     ):
         # --------------------
         # GPU submission
@@ -94,19 +88,19 @@ class BayesEoRStageType(StageType):
 
         # First check whether stage=all - this means CPU and GPU were submitted
         # together and GPU should depend on CPU with ID as recorded in jobs.json
-        if plan.stage == "all" and cpu_jobid:
+        if plan.stage_id == "all" and cpu_jobid:
             dep = cpu_jobid
             dependency_source = "same_invocation_cpu"
         # Otherwise check for explicit dependency with manually entered CPU ID
-        elif depend_afterok is not None:
-            dep = _safe_int_jobid(depend_afterok)
+        elif plan.options.depend_afterok is not None:
+            dep = _safe_int_jobid(plan.options.depend_afterok)
             if dep is None:
                 raise InvalidArgumentError(
                     "--depend-afterok must be a numeric SLURM job id."
                 )
             dependency_source = "explicit_depend_afterok"
         # Placeholder for dry run when CPU/GPU stages are submitted separately
-        elif dry_run and plan.requested_stages == [
+        elif plan.options.dry_run and plan.requested_stages == [
             [BayesEoRStageType.CPU, BayesEoRStageType.GPU]
         ]:
             dep = "<CPU_JOBID>"
@@ -146,7 +140,7 @@ class BayesEoRStageType(StageType):
         if verified_matrix_dir is not None:
             gpu_jobs["cpu_precompute_matrix_dir"] = str(verified_matrix_dir)
 
-        if hypothesis in ("signal_fit", "both"):
+        if plan.options.hypothesis in ("signal_fit", "both"):
             if plan.gpu_signal_fit_script is None:
                 raise MissingDependencyError(
                     "manifest does not contain a signal_fit GPU submit script artefact "
@@ -156,9 +150,9 @@ class BayesEoRStageType(StageType):
             jobid, cmd = run_sbatch(
                 plan.gpu_signal_fit_script,
                 dependency_afterok=dep,
-                sbatch_exe=sbatch_exe,
+                sbatch_exe=plan.options.sbatch_exe,
                 cwd=plan.run_dir,
-                dry_run=dry_run,
+                dry_run=plan.options.dry_run,
             )
             result["commands"].append(cmd)
             gpu_jobs["signal_fit"] = {
@@ -166,7 +160,7 @@ class BayesEoRStageType(StageType):
                 "job_id": jobid,
             }
 
-        if hypothesis in ("no_signal", "both"):
+        if plan.options.hypothesis in ("no_signal", "both"):
             if plan.gpu_no_signal_script is None:
                 raise MissingDependencyError(
                     "manifest does not contain a no_signal GPU submit script artefact "
@@ -176,9 +170,9 @@ class BayesEoRStageType(StageType):
             jobid, cmd = run_sbatch(
                 plan.gpu_no_signal_script,
                 dependency_afterok=dep,
-                sbatch_exe=sbatch_exe,
+                sbatch_exe=plan.options.sbatch_exe,
                 cwd=plan.run_dir,
-                dry_run=dry_run,
+                dry_run=plan.options.dry_run,
             )
             result["commands"].append(cmd)
             gpu_jobs["no_signal"] = {
@@ -201,16 +195,13 @@ class BayesEoRJobsFile(JobsFile):
     extra_fields = [("hypothesis", "")]
 
 
-# These are the possible stages for this module
-_STAGES = {
-    "cpu": [BayesEoRStageType.CPU],
-    "gpu": [BayesEoRStageType.GPU],
-    "all": [BayesEoRStageType.CPU, BayesEoRStageType.GPU],
-}
+@dataclass
+class BayesEoRRunOptions(RunOptions):
+    hypothesis: _HYP = "both"
 
 
 @dataclass()
-class BayesEoRSubmitPlan(SubmitPlan):
+class BayesEoRSubmitPlan(SubmitPlan[BayesEoRRunOptions]):
     """Resolved paths needed to submit a prepared BayesEoR run."""
 
     cpu_script: Path = field(init=False)
@@ -221,8 +212,7 @@ class BayesEoRSubmitPlan(SubmitPlan):
     def __post_init__(self):
         super().__post_init__()
 
-        self.requested_stages = self.resolve_stages(self.stage)
-        # self.requested_stages.extend(_STAGES[self.stage])
+        self.requested_stages = self.resolve_stages(self.stage_id)
 
         self.jobs_file = BayesEoRJobsFile()
 
@@ -256,8 +246,16 @@ class BayesEoRSubmitPlan(SubmitPlan):
 
     def resolve_stages(self, stage: str) -> list[Stage]:
         """Resolve BayesEoR stages"""
+
+        # These are the possible stages for this module
+        stages = {
+            "cpu": [BayesEoRStageType.CPU],
+            "gpu": [BayesEoRStageType.GPU],
+            "all": [BayesEoRStageType.CPU, BayesEoRStageType.GPU],
+        }
+
         try:
-            return [stage_type.value for stage_type in _STAGES[stage]]
+            return [stage_type.value for stage_type in stages[stage]]
         except KeyError:
             raise InvalidArgumentError(
                 f"Unknown BayesEoR submission stage: {stage}"

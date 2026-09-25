@@ -4,7 +4,10 @@ from pathlib import Path
 import pytest
 
 from valska.external_tools.bayeseor import cli_submit
-from valska.external_tools.bayeseor.submit import BayesEoRSubmitPlan
+from valska.external_tools.bayeseor.submit import (
+    BayesEoRRunOptions,
+    BayesEoRSubmitPlan,
+)
 from valska.external_tools.common.submit import (
     MissingDependencyError,
     submit_tool_run,
@@ -57,7 +60,10 @@ def test_submit_gpu_uses_recorded_dependency_when_outputs_missing(tmp_path):
     )
 
     result = submit_tool_run(
-        run_dir, stage="gpu", submit_plan=BayesEoRSubmitPlan, dry_run=True
+        run_dir,
+        stage_id="gpu",
+        submit_plan=BayesEoRSubmitPlan,
+        options=BayesEoRRunOptions(dry_run=True),
     )
 
     jobs = result.get("jobs")
@@ -79,7 +85,10 @@ def test_submit_gpu_skips_dependency_when_cpu_outputs_verified(tmp_path):
     )
 
     result = submit_tool_run(
-        run_dir, stage="gpu", submit_plan=BayesEoRSubmitPlan, dry_run=True
+        run_dir,
+        stage_id="gpu",
+        submit_plan=BayesEoRSubmitPlan,
+        options=BayesEoRRunOptions(dry_run=True),
     )
 
     jobs = result.get("jobs")
@@ -101,7 +110,10 @@ def test_submit_gpu_requires_dependency_or_completed_outputs(tmp_path):
 
     with pytest.raises(MissingDependencyError):
         submit_tool_run(
-            run_dir, stage="gpu", submit_plan=BayesEoRSubmitPlan, dry_run=True
+            run_dir,
+            stage_id="gpu",
+            submit_plan=BayesEoRSubmitPlan,
+            options=BayesEoRRunOptions(dry_run=True),
         )
 
 

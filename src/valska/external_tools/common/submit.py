@@ -14,8 +14,6 @@ from typing import Any, Literal, TypedDict
 from valska.external_tools.common.utils import utc_now_iso
 
 _RECORD = Literal["jobs.json", "manifest"]
-_HYP = Literal["signal_fit", "no_signal", "both"]
-
 
 _JOBID_RE = re.compile(r"Submitted\s+batch\s+job\s+(\d+)\s*$", re.IGNORECASE)
 
@@ -77,13 +75,24 @@ class JobsFile:
     extra_fields: list[tuple[str, ...]] = []
 
 
+@dataclass
+class RunOptions:
+    """Common arguments for module run"""
+
+    depend_afterok: str | None = None
+    sbatch_exe: str = "sbatch"
+    dry_run: bool = False
+    force: bool = False
+    record: _RECORD = "jobs.json"
+
+
 @dataclass()
-class SubmitPlan:
+class SubmitPlan[OptionsType: RunOptions]:
     """Resolved paths, config, and methods needed to submit a prepared run."""
 
     run_dir: Path
-    # TODO should be a Stage object
-    stage: str  # (this can include "all" which is actually two stages)
+    stage_id: str  # (this can include "all" which is actually two stages)
+    options: OptionsType  # (each module may have its own options class)
     # These are the resolved stage objects in a list:
     requested_stages: list[Stage] = field(init=False)
     manifest_path: Path = field(init=False)
@@ -95,6 +104,10 @@ class SubmitPlan:
         self.jobs_path = self.run_dir / "jobs.json"
 
     def resolve_stages(self, stage: str) -> list[Stage]:
+        """
+        This method is overridden within each module
+        to resolve the specific stages for that module.
+        """
         raise NotImplementedError
 
     def load_manifest(self) -> dict[str, Any]:
@@ -142,7 +155,7 @@ class SubmitPlan:
         Merge a new submission result into an existing jobs.json record.
 
         - Keeps stable top-level metadata (run_dir, manifest)
-        - Updates "jobs" by stage (cpu_precompute, gpu)
+        - Updates "jobs" by stage (e.g. cpu_precompute, gpu)
         - Appends to "history" so we don't lose what happened
         """
         merged: dict[str, Any] = {}
@@ -281,18 +294,14 @@ def run_sbatch(
     return m.group(1), cmd_str
 
 
-def submit_tool_run(
+# Declaring OptionsType here allows a module specific SubmitPlan
+# to use its own specific options class that expands RunOptions.
+def submit_tool_run[OptionsType: RunOptions](
     run_dir: Path,
     *,
-    # stage: Stage,
-    stage: str,
-    submit_plan: type[SubmitPlan],
-    hypothesis: _HYP = "both",
-    depend_afterok: str | None = None,
-    sbatch_exe: str = "sbatch",
-    dry_run: bool = False,
-    force: bool = False,
-    record: _RECORD = "jobs.json",
+    stage_id: str,
+    submit_plan: type[SubmitPlan[OptionsType]],
+    options: OptionsType,
 ) -> dict[str, Any]:
     """
     Submit external tool prepared scripts for a run_dir.
@@ -303,18 +312,18 @@ def submit_tool_run(
         Prepared run directory.
     stage
         Which stage(s) to submit: e.g. "cpu", "gpu", or "all".
-    hypothesis
-        Which GPU hypothesis to run: "signal_fit", "no_signal", or "both".
-    depend_afterok
-        Optional sbatch job id to depend on for GPU submissions.
-    sbatch_exe
-        sbatch executable to invoke.
-    dry_run
-        If True, do not submit jobs; return the commands that would run.
-    force
-        If True, allow resubmission even if jobs.json indicates prior submissions.
-    record
-        Where to record submission metadata. Currently only "jobs.json" is supported.
+    options
+        run options containing common + module specific options:
+        depend_afterok
+            Optional sbatch job id to depend on for GPU submissions.
+        sbatch_exe
+            sbatch executable to invoke.
+        dry_run
+            If True, do not submit jobs; return the commands that would run.
+        force
+            If True, allow resubmission even if jobs.json indicates prior submissions.
+        record
+            Where to record submission metadata. Currently only "jobs.json" is supported.
 
     Returns
     -------
@@ -331,25 +340,25 @@ def submit_tool_run(
     We also keep a submission 'history' list so previous job ids are not lost.
     """
 
-    plan = submit_plan(run_dir.expanduser().resolve(), stage)
+    plan = submit_plan(run_dir.expanduser().resolve(), stage_id, options)
 
     ensure_script_exists(plan.manifest_path, "manifest.json")
 
-    if record == "manifest":
+    if options.record == "manifest":
         raise InvalidArgumentError(
             "record='manifest' is not enabled in the MVP to avoid mutating provenance. "
             "Use record='jobs.json' (default)."
         )
 
-    plan.check_jobs_not_running(force)
+    plan.check_jobs_not_running(options.force)
 
     result: dict[str, Any] = {
         "run_dir": str(plan.run_dir),
         "manifest": str(plan.manifest_path),
         "submitted_utc": utc_now_iso(),
-        "sbatch": sbatch_exe,
-        "dry_run": bool(dry_run),
-        "stage": stage,
+        "sbatch": options.sbatch_exe,
+        "dry_run": bool(options.dry_run),
+        "stage": stage_id,
         "commands": [],
         "jobs": plan.load_jobs(),
     }
@@ -358,13 +367,12 @@ def submit_tool_run(
     for extra_field, default in plan.jobs_file.extra_fields:
         result[extra_field] = default
 
-    # do stage specific stuff here
+    # Stage specific code here
+    # Each requested stage is a stage object.
     for requested_stage in plan.requested_stages:
-        result, jobid, cmd = requested_stage["method"](
-            plan, result, sbatch_exe, dry_run, hypothesis, depend_afterok
-        )
+        result, jobid, cmd = requested_stage["method"](plan, result)
 
-    if not dry_run:
+    if not options.dry_run:
         merged = plan.merge_jobs_record(result)
         plan.write_jobs(merged)
         return merged

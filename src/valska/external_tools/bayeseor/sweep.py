@@ -17,7 +17,7 @@ from valska.external_tools.common.utils import utc_now_compact, utc_now_iso
 
 from ..common.runner import CondaRunner, ContainerRunner
 from .setup import prepare_bayeseor_run
-from .submit import BayesEoRSubmitPlan
+from .submit import BayesEoRRunOptions, BayesEoRSubmitPlan
 
 _STAGE = Literal["none", "cpu", "gpu", "all"]
 _HYP = Literal["signal_fit", "no_signal", "both"]
@@ -491,14 +491,16 @@ def run_fwhm_sweep(
 
                 res = submit_tool_run(
                     p.run_dir,
-                    stage="all" if submit == "all" else submit,  # type: ignore[arg-type]
+                    stage_id="all" if submit == "all" else submit,  # type: ignore[arg-type]
                     submit_plan=BayesEoRSubmitPlan,
-                    hypothesis=hypothesis,
-                    depend_afterok=depend_afterok,
-                    sbatch_exe=sbatch_exe,
-                    dry_run=submit_dry_run,
-                    force=submit_force,
-                    record=record,
+                    options=BayesEoRRunOptions(
+                        hypothesis=hypothesis,
+                        depend_afterok=depend_afterok,
+                        sbatch_exe=sbatch_exe,
+                        dry_run=submit_dry_run,
+                        force=submit_force,
+                        record=record,
+                    ),
                 )
 
                 if archived is not None:

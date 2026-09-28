@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal
 
 from valska.external_tools.common.utils import utc_now_iso
 
@@ -34,8 +34,8 @@ class SbatchError(SubmissionError):
     """Raised when sbatch fails or returns unparseable output."""
 
 
-# @dataclass()
-class Stage(TypedDict):
+@dataclass()
+class Stage:
     """Holds details about a stage and points to the method which does any setup before submission"""
 
     name: str
@@ -187,9 +187,9 @@ class SubmitPlan[OptionsType: RunOptions]:
         new_jobs = new_result.get("jobs")
         if isinstance(new_jobs, dict):
             for requested_stage in self.requested_stages:
-                stage = new_jobs.get(requested_stage["name"])
-                if isinstance(stage, dict):
-                    merged_jobs[requested_stage["name"]] = stage
+                stage_jobs = new_jobs.get(requested_stage.name)
+                if isinstance(stage_jobs, dict):
+                    merged_jobs[requested_stage.name] = stage_jobs
 
         merged["jobs"] = merged_jobs
 
@@ -365,7 +365,7 @@ def submit_tool_run[OptionsType: RunOptions](
     # Stage specific code here
     # Each requested stage is a stage object.
     for requested_stage in plan.requested_stages:
-        result, jobid, cmd = requested_stage["method"](plan, result)
+        result, jobid, cmd = requested_stage.method(plan, result)
 
     if not options.dry_run:
         merged = plan.merge_jobs_record(result)

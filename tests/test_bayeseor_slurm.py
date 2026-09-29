@@ -1,30 +1,29 @@
 from pathlib import Path
 
-from valska.external_tools.bayeseor.runner import (
-    BayesEoRInstall,
-    CondaRunner,
-)
-from valska.external_tools.bayeseor.slurm import render_submit_script
+from valska.external_tools.bayeseor.constants import TOOL_NAME
+from valska.external_tools.common.slurm import render_submit_script
 
 
 def _render_script(mode: str) -> str:
     return render_submit_script(
-        runner=CondaRunner(
-            conda_activate="source /opt/conda/etc/profile.d/conda.sh",
-            env_name="bayeseor",
-        ),
-        install=BayesEoRInstall(repo_path=Path("/opt/BayesEoR")),
+        # runner=CondaRunner(
+        #     conda_activate="source /opt/conda/etc/profile.d/conda.sh",
+        #     env_name="bayeseor",
+        # ),
+        # install=BayesEoRInstall(repo_path=Path("/opt/BayesEoR")),
         config_yaml=Path("/tmp/config.yaml"),
         run_dir=Path("/tmp/run"),
         slurm={"partition": "a100_gpu", "cpus_per_task": 4, "ntasks": 1},
         mode=mode,
+        commands=("sample prefix", "sample command"),
+        tool_name=TOOL_NAME,
     )
 
 
 def test_render_submit_script_gpu_run_includes_non_blocking_gpu_diagnostics():
     script = _render_script("gpu_run")
 
-    assert 'echo "Hostname:          $(hostname)"' in script
+    assert 'echo "Hostname:             $(hostname)"' in script
     assert (
         'echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-<unset>}"'
         in script

@@ -99,10 +99,7 @@ class BayesEoRStageType(StageType):
                     "--depend-afterok must be a numeric SLURM job id."
                 )
             dependency_source = "explicit_depend_afterok"
-        # Placeholder for dry run when CPU/GPU stages are submitted separately
-        elif plan.options.dry_run and plan.requested_stages == [
-            [BayesEoRStageType.CPU, BayesEoRStageType.GPU]
-        ]:
+        elif plan.options.dry_run and plan.stage_id == "all":
             dep = "<CPU_JOBID>"
             dependency_source = "dry_run_placeholder"
         # Otherwise CPU job must have been submitted separately before GPU
@@ -185,10 +182,8 @@ class BayesEoRStageType(StageType):
 
         return result, jobid, cmd
 
-    CPU = BayesEoRStage(
-        name="cpu_precompute", method=cpu_precompute_setup, script=""
-    )
-    GPU = BayesEoRStage(name="gpu", method=gpu_setup, script="")
+    CPU = BayesEoRStage(name="cpu_precompute", method=cpu_precompute_setup)
+    GPU = BayesEoRStage(name="gpu", method=gpu_setup)
 
 
 class BayesEoRJobsFile(JobsFile):

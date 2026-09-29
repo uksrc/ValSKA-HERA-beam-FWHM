@@ -40,7 +40,6 @@ class Stage:
 
     name: str
     method: Callable
-    script: str
 
 
 class StageType(Enum):
